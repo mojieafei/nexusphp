@@ -1,7 +1,22 @@
 <?php
-$rootpath = dirname(dirname(__DIR__)) . '/';
+$rootpath = dirname(dirname(dirname(__DIR__))) . '/';
 define('ROOT_PATH', $rootpath);
-require ROOT_PATH . 'nexus/Install/install_update_start.php';
+// Try both path layouts to support different deploy structures
+$__candidates = [
+    ROOT_PATH . 'Install/install_update_start.php',
+    ROOT_PATH . 'nexus/Install/install_update_start.php',
+];
+$__loaded = false;
+foreach ($__candidates as $__file) {
+    if (file_exists($__file)) {
+        require $__file;
+        $__loaded = true;
+        break;
+    }
+}
+if (!$__loaded) {
+    throw new \RuntimeException('install_update_start.php not found in expected paths: ' . implode(', ', $__candidates));
+}
 
 $isPost = $_SERVER['REQUEST_METHOD'] == 'POST';
 $install = new \Nexus\Install\Install();

@@ -127,6 +127,9 @@ final class Nexus
                 $schema = 'https';
             }
         }
+        if (empty($schema)) {
+            $schema = 'http'; // Fallback for built-in server or missing variables
+        }
         return $this->getFirst($schema);
     }
 
