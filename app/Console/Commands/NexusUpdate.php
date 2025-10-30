@@ -70,15 +70,15 @@ class NexusUpdate extends Command
         if ($tag !== null) {
             if ($tag === 'dev') {
                 if ($branch) {
-                    $url = "https://github.com/xiaomlove/nexusphp/archive/refs/heads/{$branch}.zip";
+                    $url = "https://github.com/mojieafei/nexusphp/archive/refs/heads/{$branch}.zip";
                 } else {
-                    $url = "https://github.com/xiaomlove/nexusphp/archive/refs/heads/php8.zip";
+                    $url = "https://github.com/mojieafei/nexusphp/archive/refs/heads/php8.zip";
                 }
             } else {
                 if (!str_starts_with($tag, 'v')) {
                     $tag = "v$tag";
                 }
-                $url = "https://api.github.com/repos/xiaomlove/nexusphp/tarball/$tag";
+                $url = "https://api.github.com/repos/mojieafei/nexusphp/tarball/$tag";
             }
             $this->doLog("Specific tag: '$tag', download from '$url' and extra code, includes: " . implode(', ', $includes));
             $tmpPath = $this->update->downAndExtractCode($url, $includes);

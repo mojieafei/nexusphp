@@ -1,0 +1,65 @@
+/*
+ * 宇航员主题 - Tooltip样式
+ */
+
+.domTT {
+    background: rgba(10, 22, 40, 0.95);
+    border: 1px solid rgba(0, 212, 255, 0.5);
+    border-radius: 8px;
+    color: #e5e7eb;
+    padding: 10px 15px;
+    font-size: 12px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.domTT_caption {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(168, 85, 247, 0.3));
+    border-bottom: 1px solid rgba(0, 212, 255, 0.5);
+    color: #00d4ff;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 8px 8px 0 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.domTT_content {
+    padding: 10px;
+    line-height: 1.5;
+}
+
+.domTT_close {
+    color: #00d4ff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.domTT_close:hover {
+    color: #a855f7;
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.8);
+}
+
+.domTT_drag {
+    cursor: move;
+}
+
+/* 确保tooltip容器不受任何父元素的overflow限制，使用最高层级 */
+div.domTT,
+div.niceTitle,
+.domTT,
+.niceTitle,
+div[id^="domTT"],
+div[class*="domTT"],
+div[class*="tooltip"] {
+    position: fixed !important;
+    z-index: 2147483647 !important; /* 最大32位整数，确保显示在最上层 */
+}
+
+/* 防止父容器的 transform 创建新的层叠上下文 */
+body,
+html {
+    overflow-x: visible !important;
+}
+
