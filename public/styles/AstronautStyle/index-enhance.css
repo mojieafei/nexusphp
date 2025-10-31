@@ -1,0 +1,437 @@
+/*
+ * 宇航员主题 - 首页增强样式
+ * 专门优化index.php的各个模块
+ */
+
+/* ============================================
+   新闻模块 (News Module)
+   ============================================ */
+#news-section h2 {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(168, 85, 247, 0.15));
+    border-left: 4px solid var(--electric-blue);
+    position: relative;
+    overflow: hidden;
+}
+
+#news-section h2::after {
+    content: '📰';
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.3;
+    font-size: 24px;
+}
+
+.news-item {
+    background: rgba(10, 22, 40, 0.6);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    transition: all 0.3s ease;
+}
+
+.news-item:hover {
+    background: rgba(0, 212, 255, 0.08);
+    border-color: var(--electric-blue);
+    transform: translateX(5px);
+    box-shadow: -3px 0 0 var(--electric-blue);
+}
+
+.news-date {
+    color: var(--star-gold);
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.news-title {
+    color: var(--electric-blue);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 5px 0;
+}
+
+/* ============================================
+   Funbox模块 (Fun Module)
+   ============================================ */
+iframe[name="funbox"] {
+    border: 2px solid rgba(168, 85, 247, 0.3);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+}
+
+/* ============================================
+   Shoutbox模块 (Chat Module)
+   ============================================ */
+iframe[name="sbox"] {
+    border: 2px solid rgba(0, 212, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+}
+
+/* Shoutbox表单 */
+form[name="shbox"] {
+    background: rgba(10, 22, 40, 0.5);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+form[name="shbox"] input[type="text"] {
+    background: rgba(10, 22, 40, 0.9);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    flex-grow: 1;
+}
+
+form[name="shbox"] input[type="text"]:focus {
+    border-color: var(--electric-blue);
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+/* ============================================
+   论坛帖子模块 (Forum Posts Module)
+   ============================================ */
+.forum-post-list {
+    background: rgba(10, 22, 40, 0.6);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.forum-post-item {
+    border-bottom: 1px solid var(--glass-border);
+    padding: 12px;
+    transition: all 0.3s ease;
+}
+
+.forum-post-item:hover {
+    background: rgba(0, 212, 255, 0.05);
+    border-left: 3px solid var(--electric-blue);
+}
+
+.forum-post-item:last-child {
+    border-bottom: none;
+}
+
+/* ============================================
+   种子列表模块 (Torrents Module)
+   ============================================ */
+.torrent-list {
+    background: rgba(10, 22, 40, 0.6);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.torrent-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--glass-border);
+    transition: all 0.3s ease;
+}
+
+.torrent-item:hover {
+    background: rgba(0, 212, 255, 0.05);
+    transform: translateX(5px);
+}
+
+.torrent-name {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.torrent-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 13px;
+}
+
+.torrent-seeders {
+    color: var(--neon-green);
+    font-weight: 600;
+}
+
+.torrent-leechers {
+    color: var(--plasma-purple);
+    font-weight: 600;
+}
+
+/* 种子图标美化 */
+.torrent-item::before {
+    content: '🚀';
+    margin-right: 10px;
+    font-size: 18px;
+    opacity: 0.6;
+}
+
+/* ============================================
+   Top上传者模块 (Top Uploader Module)
+   ============================================ */
+.tr-top-uploader-tab td {
+    background: rgba(10, 22, 40, 0.7);
+    padding: 12px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid var(--glass-border);
+}
+
+.tr-top-uploader-tab td:hover {
+    background: rgba(0, 212, 255, 0.15);
+}
+
+.tr-top-uploader-tab td.colhead {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(168, 85, 247, 0.3)) !important;
+    color: var(--electric-blue) !important;
+    border-bottom: 3px solid var(--electric-blue);
+}
+
+/* 排名徽章 */
+.ranking-badge {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.ranking-badge.rank-1 {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+}
+
+.ranking-badge.rank-2 {
+    background: linear-gradient(135deg, #d1d5db, #9ca3af);
+    box-shadow: 0 0 10px rgba(156, 163, 175, 0.6);
+}
+
+.ranking-badge.rank-3 {
+    background: linear-gradient(135deg, #fb923c, #f97316);
+    box-shadow: 0 0 10px rgba(251, 146, 60, 0.6);
+}
+
+/* ============================================
+   投票模块 (Poll Module)
+   ============================================ */
+.poll-container {
+    background: rgba(10, 22, 40, 0.6);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.poll-question {
+    color: var(--electric-blue);
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.poll-option {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin: 8px 0;
+    background: rgba(10, 22, 40, 0.8);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.poll-option:hover {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: var(--electric-blue);
+}
+
+.poll-option input[type="radio"] {
+    margin-right: 10px;
+    accent-color: var(--electric-blue);
+}
+
+/* 投票结果进度条 */
+.poll-result-bar {
+    height: 24px;
+    background: linear-gradient(90deg, 
+        rgba(0, 212, 255, 0.3), 
+        rgba(168, 85, 247, 0.3)
+    );
+    border-radius: 12px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
+
+/* ============================================
+   统计数据模块 (Statistics Module)
+   ============================================ */
+.stats-container {
+    background: rgba(10, 22, 40, 0.6);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    border-bottom: 1px solid var(--glass-border);
+    transition: all 0.3s ease;
+}
+
+.stats-row:hover {
+    background: rgba(0, 212, 255, 0.05);
+}
+
+.stats-row:last-child {
+    border-bottom: none;
+}
+
+.stats-label {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.stats-value {
+    color: var(--electric-blue);
+    font-size: 16px;
+    font-weight: 700;
+    text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+}
+
+/* HUD风格的数据面板 */
+.stats-hud {
+    background: rgba(10, 22, 40, 0.9);
+    border: 2px solid rgba(0, 212, 255, 0.5);
+    border-radius: 8px;
+    padding: 15px;
+    position: relative;
+}
+
+.stats-hud::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent, 
+        var(--electric-blue), 
+        transparent
+    );
+    animation: hud-scan 2s linear infinite;
+}
+
+@keyframes hud-scan {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+/* ============================================
+   用户等级展示 (User Class Display)
+   ============================================ */
+.user-class-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    padding: 15px 0;
+}
+
+.user-class-item {
+    background: rgba(10, 22, 40, 0.7);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.user-class-item:hover {
+    background: rgba(0, 212, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   免责声明模块 (Disclaimer Module)
+   ============================================ */
+.disclaimer-box {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* ============================================
+   友情链接模块 (Links Module)
+   ============================================ */
+.links-container {
+    background: rgba(10, 22, 40, 0.5);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.links-container a {
+    display: inline-block;
+    padding: 6px 12px;
+    margin: 5px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.links-container a:hover {
+    background: rgba(0, 212, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   响应式优化 (Responsive)
+   ============================================ */
+@media (max-width: 768px) {
+    .stats-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .user-class-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .torrent-stats {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+
+/* ============================================
+   特殊动画效果 (Special Animations)
+   ============================================ */
+/* 数据闪烁效果 */
+@keyframes data-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.stats-value-animated {
+    animation: data-blink 3s ease-in-out infinite;
+}
+
+/* 悬浮卡片效果 */
+@keyframes card-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.floating-card {
+    animation: card-float 3s ease-in-out infinite;
+}
+

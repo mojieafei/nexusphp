@@ -1,0 +1,507 @@
+/*
+ * 天枢 - 宇航员主题 (Astronaut Style)
+ * 探索浩瀚星海，驾驭无限星辰
+ */
+
+/* ============================================
+   1. 核心配色系统 (Color System)
+   ============================================ */
+:root {
+    /* 主色调 */
+    --space-dark: #0a1628;
+    --space-blue: #1e1b4b;
+    --nebula-purple: #2d1b69;
+    
+    /* 强调色 */
+    --electric-blue: #00d4ff;
+    --plasma-purple: #a855f7;
+    --star-gold: #fbbf24;
+    --neon-green: #10b981;
+    
+    /* 中性色 */
+    --glass-white: rgba(255, 255, 255, 0.9);
+    --glass-light: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    
+    /* 文字色 */
+    --text-primary: #e5e7eb;
+    --text-secondary: #9ca3af;
+    --text-dim: #6b7280;
+}
+
+/* ============================================
+   2. 星空背景 (Starfield Background)
+   ============================================ */
+body {
+    background: #0a1628;
+    background: linear-gradient(135deg, #0a1628 0%, #1e1b4b 50%, #2d1b69 100%);
+    position: relative;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-primary);
+}
+
+/* 星空动画背景 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(2px 2px at 20px 30px, white, transparent),
+        radial-gradient(2px 2px at 60px 70px, white, transparent),
+        radial-gradient(1px 1px at 50px 50px, white, transparent),
+        radial-gradient(1px 1px at 130px 80px, white, transparent),
+        radial-gradient(2px 2px at 90px 10px, white, transparent),
+        radial-gradient(1px 1px at 110px 120px, white, transparent),
+        radial-gradient(1px 1px at 160px 40px, white, transparent),
+        radial-gradient(2px 2px at 200px 90px, white, transparent);
+    background-size: 200px 200px;
+    background-repeat: repeat;
+    animation: starfield 120s linear infinite;
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+}
+
+@keyframes starfield {
+    from { transform: translateY(0); }
+    to { transform: translateY(200px); }
+}
+
+/* 流星效果 */
+body::after {
+    content: '';
+    position: fixed;
+    top: -100px;
+    right: -100px;
+    width: 300px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    transform: rotate(-45deg);
+    animation: shooting-star 8s ease-in-out infinite;
+    z-index: 0;
+    pointer-events: none;
+}
+
+@keyframes shooting-star {
+    0%, 90% { opacity: 0; transform: rotate(-45deg) translate(0, 0); }
+    95% { opacity: 1; }
+    100% { opacity: 0; transform: rotate(-45deg) translate(-1000px, 1000px); }
+}
+
+/* ============================================
+   3. 基础布局重构 (Layout)
+   ============================================ */
+table.head {
+    background: transparent;
+    position: relative;
+    z-index: 1;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+table.main {
+    background: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+/* 主内容容器 */
+#outer {
+    background: transparent;
+}
+
+td.outer {
+    background: transparent;
+}
+
+td.embedded {
+    background: transparent;
+}
+
+/* ============================================
+   4. 玻璃态卡片 (Glassmorphism Cards)
+   ============================================ */
+td.colhead {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(168, 85, 247, 0.2)) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 8px 8px 0 0;
+    color: var(--electric-blue) !important;
+    font-weight: 600;
+    padding: 12px 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 13px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+td.rowhead {
+    background: rgba(30, 27, 75, 0.6) !important;
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: 10px 15px;
+    backdrop-filter: blur(5px);
+}
+
+td.text, td.embedded {
+    background: rgba(10, 22, 40, 0.7) !important;
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    padding: 15px;
+    backdrop-filter: blur(10px);
+}
+
+/* 表格样式 */
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 10px auto; /* 全局表格水平居中 */
+}
+
+table.main {
+    background: rgba(10, 22, 40, 0.5);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+tr:hover td {
+    background: rgba(0, 212, 255, 0.05);
+}
+
+/* ============================================
+   5. 标题样式 (Headings)
+   ============================================ */
+h1, h2, h3 {
+    color: var(--electric-blue);
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+h2 {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(168, 85, 247, 0.1));
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin: 20px 0 10px 0;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+h2::before {
+    content: '◆';
+    margin-right: 10px;
+    color: var(--star-gold);
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+}
+
+/* ============================================
+   6. 按钮样式 (Buttons)
+   ============================================ */
+input[type="submit"],
+input[type="button"],
+.btn,
+button {
+    background: linear-gradient(135deg, #00d4ff, #a855f7);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: white;
+    padding: 8px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 212, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+input[type="submit"]:hover,
+input[type="button"]:hover,
+.btn:hover,
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4), 0 0 30px rgba(0, 212, 255, 0.5);
+}
+
+input[type="submit"]:active,
+input[type="button"]:active,
+.btn:active,
+button:active {
+    transform: translateY(0);
+}
+
+/* ============================================
+   7. 输入框样式 (Input Fields)
+   ============================================ */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+textarea,
+select {
+    background: rgba(10, 22, 40, 0.8);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    padding: 8px 12px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--electric-blue);
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+}
+
+/* ============================================
+   8. 链接样式 (Links)
+   ============================================ */
+a {
+    color: var(--electric-blue);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+a:hover {
+    color: var(--plasma-purple);
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+}
+
+a.altlink {
+    color: var(--star-gold);
+}
+
+a.altlink:hover {
+    color: var(--electric-blue);
+}
+
+/* ============================================
+   9. 图标和装饰 (Icons & Decorations)
+   ============================================ */
+/* VIP星标 */
+img.star {
+    filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.8));
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* 警告图标 */
+img.warned {
+    filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.8));
+}
+
+/* ============================================
+   10. 特殊模块样式 (Special Modules)
+   ============================================ */
+/* iframe容器（聊天框、funbox等） */
+iframe {
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    background: rgba(10, 22, 40, 0.9);
+}
+
+/* 进度条 */
+img.bar_end {
+    background: rgba(0, 212, 255, 0.3);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+.sltbar {
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.3), rgba(168, 85, 247, 0.3)) !important;
+}
+
+.unsltbar {
+    background: rgba(30, 27, 75, 0.3) !important;
+}
+
+/* ============================================
+   11. 页眉和页脚 (Header & Footer)
+   ============================================ */
+.logo {
+    color: var(--electric-blue);
+    font-size: 36px;
+    font-weight: 700;
+    text-shadow: 
+        0 0 10px rgba(0, 212, 255, 0.8),
+        0 0 20px rgba(0, 212, 255, 0.6),
+        0 0 30px rgba(0, 212, 255, 0.4);
+    letter-spacing: 2px;
+}
+
+.slogan {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-style: italic;
+    letter-spacing: 1px;
+}
+
+#footer {
+    background: rgba(10, 22, 40, 0.8);
+    border-top: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    padding: 20px;
+    margin-top: 30px;
+    backdrop-filter: blur(10px);
+}
+
+/* ============================================
+   12. 导航菜单 (Navigation)
+   ============================================ */
+#nav {
+    background: rgba(10, 22, 40, 0.9);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 10px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* 水平菜单布局 */
+#nav ul.menu {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    margin: 0;
+}
+
+#nav ul.menu > li {
+    margin: 0;
+}
+
+#nav a {
+    display: block;
+    padding: 8px 14px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+#nav a:hover {
+    background: rgba(0, 212, 255, 0.2);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
+
+/* 选中态高亮 */
+#nav li.selected > a {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(168, 85, 247, 0.25));
+    border: 1px solid var(--glass-border);
+}
+
+/* ============================================
+   13. 响应式调整 (Responsive)
+   ============================================ */
+@media (max-width: 768px) {
+    .logo {
+        font-size: 24px;
+    }
+    
+    h2 {
+        font-size: 16px;
+        padding: 10px 15px;
+    }
+    
+    td.text, td.embedded {
+        padding: 10px;
+    }
+}
+
+/* ============================================
+   14. 用户等级徽章美化 (User Class Badges)
+   ============================================ */
+.peasant { color: #9ca3af !important; }
+.user { color: #10b981 !important; }
+.power { color: #3b82f6 !important; }
+.elite { color: #8b5cf6 !important; }
+.crazy { color: #ec4899 !important; }
+.insane { color: #f59e0b !important; }
+.veteran { color: #ef4444 !important; }
+.extreme { color: #fbbf24 !important; }
+.ultimate { color: #00d4ff !important; text-shadow: 0 0 10px rgba(0, 212, 255, 0.8); }
+.nexusmaster { 
+    background: linear-gradient(90deg, #00d4ff, #a855f7, #fbbf24);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    font-weight: 700;
+}
+
+/* ============================================
+   15. 滚动条美化 (Scrollbar)
+   ============================================ */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(10, 22, 40, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #00d4ff, #a855f7);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #a855f7, #00d4ff);
+}
+
+/* ============================================
+   16. 加载动画 (Loading Animation)
+   ============================================ */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 212, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--electric-blue);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   17. 清除浮动和其他工具类 (Utilities)
+   ============================================ */
+.clear {
+    clear: both;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
+.center {
+    text-align: center;
+}
+
