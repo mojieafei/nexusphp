@@ -100,7 +100,7 @@ body::after {
 table.head {
     background: transparent;
     position: relative;
-    z-index: 1;
+    z-index: auto;
     margin-left: auto;
     margin-right: auto;
 }
@@ -108,7 +108,7 @@ table.head {
 table.main {
     background: transparent;
     position: relative;
-    z-index: 1;
+    z-index: auto;
 }
 
 /* 主内容容器 */

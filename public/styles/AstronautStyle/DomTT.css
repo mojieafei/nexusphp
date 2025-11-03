@@ -45,3 +45,21 @@
     cursor: move;
 }
 
+/* 确保tooltip容器不受任何父元素的overflow限制，使用最高层级 */
+div.domTT,
+div.niceTitle,
+.domTT,
+.niceTitle,
+div[id^="domTT"],
+div[class*="domTT"],
+div[class*="tooltip"] {
+    position: fixed !important;
+    z-index: 2147483647 !important; /* 最大32位整数，确保显示在最上层 */
+}
+
+/* 防止父容器的 transform 创建新的层叠上下文 */
+body,
+html {
+    overflow-x: visible !important;
+}
+
