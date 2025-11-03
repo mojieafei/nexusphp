@@ -670,3 +670,155 @@ td.navigation b {
     text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
 }
 
+/* ============================================
+   19. 论坛页面优化 (Forum Page Enhancement)
+   ============================================ */
+
+/* 论坛列表表头 */
+table.main td.colhead {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(168, 85, 247, 0.2)) !important;
+    border: 1px solid rgba(0, 212, 255, 0.4) !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    text-align: center !important;
+    padding: 10px !important;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.6);
+    backdrop-filter: blur(10px);
+}
+
+/* 论坛标题列 - 左对齐 */
+td.colfollow {
+    background: rgba(10, 22, 40, 0.5) !important;
+    border: 1px solid rgba(0, 212, 255, 0.08) !important;
+    padding: 12px !important;
+    text-align: left !important; /* 改为左对齐 */
+    transition: all 0.3s ease;
+}
+
+/* 论坛列表行hover效果 */
+table.main tr:hover td.colfollow {
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.08), rgba(168, 85, 247, 0.08)) !important;
+    border-color: rgba(0, 212, 255, 0.3) !important;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+    transform: translateX(2px);
+}
+
+/* 论坛标题链接 */
+td.colfollow a {
+    color: var(--electric-blue) !important;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 5px rgba(0, 212, 255, 0.3);
+}
+
+td.colfollow a:hover {
+    color: #ffffff !important;
+    text-shadow: 0 0 15px rgba(0, 212, 255, 0.8);
+    text-decoration: none;
+}
+
+/* 论坛描述文字 */
+td.colfollow font,
+td.colfollow span {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+/* 论坛统计数字列 - 保持居中 */
+td.colfollow:nth-last-child(-n+4) {
+    text-align: center !important;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+/* 论坛最近回复列 - 左对齐 */
+td.colfollow:nth-last-child(2) {
+    text-align: left !important;
+    padding-left: 15px !important;
+}
+
+/* 论坛版主列 - 居中 */
+td.colfollow:last-child {
+    text-align: center !important;
+}
+
+/* 论坛帖子列表 */
+table.forums td.colfollow {
+    text-align: left !important;
+}
+
+/* 帖子标题 */
+table.forums td.colfollow a.subject,
+table.forums td.colfollow a[href*="viewtopic"] {
+    color: var(--electric-blue) !important;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* 帖子列表行 */
+table.forums tr:hover {
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.05), rgba(168, 85, 247, 0.05)) !important;
+}
+
+/* 子论坛链接 */
+.sublink a {
+    color: var(--plasma-purple) !important;
+    font-size: 11px;
+    transition: all 0.3s ease;
+}
+
+.sublink a:hover {
+    color: var(--star-gold) !important;
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+/* 置顶帖标识 */
+td.colfollow .sticky,
+td.colfollow font[color="red"] {
+    color: var(--star-gold) !important;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+/* 精华帖标识 */
+td.colfollow .hot {
+    color: var(--neon-green) !important;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+/* 论坛图标美化 */
+td.colfollow img {
+    margin-right: 8px;
+    vertical-align: middle;
+    opacity: 0.9;
+    transition: all 0.3s ease;
+}
+
+td.colfollow:hover img {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* 帖子分页链接 */
+td.colfollow .pages {
+    color: var(--text-secondary);
+    font-size: 11px;
+    margin-left: 10px;
+}
+
+td.colfollow .pages a {
+    color: var(--electric-blue) !important;
+    padding: 2px 6px;
+    margin: 0 2px;
+    background: rgba(0, 212, 255, 0.1);
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+td.colfollow .pages a:hover {
+    background: rgba(0, 212, 255, 0.3);
+    transform: translateY(-1px);
+}
+
