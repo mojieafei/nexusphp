@@ -122,6 +122,7 @@ td.outer {
 
 td.embedded {
     background: transparent;
+    text-align: left;
 }
 
 /* ============================================
@@ -624,10 +625,22 @@ td.colhead {
     border: 1px solid rgba(0, 212, 255, 0.4) !important;
     color: #ffffff !important;
     font-weight: 700;
-    text-align: center;
     padding: 10px !important;
     text-shadow: 0 0 10px rgba(0, 212, 255, 0.6);
     backdrop-filter: blur(10px);
+}
+
+/* colhead 根据 align 属性设置对齐方式 */
+td.colhead[align="left"] {
+    text-align: left !important;
+}
+
+td.colhead[align="center"] {
+    text-align: center !important;
+}
+
+td.colhead[align="right"] {
+    text-align: right !important;
 }
 
 /* rowfollow通用样式优化 */
@@ -636,6 +649,48 @@ td.rowfollow {
     border: 1px solid rgba(0, 212, 255, 0.08) !important;
     padding: 8px !important;
     transition: all 0.3s ease;
+}
+
+/* 论坛页面 rowfollow 根据 align 属性设置对齐方式 */
+table td.rowfollow[align="left"],
+table td.rowfollow.nowrap[align="left"],
+body td.rowfollow[align="left"],
+body td.rowfollow.nowrap[align="left"] {
+    text-align: left !important;
+}
+
+table td.rowfollow[align="center"],
+body td.rowfollow[align="center"] {
+    text-align: center !important;
+}
+
+table td.rowfollow[align="right"],
+body td.rowfollow[align="right"] {
+    text-align: right !important;
+}
+
+/* 论坛列表行hover效果 */
+tr:hover td.rowfollow {
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.08), rgba(168, 85, 247, 0.08)) !important;
+    border-color: rgba(0, 212, 255, 0.3) !important;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+    transform: translateX(2px);
+}
+
+/* 内嵌表格也左对齐 */
+table td.rowfollow[align="left"] table,
+table td.rowfollow[align="left"] td.embedded,
+body td.rowfollow[align="left"] table,
+body td.rowfollow[align="left"] td.embedded {
+    text-align: left !important;
+}
+
+/* 确保内嵌 table 本身也左对齐 */
+td.rowfollow[align="left"] > table,
+td.rowfollow[align="left"] table {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    float: left !important;
 }
 
 /* 分页导航样式优化 */
@@ -680,19 +735,20 @@ table.main td.colhead {
     border: 1px solid rgba(0, 212, 255, 0.4) !important;
     color: #ffffff !important;
     font-weight: 700;
-    text-align: center !important;
     padding: 10px !important;
     text-shadow: 0 0 10px rgba(0, 212, 255, 0.6);
     backdrop-filter: blur(10px);
 }
 
-/* 论坛标题列 - 左对齐 */
+/* 论坛标题列 - 左对齐（强制应用） */
+table.main td.colfollow,
+table td.colfollow,
 td.colfollow {
     background: rgba(10, 22, 40, 0.5) !important;
     border: 1px solid rgba(0, 212, 255, 0.08) !important;
     padding: 12px !important;
     text-align: left !important; /* 改为左对齐 */
-    transition: all 0.3s ease;
+    transition: all 0.3s ease !important;
 }
 
 /* 论坛列表行hover效果 */
@@ -820,5 +876,57 @@ td.colfollow .pages a {
 td.colfollow .pages a:hover {
     background: rgba(0, 212, 255, 0.3);
     transform: translateY(-1px);
+}
+
+/* ============================================
+   20. 强制样式应用（最高优先级）
+   ============================================ */
+
+/* 论坛所有内容列强制左对齐 */
+body table.main td.colfollow,
+body table td.colfollow,
+body td.colfollow,
+html table.main td.colfollow,
+html table td.colfollow,
+html td.colfollow {
+    text-align: left !important;
+}
+
+/* 论坛统计列强制居中 */
+body table.main td.colfollow[align="center"],
+body table td.colfollow[align="center"],
+body td.colfollow:nth-child(2),
+body td.colfollow:nth-child(3) {
+    text-align: center !important;
+}
+
+/* 论坛版主列居中 */
+body table.main td.colfollow:last-child,
+body table td.colfollow:last-child {
+    text-align: center !important;
+}
+
+/* 强制应用表头样式 */
+body table.main td.colhead,
+body table td.colhead,
+body td.colhead {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(168, 85, 247, 0.2)) !important;
+    border: 1px solid rgba(0, 212, 255, 0.4) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.6) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+/* 强制链接颜色 */
+body td.colfollow a,
+html td.colfollow a {
+    color: #00d4ff !important;
+}
+
+body td.colfollow a:hover,
+html td.colfollow a:hover {
+    color: #ffffff !important;
+    text-shadow: 0 0 15px rgba(0, 212, 255, 0.8) !important;
 }
 
