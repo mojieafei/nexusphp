@@ -2458,6 +2458,221 @@ function get_style_highlight()
 	return $hltr;
 }
 
+function display_homepage_banner()
+{
+	$bannerDir = ROOT_PATH . 'public/banner/';
+	if (!is_dir($bannerDir)) {
+		return;
+	}
+	
+	$bannerFiles = [];
+	$allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm'];
+	
+	$files = scandir($bannerDir);
+	foreach ($files as $file) {
+		if ($file === '.' || $file === '..') continue;
+		$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+		if (in_array($ext, $allowedExtensions)) {
+			$bannerFiles[] = [
+				'file' => $file,
+				'ext' => $ext,
+				'type' => in_array($ext, ['mp4', 'webm']) ? 'video' : 'image'
+			];
+		}
+	}
+	
+	if (empty($bannerFiles)) {
+		return;
+	}
+	
+	// 输出轮播HTML和CSS
+	echo '<div class="homepage-banner-container" style="width: 100%; max-width: ' . CONTENT_WIDTH . 'px; margin: 0 auto 20px auto; overflow: hidden; position: relative; border-radius: 8px;">';
+	echo '<div class="banner-slider" style="position: relative; width: 100%; height: 0; padding-bottom: 28%; background: #000; cursor: grab;">';
+	
+	foreach ($bannerFiles as $index => $banner) {
+		$display = $index === 0 ? 'block' : 'none';
+		$path = 'banner/' . htmlspecialchars($banner['file']);
+		
+		if ($banner['type'] === 'video') {
+			echo '<div class="banner-item" style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">';
+			echo '<video style="width: 100%; height: 100%; object-fit: cover;" autoplay muted loop playsinline>';
+			echo '<source src="' . $path . '" type="video/' . $banner['ext'] . '">';
+			echo '</video>';
+			echo '</div>';
+		} else {
+			echo '<div class="banner-item" style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">';
+			echo '<img src="' . $path . '" style="width: 100%; height: 100%; object-fit: cover;" alt="Banner">';
+			echo '</div>';
+		}
+	}
+	
+	// 如果有多个banner，添加指示器和切换功能
+	if (count($bannerFiles) > 1) {
+		// 左箭头
+		echo '<div class="banner-arrow banner-arrow-left" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; opacity: 0; transition: opacity 0.3s;">';
+		echo '<span style="color: #fff; font-size: 24px; line-height: 1; user-select: none;">‹</span>';
+		echo '</div>';
+		
+		// 右箭头
+		echo '<div class="banner-arrow banner-arrow-right" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; opacity: 0; transition: opacity 0.3s;">';
+		echo '<span style="color: #fff; font-size: 24px; line-height: 1; user-select: none;">›</span>';
+		echo '</div>';
+		
+		echo '<div class="banner-indicators" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10;">';
+		foreach ($bannerFiles as $index => $banner) {
+			$active = $index === 0 ? 'opacity: 1;' : 'opacity: 0.5;';
+			echo '<span class="indicator" data-index="' . $index . '" style="width: 10px; height: 10px; border-radius: 50%; background: #fff; cursor: pointer; ' . $active . '"></span>';
+		}
+		echo '</div>';
+		
+		// 添加JS代码
+		echo '<script type="text/javascript">
+		(function() {
+			var currentIndex = 0;
+			var items = document.querySelectorAll(".homepage-banner-container .banner-item");
+			var indicators = document.querySelectorAll(".homepage-banner-container .indicator");
+			var totalItems = items.length;
+			var container = document.querySelector(".homepage-banner-container .banner-slider");
+			var bannerContainer = document.querySelector(".homepage-banner-container");
+			var leftArrow = document.querySelector(".banner-arrow-left");
+			var rightArrow = document.querySelector(".banner-arrow-right");
+			var startX = 0;
+			var isDragging = false;
+			
+			function showBanner(index) {
+				items.forEach(function(item, i) {
+					item.style.display = i === index ? "block" : "none";
+				});
+				indicators.forEach(function(ind, i) {
+					ind.style.opacity = i === index ? "1" : "0.5";
+				});
+				currentIndex = index;
+			}
+			
+			// 点击指示器切换
+			indicators.forEach(function(indicator) {
+				indicator.addEventListener("click", function() {
+					var index = parseInt(this.getAttribute("data-index"));
+					showBanner(index);
+				});
+			});
+			
+			// 左右箭头点击事件
+			leftArrow.addEventListener("click", function(e) {
+				e.stopPropagation();
+				var prevIndex = (currentIndex - 1 + totalItems) % totalItems;
+				showBanner(prevIndex);
+			});
+			
+			rightArrow.addEventListener("click", function(e) {
+				e.stopPropagation();
+				var nextIndex = (currentIndex + 1) % totalItems;
+				showBanner(nextIndex);
+			});
+			
+			// 鼠标悬停显示箭头
+			bannerContainer.addEventListener("mouseenter", function() {
+				leftArrow.style.opacity = "0.7";
+				rightArrow.style.opacity = "0.7";
+			});
+			
+			bannerContainer.addEventListener("mouseleave", function() {
+				leftArrow.style.opacity = "0";
+				rightArrow.style.opacity = "0";
+			});
+			
+			leftArrow.addEventListener("mouseenter", function() {
+				this.style.opacity = "1";
+			});
+			
+			rightArrow.addEventListener("mouseenter", function() {
+				this.style.opacity = "1";
+			});
+			
+			leftArrow.addEventListener("mouseleave", function() {
+				this.style.opacity = "0.7";
+			});
+			
+			rightArrow.addEventListener("mouseleave", function() {
+				this.style.opacity = "0.7";
+			});
+			
+			// 触摸/鼠标滑动支持
+			container.addEventListener("touchstart", function(e) {
+				startX = e.touches[0].clientX;
+				isDragging = true;
+			});
+			
+			container.addEventListener("mousedown", function(e) {
+				// 避免点击箭头时触发拖动
+				if (e.target.closest(".banner-arrow")) return;
+				startX = e.clientX;
+				isDragging = true;
+				container.style.cursor = "grabbing";
+				e.preventDefault();
+			});
+			
+			container.addEventListener("touchmove", function(e) {
+				if (!isDragging) return;
+			});
+			
+			container.addEventListener("mousemove", function(e) {
+				if (!isDragging) return;
+			});
+			
+			container.addEventListener("touchend", function(e) {
+				if (!isDragging) return;
+				var endX = e.changedTouches[0].clientX;
+				var diff = startX - endX;
+				
+				if (Math.abs(diff) > 50) {
+					if (diff > 0) {
+						// 向左滑动，显示下一个
+						var nextIndex = (currentIndex + 1) % totalItems;
+						showBanner(nextIndex);
+					} else {
+						// 向右滑动，显示上一个
+						var prevIndex = (currentIndex - 1 + totalItems) % totalItems;
+						showBanner(prevIndex);
+					}
+				}
+				isDragging = false;
+			});
+			
+			container.addEventListener("mouseup", function(e) {
+				if (!isDragging) return;
+				var endX = e.clientX;
+				var diff = startX - endX;
+				
+				if (Math.abs(diff) > 50) {
+					if (diff > 0) {
+						// 向左拖动，显示下一个
+						var nextIndex = (currentIndex + 1) % totalItems;
+						showBanner(nextIndex);
+					} else {
+						// 向右拖动，显示上一个
+						var prevIndex = (currentIndex - 1 + totalItems) % totalItems;
+						showBanner(prevIndex);
+					}
+				}
+				container.style.cursor = "grab";
+				isDragging = false;
+			});
+			
+			container.addEventListener("mouseleave", function() {
+				if (isDragging) {
+					container.style.cursor = "grab";
+				}
+				isDragging = false;
+			});
+		})();
+		</script>';
+	}
+	
+	echo '</div>';
+	echo '</div>';
+}
+
 function stdhead($title = "", $msgalert = true, $script = "", $place = "")
 {
 	global $lang_functions;
@@ -2572,6 +2787,52 @@ foreach (\Nexus\Nexus::getAppendHeaders() as $value) {
 <script type="text/javascript" src="vendor/layer-v3.5.1/layer/layer.js<?php echo $cssupdatedate?>"></script>
 </head>
 <body>
+
+<?php
+// 星际捐赠按钮
+if ($enabledonation == 'yes' && $CURUSER) {
+?>
+<div class="donate-btn-stellar">
+    <a href="javascript:void(0);" id="donateToggle" title="支持天枢，让星际之旅继续 🚀">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#fff"/>
+        </svg>
+    </a>
+    <div id="donatePanel" class="donate-panel-stellar" style="display:none;">
+        <h4>💫 支持我们</h4>
+        <p>帮助我们继续维护站点，保持服务器运行。</p>
+        <a href="donate.php" class="pay-btn-stellar paypal">前往捐赠页面</a>
+        <button id="donateClose" class="close-btn-stellar">✕ 关闭</button>
+    </div>
+</div>
+<script type="text/javascript">
+(function() {
+    var toggle = document.getElementById('donateToggle');
+    var panel = document.getElementById('donatePanel');
+    var close = document.getElementById('donateClose');
+    
+    if (toggle && panel && close) {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        close.addEventListener('click', function() {
+            panel.style.display = 'none';
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.donate-btn-stellar')) {
+                panel.style.display = 'none';
+            }
+        });
+    }
+})();
+</script>
+<?php
+}
+?>
+
 <table class="head" cellspacing="0" cellpadding="0" align="center" style="width: <?php echo isset($GLOBALS['CURUSER']) ? CONTENT_WIDTH + 28.66 : CONTENT_WIDTH ?>px">
 	<tr>
 		<td class="clear">
@@ -2598,14 +2859,22 @@ else
 			echo "<span>".$headerad[0]."</span>";
 		}
 }
+/* 原捐赠按钮已隐藏，使用右上角星际捐赠按钮 */
+/*
 if ($enabledonation == 'yes'){?>
 			<a href="donate.php"><img src="<?php echo get_forum_pic_folder()?>/donate.gif" alt="Make a donation" style="margin-left: 5px; margin-top: 50px;" /></a>
 <?php
 }
+*/
 ?>
 		</td>
 	</tr>
 </table>
+
+<?php
+// 显示banner轮播
+display_homepage_banner();
+?>
 
 <table class="mainouter" width="<?php echo CONTENT_WIDTH ?>" cellspacing="0" cellpadding="5" align="center">
 	<tr><td id="nav_block" class="text" align="center">
