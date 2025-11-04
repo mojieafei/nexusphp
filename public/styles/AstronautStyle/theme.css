@@ -149,37 +149,52 @@ td.rowhead {
     text-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
 }
 
+td, th {
+    box-sizing: border-box !important;
+}
+
 td.text, td.embedded {
     background: rgba(10, 22, 40, 0.7) !important;
-    border: 1px solid var(--glass-border);
+    border: none !important;
     color: var(--text-primary);
-    padding: 15px;
+    padding: 5px !important;
     backdrop-filter: blur(10px);
+    box-sizing: border-box !important;
 }
 
 /* 表格样式 - Dark Passion风格 */
 table {
-    border-right: medium none;
-    border-top: medium none;
-    border-left: medium none;
-    border-bottom: medium none;
-    border-collapse: collapse;
+    border-right: medium none !important;
+    border-top: medium none !important;
+    border-left: medium none !important;
+    border-bottom: medium none !important;
+    border-collapse: collapse !important;
     background-color: #0e1927;
     margin: 10px auto;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
 }
 
 table.main {
     background-color: #09111b;
-    border-right: medium none;
-    border-top: medium none;
-    border-left: medium none;
-    border-bottom: medium none;
+    border-right: medium none !important;
+    border-top: medium none !important;
+    border-left: medium none !important;
+    border-bottom: medium none !important;
     margin-left: auto;
     margin-right: auto;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
 }
 
 table.mainouter {
     background-color: #09111b;
+    margin-top: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.homepage-banner-container {
+    box-sizing: border-box !important;
 }
 
 /* td {

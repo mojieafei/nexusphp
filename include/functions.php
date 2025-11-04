@@ -705,7 +705,7 @@ function begin_frame($caption = "", $center = false, $padding = 10, $width="100%
 	if ($center)
 	$tdextra .= " align=\"center\"";
 
-	print(($caption ? "<h2 align=\"".$caption_center."\">".$caption."</h2>" : "") . "<table width=\"".$width."\" border=\"1\" cellspacing=\"0\" cellpadding=\"".$padding."\">" . "<tr><td class=\"text\" $tdextra>\n");
+	print(($caption ? "<h2 align=\"".$caption_center."\">".$caption."</h2>" : "") . "<table width=\"".$width."\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"box-sizing: border-box;\">" . "<tr><td class=\"text\" $tdextra>\n");
 
 }
 
@@ -720,7 +720,7 @@ function begin_table($fullwidth = false, $padding = 5)
 
 	if ($fullwidth)
 	$width .= " width=50%";
-	print("<table class=\"main".$width."\" border=\"1\" cellspacing=\"0\" cellpadding=\"".$padding."\">");
+	print("<table class=\"main".$width."\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"box-sizing: border-box;\">");
 }
 
 function end_table()
@@ -1227,7 +1227,7 @@ function begin_compose($title = "",$type="new", $body="", $hassubject=true, $sub
 		}
 	}
 	begin_frame($framename, true);
-	print("<table class=\"main\" width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"5\">\n");
+	print("<table class=\"main\" width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"box-sizing: border-box;\">\n");
 	if ($hassubject)
 		print("<tr><td class=\"rowhead\">".$lang_functions['row_subject']."</td>" .
 "<td class=\"rowfollow\" align=\"left\"><input type=\"text\" style=\"width: 99%;\" name=\"subject\" maxlength=\"".$maxsubjectlength."\" value=\"".htmlspecialchars($subject)."\" /></td></tr>\n");
@@ -2485,9 +2485,9 @@ function display_homepage_banner()
 		return;
 	}
 	
-	// 输出轮播HTML和CSS
-	echo '<div class="homepage-banner-container" style="width: 100%; max-width: ' . CONTENT_WIDTH . 'px; margin: 0 auto 20px auto; overflow: hidden; position: relative; border-radius: 8px;">';
-	echo '<div class="banner-slider" style="position: relative; width: 100%; height: 0; padding-bottom: 28%; background: #000; cursor: grab;">';
+	// 输出轮播HTML和CSS - 与导航栏等宽（1200px）
+	echo '<div class="homepage-banner-container" style="width: ' . CONTENT_WIDTH . 'px; margin: 0 auto; overflow: hidden; position: relative; box-sizing: border-box;">';
+	echo '<div class="banner-slider" style="position: relative; width: 100%; height: 0; padding-bottom: 42%; background: #000; cursor: grab;">';
 	
 	foreach ($bannerFiles as $index => $banner) {
 		$display = $index === 0 ? 'block' : 'none';
@@ -2537,11 +2537,14 @@ function display_homepage_banner()
 			var leftArrow = document.querySelector(".banner-arrow-left");
 			var rightArrow = document.querySelector(".banner-arrow-right");
 			var startX = 0;
+			var currentX = 0;
 			var isDragging = false;
 			
 			function showBanner(index) {
 				items.forEach(function(item, i) {
 					item.style.display = i === index ? "block" : "none";
+					item.style.transform = "translateX(0)";
+					item.style.transition = "transform 0.3s ease";
 				});
 				indicators.forEach(function(ind, i) {
 					ind.style.opacity = i === index ? "1" : "0.5";
@@ -2600,30 +2603,42 @@ function display_homepage_banner()
 			// 触摸/鼠标滑动支持
 			container.addEventListener("touchstart", function(e) {
 				startX = e.touches[0].clientX;
+				currentX = startX;
 				isDragging = true;
+				items[currentIndex].style.transition = "none";
 			});
 			
 			container.addEventListener("mousedown", function(e) {
 				// 避免点击箭头时触发拖动
 				if (e.target.closest(".banner-arrow")) return;
 				startX = e.clientX;
+				currentX = startX;
 				isDragging = true;
 				container.style.cursor = "grabbing";
+				items[currentIndex].style.transition = "none";
 				e.preventDefault();
 			});
 			
 			container.addEventListener("touchmove", function(e) {
 				if (!isDragging) return;
+				currentX = e.touches[0].clientX;
+				var diff = currentX - startX;
+				items[currentIndex].style.transform = "translateX(" + diff + "px)";
 			});
 			
 			container.addEventListener("mousemove", function(e) {
 				if (!isDragging) return;
+				currentX = e.clientX;
+				var diff = currentX - startX;
+				items[currentIndex].style.transform = "translateX(" + diff + "px)";
 			});
 			
 			container.addEventListener("touchend", function(e) {
 				if (!isDragging) return;
-				var endX = e.changedTouches[0].clientX;
-				var diff = startX - endX;
+				var diff = startX - currentX;
+				
+				items[currentIndex].style.transition = "transform 0.3s ease";
+				items[currentIndex].style.transform = "translateX(0)";
 				
 				if (Math.abs(diff) > 50) {
 					if (diff > 0) {
@@ -2641,8 +2656,10 @@ function display_homepage_banner()
 			
 			container.addEventListener("mouseup", function(e) {
 				if (!isDragging) return;
-				var endX = e.clientX;
-				var diff = startX - endX;
+				var diff = startX - currentX;
+				
+				items[currentIndex].style.transition = "transform 0.3s ease";
+				items[currentIndex].style.transform = "translateX(0)";
 				
 				if (Math.abs(diff) > 50) {
 					if (diff > 0) {
@@ -2661,9 +2678,11 @@ function display_homepage_banner()
 			
 			container.addEventListener("mouseleave", function() {
 				if (isDragging) {
+					items[currentIndex].style.transition = "transform 0.3s ease";
+					items[currentIndex].style.transform = "translateX(0)";
 					container.style.cursor = "grab";
+					isDragging = false;
 				}
-				isDragging = false;
 			});
 		})();
 		</script>';
@@ -2833,50 +2852,12 @@ if ($enabledonation == 'yes' && $CURUSER) {
 }
 ?>
 
-<table class="head" cellspacing="0" cellpadding="0" align="center" style="width: <?php echo isset($GLOBALS['CURUSER']) ? CONTENT_WIDTH + 28.66 : CONTENT_WIDTH ?>px">
-	<tr>
-		<td class="clear">
-<?php
-if ($logo_main == "")
-{
-?>
-			<div class="logo"><?php echo htmlspecialchars($SITENAME)?></div>
-			<div class="slogan"><?php echo htmlspecialchars($SLOGAN)?></div>
-<?php
-}
-else
-{
-?>
-			<div class="logo_img"><img src="<?php echo $logo_main?>" alt="<?php echo htmlspecialchars($SITENAME)?>" title="<?php echo htmlspecialchars($SITENAME)?> - <?php echo htmlspecialchars($SLOGAN)?>" /></div>
-<?php
-}
-?>
-		</td>
-		<td class="clear nowrap" align="right" valign="middle">
-<?php if ($Advertisement->enable_ad()){
-		$headerad=$Advertisement->get_ad('header');
-		if ($headerad){
-			echo "<span>".$headerad[0]."</span>";
-		}
-}
-/* 原捐赠按钮已隐藏，使用右上角星际捐赠按钮 */
-/*
-if ($enabledonation == 'yes'){?>
-			<a href="donate.php"><img src="<?php echo get_forum_pic_folder()?>/donate.gif" alt="Make a donation" style="margin-left: 5px; margin-top: 50px;" /></a>
-<?php
-}
-*/
-?>
-		</td>
-	</tr>
-</table>
+<!-- 头部Logo区域已移除 -->
 
 <?php
 // 显示banner轮播
 display_homepage_banner();
-?>
-
-<table class="mainouter" width="<?php echo CONTENT_WIDTH ?>" cellspacing="0" cellpadding="5" align="center">
+?><table class="mainouter" width="<?php echo CONTENT_WIDTH ?>" cellspacing="0" cellpadding="0" align="center" style="margin-top: 0;">
 	<tr><td id="nav_block" class="text" align="center">
 <?php if (!$CURUSER) { ?>
 			<a href="login.php"><font class="big"><b><?php echo $lang_functions['text_login'] ?></b></font></a> / <a href="signup.php"><font class="big"><b><?php echo $lang_functions['text_signup'] ?></b></font></a>
