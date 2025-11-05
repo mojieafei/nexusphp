@@ -2708,7 +2708,9 @@ function display_homepage_banner()
 				}
 			});
 			
-			// 初始调整高度
+		// 移动端禁用高度自动调整，避免闪屏
+		if (window.innerWidth > 1200) {
+			// 初始调整高度（仅PC端）
 			setTimeout(adjustBannerHeight, 100);
 			
 			// 窗口大小改变时重新调整（优化防抖，避免闪烁）
@@ -2724,6 +2726,7 @@ function display_homepage_banner()
 					}
 				}, 500);
 			});
+		}
 			
 			// 点击指示器切换
 			indicators.forEach(function(indicator) {
@@ -2941,22 +2944,25 @@ function display_homepage_banner()
 			}
 		});
 		
-		// 初始调整高度
-		setTimeout(adjustBannerHeight, 100);
-		
-		// 窗口大小改变时重新调整（优化防抖，避免闪烁）
-		var resizeTimer;
-		var lastWidth = window.innerWidth;
-		window.addEventListener("resize", function() {
-			clearTimeout(resizeTimer);
-			resizeTimer = setTimeout(function() {
-				// 只有当宽度真正变化时才调整（避免移动端浏览器地址栏显隐导致的误触发）
-				if (Math.abs(window.innerWidth - lastWidth) > 10) {
-					lastWidth = window.innerWidth;
-					adjustBannerHeight();
-				}
-			}, 500);
-		});
+		// 移动端禁用高度自动调整，避免闪屏
+		if (window.innerWidth > 1200) {
+			// 初始调整高度（仅PC端）
+			setTimeout(adjustBannerHeight, 100);
+			
+			// 窗口大小改变时重新调整（优化防抖，避免闪烁）
+			var resizeTimer;
+			var lastWidth = window.innerWidth;
+			window.addEventListener("resize", function() {
+				clearTimeout(resizeTimer);
+				resizeTimer = setTimeout(function() {
+					// 只有当宽度真正变化时才调整（避免移动端浏览器地址栏显隐导致的误触发）
+					if (Math.abs(window.innerWidth - lastWidth) > 10) {
+						lastWidth = window.innerWidth;
+						adjustBannerHeight();
+					}
+				}, 500);
+			});
+		}
 	})();
 	</script>';
 	
@@ -3010,6 +3016,7 @@ function stdhead($title = "", $msgalert = true, $script = "", $place = "")
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <?php
 if ($metakeywords_tweak){
 ?>

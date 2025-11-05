@@ -87,10 +87,9 @@ body::before {
         transform: none !important;
     }
     
-    /* 星空背景静态化 */
+    /* 完全隐藏星空背景层，避免fixed定位导致的重绘 */
     body::before {
-        background-position: 0 0 !important;
-        opacity: 0.4;
+        display: none !important;
     }
     
     /* 隐藏装饰性伪元素 */
