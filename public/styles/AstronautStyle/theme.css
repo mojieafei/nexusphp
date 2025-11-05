@@ -67,35 +67,39 @@ body::before {
         radial-gradient(1px 1px at 10% 50%, white, transparent);
     background-size: 200% 200%;
     background-position: 0 0, 40% 60%, 130% 270%, 70% 100%, 20% 80%, 90% 30%, 50% 10%;
-    animation: stars 120s linear infinite;
+    animation: none; /* 禁用动画避免闪屏 */
     opacity: 0.6;
     pointer-events: none;
     z-index: 0;
-    filter: blur(0.5px);
+    filter: none; /* 移除blur避免性能问题 */
 }
 
-/* 移动端优化 - 禁用动画和blur */
+/* 移动端优化 - 彻底禁用所有动画和特效以避免闪屏 */
 @media (max-width: 1200px) {
-    body::before {
+    /* 禁用所有动画、过渡、变换 */
+    *,
+    *::before,
+    *::after {
         animation: none !important;
-        background-position: 0 0 !important;
+        transition: none !important;
+        backdrop-filter: none !important;
         filter: none !important;
+        transform: none !important;
+    }
+    
+    /* 星空背景静态化 */
+    body::before {
+        background-position: 0 0 !important;
         opacity: 0.4;
     }
     
-    /* 禁用所有backdrop-filter */
-    * {
-        backdrop-filter: none !important;
-    }
-    
-    /* 禁用表格动画 */
+    /* 隐藏装饰性伪元素 */
     table::before,
     td.colhead::before,
     h2::after,
     #nav::before,
     input[type="submit"]::before,
     button::before {
-        animation: none !important;
         display: none !important;
     }
     
@@ -106,11 +110,6 @@ body::before {
     input[type="submit"],
     button {
         box-shadow: none !important;
-    }
-    
-    /* 禁用悬停动画 */
-    * {
-        transition: none !important;
     }
     
     /* Banner容器固定高度，避免视频加载时跳动 */
