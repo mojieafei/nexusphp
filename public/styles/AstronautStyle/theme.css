@@ -771,21 +771,18 @@ table td.colhead[width="70%"] {
     max-width: 50% !important;
 }
 
-/* 论坛主题列内的嵌套table撑满宽度，固定布局比例 */
-table td.rowfollow[align="left"] > table {
+/* ============================================
+   论坛页面专用样式（排除种子页table.torrents和table.torrentname）
+   ============================================ */
+/* 论坛主题列嵌套table撑满宽度 */
+table:not(.torrents):not(.torrentname) td.rowfollow[align="left"] > table:not(.torrentname) {
     width: 100% !important;
     table-layout: fixed !important;
 }
 
-/* 嵌套table内两个td的比例：图标2份（20%） + 标题8份（80%） */
-table td.rowfollow[align="left"] > table td.embedded[style*="padding-right: 10px"] {
-    width: 20% !important;
-    text-align: left !important;
-}
-
-table td.rowfollow[align="left"] > table td.embedded:not([style*="padding-right: 10px"]) {
-    width: 80% !important;
-    text-align: left !important;
+/* 论坛主题列 - 标题内容右对齐 */
+table:not(.torrents):not(.torrentname) td.rowfollow[align="left"] > table:not(.torrentname) > tbody > tr > td.embedded:last-child {
+    text-align: right !important;
     word-wrap: break-word;
     word-break: break-word;
 }
