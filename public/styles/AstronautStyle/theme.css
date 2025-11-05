@@ -669,6 +669,26 @@ table.mainouter td.text {
 }
 
 /* ============================================
+   Banner Logo 悬浮样式
+   ============================================ */
+.banner-logo {
+    transition: all 0.3s ease;
+}
+
+.banner-logo:hover {
+    opacity: 1 !important;
+    transform: scale(1.05);
+}
+
+.banner-logo img {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 15px rgba(0, 212, 255, 0.3));
+}
+
+.banner-logo:hover img {
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 25px rgba(0, 212, 255, 0.6));
+}
+
+/* ============================================
    控制面板菜单横向排版 (User CP Menu & Log Menu)
    ============================================ */
 #usercpnav,
@@ -685,6 +705,15 @@ table.mainouter td.text {
     gap: 8px;
     padding: 0;
     margin: 0;
+}
+
+/* 日志页菜单居中 */
+#lognav {
+    text-align: center;
+}
+
+#logmenu {
+    justify-content: center;
 }
 
 #usercpmenu > li,

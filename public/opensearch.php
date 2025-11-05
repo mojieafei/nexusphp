@@ -1,10 +1,10 @@
 <?php
 require "../include/bittorrent.php";
 dbconn();
-function data_url($file, $mime) 
-{  
+function data_url($file, $mime)
+{
   $contents = file_get_contents($file);
-  $base64   = base64_encode($contents); 
+  $base64   = base64_encode($contents);
   return ('data:' . $mime . ';base64,' . $base64);
 }
 $url = get_protocol_prefix().$BASEURL;

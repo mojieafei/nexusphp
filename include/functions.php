@@ -2566,9 +2566,14 @@ function display_homepage_banner()
 		return;
 	}
 	
-	// 输出轮播HTML和CSS - 与导航栏等宽（1200px）
+	// 输出轮播HTML和CSS - 与导航栏等宽（1600px），高度根据内容自适应
 	echo '<div class="homepage-banner-container" style="width: ' . CONTENT_WIDTH . 'px; margin: 0 auto; overflow: hidden; position: relative; box-sizing: border-box;">';
-	echo '<div class="banner-slider" style="position: relative; width: 100%; height: 0; padding-bottom: 42%; background: #000; cursor: grab;">';
+	echo '<div class="banner-slider" style="position: relative; width: 100%; min-height: 200px; background: #000; cursor: grab;">';
+	
+	// 添加悬浮 logo
+	echo '<div class="banner-logo" style="position: absolute; top: 20px; left: 20px; z-index: 100; opacity: 0.9; transition: opacity 0.3s;">';
+	echo '<img src="img/logo.png" alt="Logo" style="height: 60px; width: auto; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));">';
+	echo '</div>';
 	
 	foreach ($bannerFiles as $index => $banner) {
 		$display = $index === 0 ? 'block' : 'none';
@@ -2576,13 +2581,13 @@ function display_homepage_banner()
 		
 		if ($banner['type'] === 'video') {
 			echo '<div class="banner-item" style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">';
-			echo '<video style="width: 100%; height: 100%; object-fit: cover;" autoplay muted loop playsinline>';
+			echo '<video class="banner-video" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto;" autoplay muted loop playsinline>';
 			echo '<source src="' . $path . '" type="video/' . $banner['ext'] . '">';
 			echo '</video>';
 			echo '</div>';
 		} else {
 			echo '<div class="banner-item" style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">';
-			echo '<img src="' . $path . '" style="width: 100%; height: 100%; object-fit: cover;" alt="Banner">';
+			echo '<img class="banner-image" src="' . $path . '" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto;" alt="Banner">';
 			echo '</div>';
 		}
 	}
@@ -2621,6 +2626,35 @@ function display_homepage_banner()
 			var currentX = 0;
 			var isDragging = false;
 			
+			// 根据当前显示的banner调整容器高度
+			function adjustBannerHeight() {
+				var activeItem = items[currentIndex];
+				if (!activeItem || !container || !bannerContainer) return;
+				
+				var video = activeItem.querySelector(".banner-video");
+				var image = activeItem.querySelector(".banner-image");
+				
+				if (video) {
+					// 视频已加载元数据
+					if (video.videoWidth && video.videoHeight) {
+						var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
+						var aspectRatio = video.videoHeight / video.videoWidth;
+						var height = containerWidth * aspectRatio;
+						container.style.height = Math.round(height) + "px";
+						console.log("Banner高度已调整为: " + Math.round(height) + "px (视频尺寸: " + video.videoWidth + "x" + video.videoHeight + ")");
+					}
+				} else if (image) {
+					// 图片已加载
+					if (image.complete && image.naturalWidth && image.naturalHeight) {
+						var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
+						var aspectRatio = image.naturalHeight / image.naturalWidth;
+						var height = containerWidth * aspectRatio;
+						container.style.height = Math.round(height) + "px";
+						console.log("Banner高度已调整为: " + Math.round(height) + "px (图片尺寸: " + image.naturalWidth + "x" + image.naturalHeight + ")");
+					}
+				}
+			}
+			
 			function showBanner(index) {
 				items.forEach(function(item, i) {
 					item.style.display = i === index ? "block" : "none";
@@ -2631,7 +2665,43 @@ function display_homepage_banner()
 					ind.style.opacity = i === index ? "1" : "0.5";
 				});
 				currentIndex = index;
+				// 切换后调整高度
+				setTimeout(adjustBannerHeight, 100);
 			}
+			
+			// 监听视频加载完成
+			items.forEach(function(item) {
+				var video = item.querySelector(".banner-video");
+				var image = item.querySelector(".banner-image");
+				
+				if (video) {
+					video.addEventListener("loadedmetadata", function() {
+						if (item.style.display !== "none") {
+							adjustBannerHeight();
+						}
+					});
+				}
+				
+				if (image) {
+					if (image.complete) {
+						adjustBannerHeight();
+					} else {
+						image.addEventListener("load", function() {
+							if (item.style.display !== "none") {
+								adjustBannerHeight();
+							}
+						});
+					}
+				}
+			});
+			
+			// 初始调整高度
+			setTimeout(adjustBannerHeight, 100);
+			
+			// 窗口大小改变时重新调整
+			window.addEventListener("resize", function() {
+				setTimeout(adjustBannerHeight, 100);
+			});
 			
 			// 点击指示器切换
 			indicators.forEach(function(indicator) {
@@ -2768,6 +2838,83 @@ function display_homepage_banner()
 		})();
 		</script>';
 	}
+	
+	// 高度调整代码（无论有几个banner都需要，确保单个banner时也能工作）
+	echo '<script type="text/javascript">
+	(function() {
+		var container = document.querySelector(".homepage-banner-container .banner-slider");
+		var bannerContainer = document.querySelector(".homepage-banner-container");
+		var items = document.querySelectorAll(".homepage-banner-container .banner-item");
+		
+		if (!container || !bannerContainer || items.length === 0) return;
+		
+		var currentIndex = 0;
+		items.forEach(function(item, i) {
+			if (item.style.display !== "none") {
+				currentIndex = i;
+			}
+		});
+		
+		// 根据当前显示的banner调整容器高度
+		function adjustBannerHeight() {
+			var activeItem = items[currentIndex];
+			if (!activeItem || !container || !bannerContainer) return;
+			
+			var video = activeItem.querySelector(".banner-video");
+			var image = activeItem.querySelector(".banner-image");
+			
+			if (video) {
+				if (video.videoWidth && video.videoHeight) {
+					var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
+					var aspectRatio = video.videoHeight / video.videoWidth;
+					var height = containerWidth * aspectRatio;
+					container.style.height = Math.round(height) + "px";
+				}
+			} else if (image) {
+				if (image.complete && image.naturalWidth && image.naturalHeight) {
+					var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
+					var aspectRatio = image.naturalHeight / image.naturalWidth;
+					var height = containerWidth * aspectRatio;
+					container.style.height = Math.round(height) + "px";
+				}
+			}
+		}
+		
+		// 监听视频/图片加载完成
+		items.forEach(function(item) {
+			var video = item.querySelector(".banner-video");
+			var image = item.querySelector(".banner-image");
+			
+			if (video) {
+				video.addEventListener("loadedmetadata", function() {
+					if (item.style.display !== "none") {
+						adjustBannerHeight();
+					}
+				});
+			}
+			
+			if (image) {
+				if (image.complete) {
+					adjustBannerHeight();
+				} else {
+					image.addEventListener("load", function() {
+						if (item.style.display !== "none") {
+							adjustBannerHeight();
+						}
+					});
+				}
+			}
+		});
+		
+		// 初始调整高度
+		setTimeout(adjustBannerHeight, 100);
+		
+		// 窗口大小改变时重新调整
+		window.addEventListener("resize", function() {
+			setTimeout(adjustBannerHeight, 100);
+		});
+	})();
+	</script>';
 	
 	echo '</div>';
 	echo '</div>';
