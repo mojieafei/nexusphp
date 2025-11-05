@@ -668,6 +668,65 @@ table.mainouter td.text {
     z-index: 999999 !important;
 }
 
+/* ============================================
+   控制面板菜单横向排版 (User CP Menu & Log Menu)
+   ============================================ */
+#usercpnav,
+#lognav {
+    margin: 10px 0;
+}
+
+#usercpmenu,
+#logmenu {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    margin: 0;
+}
+
+#usercpmenu > li,
+#logmenu > li {
+    margin: 0;
+}
+
+#usercpmenu a,
+#logmenu a {
+    display: block;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: #e5e7eb;
+    background: rgba(10, 22, 40, 0.5);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+#usercpmenu a:hover,
+#logmenu a:hover {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(168, 85, 247, 0.15));
+    border-color: rgba(0, 212, 255, 0.4);
+    box-shadow:
+        0 0 10px rgba(0, 212, 255, 0.3),
+        0 0 20px rgba(0, 212, 255, 0.2),
+        inset 0 0 8px rgba(0, 212, 255, 0.1);
+    transform: translateY(-1px);
+    text-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+}
+
+/* 选中态高亮 */
+#usercpmenu li.selected > a,
+#logmenu li.selected > a {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(168, 85, 247, 0.2));
+    border-color: rgba(0, 212, 255, 0.5);
+    box-shadow:
+        0 0 15px rgba(0, 212, 255, 0.4),
+        inset 0 0 10px rgba(0, 212, 255, 0.15);
+    text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+}
+
 table.mainouter {
     position: relative;
     z-index: auto;

@@ -3095,12 +3095,27 @@ if ($CURUSER) {
         
         meteor.style.animation = `${animationName} 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
         
+        // 添加流星头部的五角星
+        const star = document.createElement('div');
+        star.style.cssText = `
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 18px;
+            height: 18px;
+            background: ${color};
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            box-shadow: 0 0 20px ${color}, 0 0 35px ${color};
+            transform: translate(-50%, -50%);
+        `;
+        meteor.appendChild(star);
+        
         // 添加流星尾迹粒子效果
         for (let i = 0; i < 5; i++) {
             const particle = document.createElement('div');
             particle.style.cssText = `
                 position: absolute;
-                left: ${15 * i}%;
+                left: ${15 + 15 * i}%;
                 top: 50%;
                 width: ${10 - i * 1.5}px;
                 height: ${10 - i * 1.5}px;
