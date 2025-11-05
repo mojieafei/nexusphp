@@ -804,6 +804,77 @@ table.mainouter {
     filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
 }
 
+/* 流星雨按钮容器 */
+.meteor-btn-stellar {
+    position: fixed;
+    top: 5.2rem;
+    right: 1.2rem;
+    z-index: 9999;
+}
+
+/* 流星雨按钮本体 */
+.meteor-btn-stellar a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #8a2be2, #00d4ff);
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(138, 43, 226, 0.6), 0 0 40px rgba(0, 212, 255, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    animation: stellar-pulse 3s ease-in-out infinite 0.5s;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.meteor-btn-stellar a:hover {
+    transform: scale(1.15) rotate(-10deg);
+    box-shadow: 0 0 30px rgba(138, 43, 226, 0.9), 0 0 60px rgba(0, 212, 255, 0.6), inset 0 0 12px rgba(255, 255, 255, 0.4);
+    animation: none;
+}
+
+.meteor-btn-stellar a:active {
+    transform: scale(0.95);
+}
+
+/* SVG 图标 */
+.meteor-btn-stellar svg {
+    stroke: #fff;
+    fill: #fff;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+}
+
+/* 粒子淡出动画 */
+@keyframes particle-fade {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+}
+
+/* 流星雨容器 - 确保最高层级 */
+#meteor-shower-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    pointer-events: none !important;
+    z-index: 2147483647 !important;
+    overflow: hidden !important;
+}
+
+/* 流星轨迹 */
+.meteor-trail {
+    position: absolute !important;
+    pointer-events: none !important;
+}
+
 /* 星星呼吸动画 */
 @keyframes stellar-pulse {
     0%, 100% {

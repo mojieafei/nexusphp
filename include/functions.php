@@ -2931,6 +2931,209 @@ if ($enabledonation == 'yes' && $CURUSER) {
 </script>
 <?php
 }
+// 星际捐赠按钮结束
+
+// 流星雨按钮
+if ($CURUSER) {
+?>
+<div class="meteor-btn-stellar">
+    <a href="javascript:void(0);" id="meteorShowerToggle" title="触发流星雨特效 🌠">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 3L14 10M14 10L12 8M14 10L16 12M9 15L3 21M11 13L8.5 15.5M15 9L17.5 6.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="1.5" fill="#fff"/>
+            <circle cx="8" cy="16" r="1" fill="#fff" opacity="0.7"/>
+            <circle cx="16" cy="8" r="1" fill="#fff" opacity="0.7"/>
+        </svg>
+    </a>
+</div>
+<script>
+(function() {
+    const btn = document.getElementById('meteorShowerToggle');
+    if (btn) {
+        console.log('流星雨按钮已找到');
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('流星雨按钮被点击');
+            triggerMeteorShower();
+        });
+    } else {
+        console.error('未找到流星雨按钮元素');
+    }
+    
+    function triggerMeteorShower() {
+        console.log('开始创建流星雨');
+        const container = document.createElement('div');
+        container.id = 'meteor-shower-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 2147483647;
+            overflow: hidden;
+        `;
+        document.body.appendChild(container);
+        console.log('流星雨容器已创建', container);
+        
+        // 随机生成1-3颗流星
+        const meteorCount = Math.floor(Math.random() * 3) + 1;
+        console.log('将创建 ' + meteorCount + ' 颗流星');
+        
+        for (let i = 0; i < meteorCount; i++) {
+            setTimeout(() => {
+                createMeteor(container);
+            }, i * 300); // 每颗流星间隔300ms
+        }
+        
+        // 3秒后移除容器
+        setTimeout(() => {
+            container.remove();
+            console.log('流星雨容器已移除');
+        }, 3000);
+    }
+    
+    function createMeteor(container) {
+        console.log('创建一颗流星');
+        const meteor = document.createElement('div');
+        meteor.className = 'meteor-trail';
+        
+        // 随机选择边缘和方向
+        const edge = Math.floor(Math.random() * 4); // 0=顶部, 1=右侧, 2=底部, 3=左侧
+        const colors = [
+            'rgba(0, 212, 255, 0.9)',
+            'rgba(138, 43, 226, 0.9)',
+            'rgba(255, 255, 255, 0.9)',
+            'rgba(147, 112, 219, 0.9)'
+        ];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
+        let startX, startY, endX, endY;
+        
+        switch(edge) {
+            case 0: // 从顶部右侧划向左下
+                startX = Math.random() * 30 + 70; // 70-100%
+                startY = -5;
+                endX = Math.random() * 30; // 0-30%
+                endY = Math.random() * 30 + 70; // 70-100%
+                break;
+            case 1: // 从右侧划向左侧
+                startX = 105;
+                startY = Math.random() * 60 + 20; // 20-80%
+                endX = -5;
+                endY = Math.random() * 60 + 20; // 20-80%
+                break;
+            case 2: // 从底部划向顶部
+                startX = Math.random() * 100;
+                startY = 105;
+                endX = Math.random() * 100;
+                endY = -5;
+                break;
+            case 3: // 从左上划向右下
+                startX = -5;
+                startY = Math.random() * 30; // 0-30%
+                endX = Math.random() * 30 + 70; // 70-100%
+                endY = Math.random() * 30 + 70; // 70-100%
+                break;
+        }
+        
+        // 流星长度（更长更明显）
+        const meteorLength = Math.random() * 150 + 200; // 200-350px
+        
+        // 计算实际移动距离
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        
+        // 根据飞行方向自动计算旋转角度（让流星头部指向飞行方向）
+        // 渐变是从左到右（左亮右透明），所以旋转+180°让亮的一端朝前
+        const rotate = Math.atan2(deltaY, deltaX) * 180 / Math.PI + 180;
+        
+        meteor.style.cssText = `
+            position: absolute;
+            left: ${startX}vw;
+            top: ${startY}vh;
+            width: ${meteorLength}px;
+            height: 4px;
+            background: linear-gradient(to right, ${color} 0%, ${color} 20%, transparent 100%);
+            box-shadow: 0 0 15px ${color}, 0 0 30px ${color}, 0 0 45px ${color};
+            transform: rotate(${rotate}deg);
+            transform-origin: left center;
+            border-radius: 50%;
+            opacity: 0;
+        `;
+        
+        // 动态创建关键帧动画
+        const animationName = 'meteor-fly-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const keyframes = `
+            @keyframes ${animationName} {
+                0% {
+                    transform: translate(0, 0) rotate(${rotate}deg);
+                    opacity: 0;
+                }
+                5% {
+                    opacity: 1;
+                }
+                95% {
+                    opacity: 1;
+                }
+                100% {
+                    transform: translate(${deltaX}vw, ${deltaY}vh) rotate(${rotate}deg);
+                    opacity: 0;
+                }
+            }
+        `;
+        
+        // 插入样式
+        const style = document.createElement('style');
+        style.textContent = keyframes;
+        document.head.appendChild(style);
+        
+        // 强制浏览器重排，确保样式已应用
+        void meteor.offsetWidth;
+        
+        meteor.style.animation = `${animationName} 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+        
+        // 添加流星尾迹粒子效果
+        for (let i = 0; i < 5; i++) {
+            const particle = document.createElement('div');
+            particle.style.cssText = `
+                position: absolute;
+                left: ${15 * i}%;
+                top: 50%;
+                width: ${10 - i * 1.5}px;
+                height: ${10 - i * 1.5}px;
+                background: ${color};
+                border-radius: 50%;
+                box-shadow: 0 0 ${12 - i * 2}px ${color};
+                animation: particle-fade 2s ease-out forwards;
+                transform: translate(-50%, -50%);
+            `;
+            meteor.appendChild(particle);
+        }
+        
+        container.appendChild(meteor);
+        console.log('流星已添加到容器', {edge, color, startX, startY, endX, endY, rotate});
+        
+        // 清理样式（2秒动画+100ms缓冲）
+        setTimeout(() => {
+            style.remove();
+            meteor.remove();
+        }, 2100);
+    }
+    
+    // 确保在DOM加载完成后执行
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成');
+        });
+    }
+})();
+</script>
+<?php
+}
+// 流星雨按钮结束
 ?>
 
 <!-- 头部Logo区域已移除 -->
