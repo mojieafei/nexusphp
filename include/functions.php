@@ -2631,6 +2631,11 @@ function display_homepage_banner()
 				var activeItem = items[currentIndex];
 				if (!activeItem || !container || !bannerContainer) return;
 				
+				// 移动端跳过高度调整，使用CSS固定高度
+				if (window.innerWidth <= 768) {
+					return;
+				}
+				
 				var video = activeItem.querySelector(".banner-video");
 				var image = activeItem.querySelector(".banner-image");
 				
@@ -2698,9 +2703,11 @@ function display_homepage_banner()
 			// 初始调整高度
 			setTimeout(adjustBannerHeight, 100);
 			
-			// 窗口大小改变时重新调整
+			// 窗口大小改变时重新调整（防抖）
+			var resizeTimer2;
 			window.addEventListener("resize", function() {
-				setTimeout(adjustBannerHeight, 100);
+				clearTimeout(resizeTimer2);
+				resizeTimer2 = setTimeout(adjustBannerHeight, 300);
 			});
 			
 			// 点击指示器切换
@@ -2860,6 +2867,11 @@ function display_homepage_banner()
 			var activeItem = items[currentIndex];
 			if (!activeItem || !container || !bannerContainer) return;
 			
+			// 移动端跳过高度调整，使用CSS固定高度
+			if (window.innerWidth <= 768) {
+				return;
+			}
+			
 			var video = activeItem.querySelector(".banner-video");
 			var image = activeItem.querySelector(".banner-image");
 			
@@ -2909,9 +2921,11 @@ function display_homepage_banner()
 		// 初始调整高度
 		setTimeout(adjustBannerHeight, 100);
 		
-		// 窗口大小改变时重新调整
+		// 窗口大小改变时重新调整（移动端防抖）
+		var resizeTimer;
 		window.addEventListener("resize", function() {
-			setTimeout(adjustBannerHeight, 100);
+			clearTimeout(resizeTimer);
+			resizeTimer = setTimeout(adjustBannerHeight, 300);
 		});
 	})();
 	</script>';

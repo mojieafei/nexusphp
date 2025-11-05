@@ -55,7 +55,7 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image:
+    background-image: 
         radial-gradient(3px 3px at 20% 30%, #00d4ff, transparent),
         radial-gradient(2px 2px at 60% 70%, white, transparent),
         radial-gradient(2px 2px at 50% 50%, #a855f7, transparent),
@@ -72,6 +72,59 @@ body::before {
     pointer-events: none;
     z-index: 0;
     filter: blur(0.5px);
+}
+
+/* 移动端优化 - 禁用动画和blur */
+@media (max-width: 768px) {
+    body::before {
+        animation: none !important;
+        background-position: 0 0 !important;
+        filter: none !important;
+        opacity: 0.4;
+    }
+    
+    /* 禁用所有backdrop-filter */
+    * {
+        backdrop-filter: none !important;
+    }
+    
+    /* 禁用表格动画 */
+    table::before,
+    td.colhead::before,
+    h2::after,
+    #nav::before,
+    input[type="submit"]::before,
+    button::before {
+        animation: none !important;
+        display: none !important;
+    }
+    
+    /* 简化阴影效果 */
+    table,
+    #nav,
+    h2,
+    input[type="submit"],
+    button {
+        box-shadow: none !important;
+    }
+    
+    /* 禁用悬停动画 */
+    * {
+        transition: none !important;
+    }
+    
+    /* Banner容器固定高度，避免视频加载时跳动 */
+    .homepage-banner-container .banner-slider {
+        height: 300px !important;
+        min-height: 300px !important;
+    }
+    
+    /* Banner视频使用cover模式 */
+    .banner-video,
+    .banner-image {
+        object-fit: cover !important;
+        height: 100% !important;
+    }
 }
 
 /* 星空动画 */
