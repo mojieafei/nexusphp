@@ -1055,7 +1055,7 @@ function textBBCodeEdit() {
 </script>
 <table width="100%" cellspacing="0" cellpadding="5" border="0">
     <tbody id="<?php echo $editTbodyId?>">
-<tr><td align="left" colspan="2">
+<tr><td align="left" colspan="2" style="padding: 5px;">
 <table cellspacing="1" cellpadding="2" border="0">
 <tr>
 <td class="embedded"><input style="font-weight: bold;font-size:11px; margin-right:3px" type="button" name="b" value="B" onclick="javascript: simpletag('b')" /></td>
@@ -1154,17 +1154,17 @@ print("<td class=\"embedded\"><input type=\"button\" style=\"font-size:11px;marg
 if ($enableattach_attachment == 'yes'){
 ?>
 <tr>
-<td colspan="2" valign="middle">
-<iframe src="<?php echo getSchemeAndHttpHost()?>/attachment.php" width="100%" height="24" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"></iframe>
+<td colspan="2" valign="middle" style="padding: 10px 5px; line-height: 1.5;">
+<iframe src="<?php echo getSchemeAndHttpHost()?>/attachment.php" width="100%" height="60" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" style="min-height: 60px; border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 4px; background: rgba(10, 22, 40, 0.5); display: block; visibility: visible;"></iframe>
 </td>
 </tr>
 <?php
 }
 print("<tr>");
-print("<td align=\"left\"><textarea class=\"bbcode\" cols=\"100\" style=\"width: 100%;\" name=\"".$text."\" id=\"".$text."\" rows=\"20\" onkeydown=\"ctrlenter(event,'compose','qr')\">".$content."</textarea>");
+print("<td align=\"left\" style=\"padding: 5px;\"><textarea class=\"bbcode\" cols=\"100\" style=\"width: 100%;\" name=\"".$text."\" id=\"".$text."\" rows=\"20\" onkeydown=\"ctrlenter(event,'compose','qr')\">".$content."</textarea>");
 ?>
 </td>
-<td align="center" width="">
+<td align="center" width="" style="padding: 5px;">
 <table cellspacing="1" cellpadding="3">
 <tr>
 <?php
@@ -2345,6 +2345,87 @@ function menu ($selected = "home") {
         else
             print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"" . $extforumurl."\" target=\"_blank\">".$lang_functions['text_forums']."</a></li>");
         print ("<li" . ($selected == "torrents" ? " class=\"selected\"" : "") . "><a href=\"torrents.php\" rel='sub-menu'>".($normalSectionName[$lang] ?? $lang_functions['text_torrents'])."</a></li>");
+        // 官方资源下拉菜单 - 临时隐藏，下个版本优化
+        /* 
+        print ("<li class=\"dropdown-menu" . ($selected == "official" ? " selected" : "") . "\" id=\"official-dropdown\">");
+        print ("<a href=\"javascript:void(0);\" class=\"dropdown-toggle\" onclick=\"return false;\">官方资源 ▼</a>");
+        print ("<ul class=\"dropdown-content\">");
+        // 官方-媒体：tag_id=3 且 category IN (401,402,403,405,406,407) - 视频类，排除404书籍
+        print ("<li><a href=\"torrents.php?tag_id=3&cat401=1&cat402=1&cat403=1&cat405=1&cat406=1&cat407=1&official_type=media\">官方-媒体</a></li>");
+        // 官方-天书：tag_id=3 且 category=404（书籍）
+        print ("<li><a href=\"torrents.php?tag_id=3&cat404=1&official_type=book\">官方-天书</a></li>");
+        print ("</ul>");
+        print ("</li>");
+        // 下拉菜单增强JS - 动态定位确保不被遮挡
+        print ("<script>
+        (function() {
+            var dropdown = document.getElementById('official-dropdown');
+            if (!dropdown) return;
+            var timer = null;
+            var dropdownContent = dropdown.querySelector('.dropdown-content');
+            
+            function updateDropdownPosition() {
+                var rect = dropdown.getBoundingClientRect();
+                dropdownContent.style.position = 'fixed';
+                dropdownContent.style.top = rect.bottom + 'px';
+                dropdownContent.style.left = rect.left + 'px';
+                dropdownContent.style.zIndex = '2147483647';
+            }
+            
+            function showDropdown() {
+                updateDropdownPosition();
+                dropdownContent.style.display = 'block';
+            }
+            
+            function hideDropdown() {
+                dropdownContent.style.display = 'none';
+            }
+            
+            dropdown.addEventListener('mouseenter', function() {
+                if (timer) clearTimeout(timer);
+                showDropdown();
+            });
+            
+            dropdown.addEventListener('mouseleave', function() {
+                timer = setTimeout(function() {
+                    hideDropdown();
+                }, 150);
+            });
+            
+            // 下拉菜单本身悬停时也保持显示
+            dropdownContent.addEventListener('mouseenter', function() {
+                if (timer) clearTimeout(timer);
+            });
+            
+            dropdownContent.addEventListener('mouseleave', function() {
+                timer = setTimeout(function() {
+                    hideDropdown();
+                }, 150);
+            });
+            
+            // 窗口滚动/调整大小时更新位置
+            window.addEventListener('scroll', function() {
+                if (dropdownContent.style.display === 'block') {
+                    updateDropdownPosition();
+                }
+            });
+            
+            window.addEventListener('resize', function() {
+                if (dropdownContent.style.display === 'block') {
+                    updateDropdownPosition();
+                }
+            });
+            
+            // 点击下拉菜单链接时关闭
+            var links = dropdown.querySelectorAll('.dropdown-content a');
+            links.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    hideDropdown();
+                });
+            });
+        })();
+        </script>");
+        */
         if ($enablespecial == 'yes' && user_can('view_special_torrent'))
             print ("<li" . ($selected == "special" ? " class=\"selected\"" : "") . "><a href=\"special.php\">".($specialSectionName[$lang] ?? $lang_functions['text_special'])."</a></li>");
         if ($enableoffer == 'yes')

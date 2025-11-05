@@ -919,9 +919,15 @@ if (!empty($whereothera)) {
 
 $tagFilter = "";
 $tagId = intval($_REQUEST['tag_id'] ?? 0);
+$officialType = isset($_GET['official_type']) ? $_GET['official_type'] : '';
+// 默认排除官种（tag_id=3），除非明确选择了官方资源
 if ($tagId > 0) {
     $tagFilter = " inner join torrent_tags on torrents.id = torrent_tags.torrent_id and torrent_tags.tag_id = $tagId ";
     $addparam .= "tag_id={$tagId}&";
+} else if (empty($officialType)) {
+    // 默认排除官种（tag_id=3）
+    $tagFilter = " LEFT JOIN torrent_tags as exclude_official ON torrents.id = exclude_official.torrent_id AND exclude_official.tag_id = 3 ";
+    $wherea[] = "exclude_official.torrent_id IS NULL";
 }
 $torrentExtraFilter = "";
 if ($search_area == 1) {
