@@ -756,6 +756,40 @@ table.mainouter td.text {
     text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
 }
 
+/* ============================================
+   论坛和帖子列表页标题列固定宽度
+   ============================================ */
+/* 论坛主题列固定宽度 - width="99%" 的列改为60% */
+table td.colhead[width="99%"] {
+    width: 60% !important;
+    max-width: 60% !important;
+}
+
+/* 帖子主题列固定宽度 - width="70%" 的列改为50% */
+table td.colhead[width="70%"] {
+    width: 50% !important;
+    max-width: 50% !important;
+}
+
+/* 论坛主题列内的嵌套table撑满宽度，固定布局比例 */
+table td.rowfollow[align="left"] > table {
+    width: 100% !important;
+    table-layout: fixed !important;
+}
+
+/* 嵌套table内两个td的比例：图标2份（20%） + 标题8份（80%） */
+table td.rowfollow[align="left"] > table td.embedded[style*="padding-right: 10px"] {
+    width: 20% !important;
+    text-align: left !important;
+}
+
+table td.rowfollow[align="left"] > table td.embedded:not([style*="padding-right: 10px"]) {
+    width: 80% !important;
+    text-align: left !important;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
 table.mainouter {
     position: relative;
     z-index: auto;
