@@ -285,7 +285,7 @@ if ($user["downloaded"] > 0 && $true_download > 0)
 
 $xfer = "<tr><td class=\"embedded\"><strong>" . $lang_userdetails['row_uploaded'] . "</strong>:  ". mksize($user["uploaded"]) . "</td><td class=\"embedded\">&nbsp;&nbsp;<strong>" . $lang_userdetails['row_downloaded'] . "</strong>:  " . mksize($user["downloaded"]) . "</td></tr>";
 $true_xfer = "<tr><td class=\"embedded\"><strong>" . $lang_userdetails['row_real_uploaded'] . "</strong>:  ". mksize($true_upload) . "</td><td class=\"embedded\">&nbsp;&nbsp;<strong>" . $lang_userdetails['row_real_downloaded'] . "</strong>:  " . mksize($true_download) . "</td><td class=\"embedded text-muted\">&nbsp;&nbsp;" . $lang_userdetails['row_real_ps'] . "</td></tr>";
-tr_small($lang_userdetails['row_transfer'], "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\">" . ($sr ?? '') . $xfer .  $true_xfer . "</table>", 1);
+tr_small($lang_userdetails['row_transfer'], "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"width: auto !important; table-layout: auto !important;\">" . ($sr ?? '') . $xfer .  $true_xfer . "</table>", 1);
 
 
 if ($user["leechtime"] > 0)
@@ -296,7 +296,7 @@ if ($user["leechtime"] > 0)
 
 $slt = "<tr><td class=\"embedded\"><strong>" . $lang_userdetails['text_seeding_time'] . "</strong>:  ". mkprettytime($user["seedtime"]) . "</td><td class=\"embedded\">&nbsp;&nbsp;<strong>" . $lang_userdetails['text_leeching_time'] . "</strong>:  " . mkprettytime($user["leechtime"]) . "</td><td class=\"embedded text-muted\">&nbsp;&nbsp;(" . nexus_trans('label.updated_at') . ": " . $user['seed_time_updated_at'] . ")</td></tr>";
 
-	tr_small($lang_userdetails['row_sltime'], "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\">" . ($slr ?? '') . $slt . "</table>", 1);
+	tr_small($lang_userdetails['row_sltime'], "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"width: auto !important; table-layout: auto !important;\">" . ($slr ?? '') . $slt . "</table>", 1);
 
 if ($user["download"] && $user["upload"])
 tr_small($lang_userdetails['row_internet_speed'], $download."&nbsp;&nbsp;&nbsp;&nbsp;".$upload."&nbsp;&nbsp;&nbsp;&nbsp;".$isp, 1);

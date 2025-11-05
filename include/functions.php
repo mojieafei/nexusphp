@@ -2644,18 +2644,26 @@ function display_homepage_banner()
 					if (video.videoWidth && video.videoHeight) {
 						var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
 						var aspectRatio = video.videoHeight / video.videoWidth;
-						var height = containerWidth * aspectRatio;
-						container.style.height = Math.round(height) + "px";
-						console.log("Banner高度已调整为: " + Math.round(height) + "px (视频尺寸: " + video.videoWidth + "x" + video.videoHeight + ")");
+						var height = Math.round(containerWidth * aspectRatio);
+						var currentHeight = parseInt(container.style.height) || 0;
+						// 只有高度变化超过1px时才更新（避免不必要的DOM操作）
+						if (Math.abs(height - currentHeight) > 1) {
+							container.style.height = height + "px";
+							console.log("Banner高度已调整为: " + height + "px (视频尺寸: " + video.videoWidth + "x" + video.videoHeight + ")");
+						}
 					}
 				} else if (image) {
 					// 图片已加载
 					if (image.complete && image.naturalWidth && image.naturalHeight) {
 						var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
 						var aspectRatio = image.naturalHeight / image.naturalWidth;
-						var height = containerWidth * aspectRatio;
-						container.style.height = Math.round(height) + "px";
-						console.log("Banner高度已调整为: " + Math.round(height) + "px (图片尺寸: " + image.naturalWidth + "x" + image.naturalHeight + ")");
+						var height = Math.round(containerWidth * aspectRatio);
+						var currentHeight = parseInt(container.style.height) || 0;
+						// 只有高度变化超过1px时才更新（避免不必要的DOM操作）
+						if (Math.abs(height - currentHeight) > 1) {
+							container.style.height = height + "px";
+							console.log("Banner高度已调整为: " + height + "px (图片尺寸: " + image.naturalWidth + "x" + image.naturalHeight + ")");
+						}
 					}
 				}
 			}
@@ -2703,11 +2711,18 @@ function display_homepage_banner()
 			// 初始调整高度
 			setTimeout(adjustBannerHeight, 100);
 			
-			// 窗口大小改变时重新调整（防抖）
+			// 窗口大小改变时重新调整（优化防抖，避免闪烁）
 			var resizeTimer2;
+			var lastWidth2 = window.innerWidth;
 			window.addEventListener("resize", function() {
 				clearTimeout(resizeTimer2);
-				resizeTimer2 = setTimeout(adjustBannerHeight, 300);
+				resizeTimer2 = setTimeout(function() {
+					// 只有当宽度真正变化时才调整（避免移动端浏览器地址栏显隐导致的误触发）
+					if (Math.abs(window.innerWidth - lastWidth2) > 10) {
+						lastWidth2 = window.innerWidth;
+						adjustBannerHeight();
+					}
+				}, 500);
 			});
 			
 			// 点击指示器切换
@@ -2879,15 +2894,23 @@ function display_homepage_banner()
 				if (video.videoWidth && video.videoHeight) {
 					var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
 					var aspectRatio = video.videoHeight / video.videoWidth;
-					var height = containerWidth * aspectRatio;
-					container.style.height = Math.round(height) + "px";
+					var height = Math.round(containerWidth * aspectRatio);
+					var currentHeight = parseInt(container.style.height) || 0;
+					// 只有高度变化超过1px时才更新（避免不必要的DOM操作）
+					if (Math.abs(height - currentHeight) > 1) {
+						container.style.height = height + "px";
+					}
 				}
 			} else if (image) {
 				if (image.complete && image.naturalWidth && image.naturalHeight) {
 					var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
 					var aspectRatio = image.naturalHeight / image.naturalWidth;
-					var height = containerWidth * aspectRatio;
-					container.style.height = Math.round(height) + "px";
+					var height = Math.round(containerWidth * aspectRatio);
+					var currentHeight = parseInt(container.style.height) || 0;
+					// 只有高度变化超过1px时才更新（避免不必要的DOM操作）
+					if (Math.abs(height - currentHeight) > 1) {
+						container.style.height = height + "px";
+					}
 				}
 			}
 		}
@@ -2921,11 +2944,18 @@ function display_homepage_banner()
 		// 初始调整高度
 		setTimeout(adjustBannerHeight, 100);
 		
-		// 窗口大小改变时重新调整（移动端防抖）
+		// 窗口大小改变时重新调整（优化防抖，避免闪烁）
 		var resizeTimer;
+		var lastWidth = window.innerWidth;
 		window.addEventListener("resize", function() {
 			clearTimeout(resizeTimer);
-			resizeTimer = setTimeout(adjustBannerHeight, 300);
+			resizeTimer = setTimeout(function() {
+				// 只有当宽度真正变化时才调整（避免移动端浏览器地址栏显隐导致的误触发）
+				if (Math.abs(window.innerWidth - lastWidth) > 10) {
+					lastWidth = window.innerWidth;
+					adjustBannerHeight();
+				}
+			}, 500);
 		});
 	})();
 	</script>';
