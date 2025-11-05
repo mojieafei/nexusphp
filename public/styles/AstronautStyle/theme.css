@@ -75,7 +75,7 @@ body::before {
 }
 
 /* 移动端优化 - 禁用动画和blur */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
     body::before {
         animation: none !important;
         background-position: 0 0 !important;
