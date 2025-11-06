@@ -1,54 +1,85 @@
-img.f_reply
+/* 宇航员主题 - 论坛按钮样式 */
+img.f_reply,
+img.f_new,
+img.f_delete,
+img.f_edit,
+img.f_quote,
+img.f_report,
+img.f_tip
 {
-width:87px;
 height:25px;
-background:url(forum.gif) 0 0;
+border-radius:6px;
+transition:all 0.3s ease;
+box-shadow:0 2px 4px rgba(0,0,0,0.2);
 }
-img.f_new
+
+/* 打赏 - 金色强调 */
+img.f_tip
 {
-width:87px;
-height:25px;
-background:url(forum.gif) -87px 0;
+width:69px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="69" height="25"%3E%3Cdefs%3E%3ClinearGradient id="g1" x1="0" y1="0" x2="1" y2="0"%3E%3Cstop offset="0" stop-color="%23FFD700"/%3E%3Cstop offset="1" stop-color="%23FFA500"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="69" height="25" fill="url(%23g1)" rx="6"/%3E%3Ctext x="8" y="17" font-family="Arial" font-size="13" fill="%23000"%3E💰%3C/text%3E%3Ctext x="28" y="17" font-family="Arial" font-size="12" fill="%23000" font-weight="bold"%3E打赏%3C/text%3E%3C/svg%3E') no-repeat;
 }
+
+/* 引用 - 蓝色主色调 */
+img.f_quote
+{
+width:69px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="69" height="25"%3E%3Cdefs%3E%3ClinearGradient id="g2" x1="0" y1="0" x2="1" y2="0"%3E%3Cstop offset="0" stop-color="%2300d4ff"/%3E%3Cstop offset="1" stop-color="%235091d4"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="69" height="25" fill="url(%23g2)" rx="6"/%3E%3Ctext x="8" y="17" font-family="Arial" font-size="13"%3E💬%3C/text%3E%3Ctext x="28" y="17" font-family="Arial" font-size="12" fill="%23ffffff" font-weight="bold"%3E引用%3C/text%3E%3C/svg%3E') no-repeat;
+}
+
+/* 删除 - 红色警告 */
 img.f_delete
 {
 width:69px;
-height:25px;
-background:url(forum.gif) 0 -25px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="69" height="25"%3E%3Cdefs%3E%3ClinearGradient id="g3" x1="0" y1="0" x2="1" y2="0"%3E%3Cstop offset="0" stop-color="%23ff4757"/%3E%3Cstop offset="1" stop-color="%23d63031"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="69" height="25" fill="url(%23g3)" rx="6"/%3E%3Ctext x="8" y="17" font-family="Arial" font-size="13"%3E🗑️%3C/text%3E%3Ctext x="28" y="17" font-family="Arial" font-size="12" fill="%23ffffff" font-weight="bold"%3E删除%3C/text%3E%3C/svg%3E') no-repeat;
 }
+
+/* 编辑 - 紫色 */
 img.f_edit
 {
-width:62px;
-height:25px;
-background:url(forum.gif) -69px -25px;
+width:69px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="69" height="25"%3E%3Cdefs%3E%3ClinearGradient id="g4" x1="0" y1="0" x2="1" y2="0"%3E%3Cstop offset="0" stop-color="%23a855f7"/%3E%3Cstop offset="1" stop-color="%238b5cf6"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="69" height="25" fill="url(%23g4)" rx="6"/%3E%3Ctext x="8" y="17" font-family="Arial" font-size="13"%3E✏️%3C/text%3E%3Ctext x="28" y="17" font-family="Arial" font-size="12" fill="%23ffffff" font-weight="bold"%3E编辑%3C/text%3E%3C/svg%3E') no-repeat;
 }
+
+/* 举报 - 橙色警告 */
+img.f_report
+{
+width:69px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="69" height="25"%3E%3Cdefs%3E%3ClinearGradient id="g5" x1="0" y1="0" x2="1" y2="0"%3E%3Cstop offset="0" stop-color="%23ff9800"/%3E%3Cstop offset="1" stop-color="%23f57c00"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="69" height="25" fill="url(%23g5)" rx="6"/%3E%3Ctext x="8" y="17" font-family="Arial" font-size="13"%3E⚠️%3C/text%3E%3Ctext x="28" y="17" font-family="Arial" font-size="12" fill="%23ffffff" font-weight="bold"%3E举报%3C/text%3E%3C/svg%3E') no-repeat;
+}
+
+/* 回复 - 绿色积极 */
+img.f_reply
+{
+width:69px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="69" height="25"%3E%3Cdefs%3E%3ClinearGradient id="g6" x1="0" y1="0" x2="1" y2="0"%3E%3Cstop offset="0" stop-color="%2310b981"/%3E%3Cstop offset="1" stop-color="%23059669"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="69" height="25" fill="url(%23g6)" rx="6"/%3E%3Ctext x="8" y="17" font-family="Arial" font-size="13"%3E💬%3C/text%3E%3Ctext x="28" y="17" font-family="Arial" font-size="12" fill="%23ffffff" font-weight="bold"%3E回复%3C/text%3E%3C/svg%3E') no-repeat;
+}
+
+/* 新建 - 蓝紫渐变 */
+img.f_new
+{
+width:69px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="69" height="25"%3E%3Cdefs%3E%3ClinearGradient id="g7" x1="0" y1="0" x2="1" y2="0"%3E%3Cstop offset="0" stop-color="%2300d4ff"/%3E%3Cstop offset="1" stop-color="%23a855f7"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="69" height="25" fill="url(%23g7)" rx="6"/%3E%3Ctext x="8" y="17" font-family="Arial" font-size="13"%3E✨%3C/text%3E%3Ctext x="28" y="17" font-family="Arial" font-size="12" fill="%23ffffff" font-weight="bold"%3E新建%3C/text%3E%3C/svg%3E') no-repeat;
+}
+
+/* 状态图标 - 小尺寸 */
 img.f_pm
 {
 width:30px;
 height:25px;
-background:url(forum.gif) -131px -25px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="30" height="25"%3E%3Crect width="30" height="25" fill="%2300d4ff" rx="6"/%3E%3Ctext x="7" y="17" font-family="Arial" font-size="14"%3E✉️%3C/text%3E%3C/svg%3E') no-repeat;
 }
-img.f_offline
-{
-width:35px;
-height:25px;
-background:url(forum.gif) -161px -25px;
-}
-img.f_quote
-{
-width:69px;
-height:25px;
-background:url(forum.gif) 0 -50px;
-}
-img.f_report
-{
-width:69px;
-height:25px;
-background:url(forum.gif) -69px -50px;
-}
+
 img.f_online
 {
 width:30px;
 height:25px;
-background:url(forum.gif) -138px -50px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="30" height="25"%3E%3Crect width="30" height="25" fill="%2310b981" rx="6"/%3E%3Ctext x="7" y="17" font-family="Arial" font-size="14"%3E✓%3C/text%3E%3C/svg%3E') no-repeat;
+}
+
+img.f_offline
+{
+width:35px;
+height:25px;
+background:url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="35" height="25"%3E%3Crect width="35" height="25" fill="%23666666" rx="6"/%3E%3Ctext x="9" y="17" font-family="Arial" font-size="14"%3E⊗%3C/text%3E%3C/svg%3E') no-repeat;
 }

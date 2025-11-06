@@ -821,6 +821,11 @@ if ($action == "viewtopic")
 		$dt = sqlesc(date("Y-m-d H:i:s",(TIMENOW - $secs))); // calculate date.
 		print("<tr><td class=\"rowfollow\" align=\"center\" valign=\"middle\">".("'".$arr2['last_access']."'">$dt?"<img class=\"f_online\" src=\"pic/trans.gif\" alt=\"Online\" title=\"".$lang_forums['title_online']."\" />":"<img class=\"f_offline\" src=\"pic/trans.gif\" alt=\"Offline\" title=\"".$lang_forums['title_offline']."\" />" )."<a href=\"sendmessage.php?receiver=".htmlspecialchars(trim($arr2["id"]))."\"><img class=\"f_pm\" src=\"pic/trans.gif\" alt=\"PM\" title=\"".$lang_forums['title_send_message_to'].htmlspecialchars($arr2["username"])."\" /></a><a href=\"report.php?forumpost=$postid\"><img class=\"f_report\" src=\"pic/trans.gif\" alt=\"Report\" title=\"".$lang_forums['title_report_this_post']."\" /></a></td>");
 		print("<td class=\"toolbox\" align=\"right\">");
+		
+		// 打赏按钮 - 所有用户可见，但不能打赏自己
+		if ($CURUSER["id"] != $arr2["id"]) {
+			print("<a href=\"javascript:void(0);\" onclick=\"openTipModal(".(int)$arr2["id"].", ".(int)$postid.", '".htmlspecialchars($arr2["username"], ENT_QUOTES)."')\" title=\"打赏\"><img class=\"f_tip\" src=\"pic/trans.gif\" alt=\"Tip\" /></a>");
+		}
 
 		do_action('post_toolbox', $arr, $allPosts, $CURUSER['id']);
 
@@ -929,6 +934,107 @@ if ($action == "viewtopic")
 	else print($lang_forums['text_unpermitted_posting_here']);
 
 	print(key_shortcut($page,$pages-1));
+	
+	// 打赏弹窗HTML和JavaScript
+	?>
+	<div id="tipModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; justify-content:center; align-items:center;">
+		<div style="background:#1a2642; border-radius:12px; padding:30px; width:90%; max-width:500px; box-shadow:0 0 30px rgba(0,212,255,0.3); border:1px solid rgba(0,212,255,0.5);">
+			<h2 style="color:#00d4ff; margin-top:0; text-align:center;">💫 打赏</h2>
+			<p style="color:#b8d4ff; text-align:center; margin-bottom:20px;">打赏给 <span id="tipUsername" style="color:#00d4ff; font-weight:bold;"></span></p>
+			
+			<div style="margin-bottom:20px;">
+				<label style="color:#b8d4ff; display:block; margin-bottom:8px;">打赏魔力值 (最少100):</label>
+				<input type="number" id="tipAmount" min="100" value="100" style="width:100%; padding:12px; border-radius:6px; border:1px solid rgba(0,212,255,0.3); background:#0f1b33; color:#fff; font-size:16px;" />
+			</div>
+			
+			<div style="margin-bottom:20px;">
+				<label style="color:#b8d4ff; display:block; margin-bottom:8px;">留言（可选）:</label>
+				<input type="text" id="tipMessage" maxlength="100" placeholder="说点什么..." style="width:100%; padding:12px; border-radius:6px; border:1px solid rgba(0,212,255,0.3); background:#0f1b33; color:#fff; font-size:14px;" />
+			</div>
+			
+			<div style="display:flex; gap:10px; justify-content:center;">
+				<button onclick="submitTip()" style="padding:12px 30px; background:linear-gradient(135deg, #00d4ff, #a855f7); border:none; border-radius:6px; color:#fff; font-weight:bold; cursor:pointer; font-size:16px;">确认打赏</button>
+				<button onclick="closeTipModal()" style="padding:12px 30px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; cursor:pointer; font-size:16px;">取消</button>
+			</div>
+		</div>
+	</div>
+	
+	<script>
+	var currentTipUserId = 0;
+	var currentTipPostId = 0;
+	
+	function openTipModal(userId, postId, username) {
+		currentTipUserId = userId;
+		currentTipPostId = postId;
+		document.getElementById('tipUsername').textContent = username;
+		document.getElementById('tipAmount').value = 100;
+		document.getElementById('tipMessage').value = '';
+		document.getElementById('tipModal').style.display = 'flex';
+	}
+	
+	function closeTipModal() {
+		document.getElementById('tipModal').style.display = 'none';
+	}
+	
+	function submitTip() {
+		var amount = parseInt(document.getElementById('tipAmount').value);
+		var message = document.getElementById('tipMessage').value;
+		
+		if (amount < 100) {
+			alert('打赏金额最少为100魔力值！');
+			return;
+		}
+		
+		if (isNaN(amount) || amount <= 0) {
+			alert('请输入有效的金额！');
+			return;
+		}
+		
+		// AJAX提交
+		var xhr = new XMLHttpRequest();
+		xhr.open('POST', 'ajax.php?action=forumtip', true);
+		xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+		
+		xhr.onload = function() {
+			if (xhr.status === 200) {
+				try {
+					var response = JSON.parse(xhr.responseText);
+					if (response.success) {
+						alert('打赏成功！');
+						closeTipModal();
+						location.reload();
+					} else {
+						alert('打赏失败：' + (response.message || '未知错误'));
+					}
+				} catch(e) {
+					alert('响应解析失败');
+				}
+			} else {
+				alert('请求失败，状态码：' + xhr.status);
+			}
+		};
+		
+		xhr.onerror = function() {
+			alert('网络错误，请稍后重试');
+		};
+		
+		var params = 'userid=' + encodeURIComponent(currentTipUserId) + 
+					 '&postid=' + encodeURIComponent(currentTipPostId) +
+					 '&amount=' + encodeURIComponent(amount) +
+					 '&message=' + encodeURIComponent(message);
+		
+		xhr.send(params);
+	}
+	
+	// 点击弹窗外部关闭
+	document.getElementById('tipModal').addEventListener('click', function(e) {
+		if (e.target === this) {
+			closeTipModal();
+		}
+	});
+	</script>
+	<?php
+	
 	stdfoot();
 	die;
 }

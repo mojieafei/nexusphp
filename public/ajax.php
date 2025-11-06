@@ -3,8 +3,78 @@ require "../include/bittorrent.php";
 dbconn();
 loggedinorreturn();
 
-$action = $_POST['action'] ?? '';
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
 $params = $_POST['params'] ?? [];
+
+// 特殊处理：论坛打赏
+if ($action === 'forumtip') {
+    try {
+        $userId = intval($_POST['userid'] ?? 0);
+        $postId = intval($_POST['postid'] ?? 0);
+        $amount = intval($_POST['amount'] ?? 0);
+        $message = trim($_POST['message'] ?? '');
+        
+        if (!$userId || !$postId) {
+            throw new \InvalidArgumentException('缺少必要参数');
+        }
+        
+        if ($amount < 100) {
+            throw new \InvalidArgumentException('打赏金额最少为100魔力值');
+        }
+        
+        if ($CURUSER['id'] == $userId) {
+            throw new \InvalidArgumentException('不能打赏自己');
+        }
+        
+        // 检查用户魔力值是否足够
+        if ($CURUSER['seedbonus'] < $amount) {
+            throw new \InvalidArgumentException('魔力值不足，当前魔力值：' . number_format($CURUSER['seedbonus'], 1));
+        }
+        
+        // 获取接收者信息
+        $receiver = \App\Models\User::query()->findOrFail($userId);
+        
+        // 计算税收
+        $basictax_bonus = get_setting('bonus.basictax') ?: 0;
+        $taxpercentage_bonus = get_setting('bonus.taxpercentage') ?: 0;
+        $taxAmount = $basictax_bonus + ($amount * $taxpercentage_bonus / 100);
+        $aftertaxAmount = $amount - $taxAmount;
+        
+        // 扣除打赏者魔力值
+        $bonusRep = new \App\Repositories\BonusRepository();
+        $bonusRep->consumeUserBonus(
+            $CURUSER['id'], 
+            $amount, 
+            \App\Models\BonusLogs::BUSINESS_TYPE_GIFT_TO_SOMEONE, 
+            $amount . " Points as tip to " . $receiver->username . " (Forum Post #" . $postId . ")" . ($message ? ": " . htmlspecialchars($message) : "")
+        );
+        
+        // 增加接收者魔力值
+        sql_query("UPDATE users SET seedbonus = seedbonus + " . $aftertaxAmount . " WHERE id = " . sqlesc($userId));
+        \App\Models\BonusLogs::add(
+            $userId, 
+            $receiver->seedbonus, 
+            $aftertaxAmount, 
+            $receiver->seedbonus + $aftertaxAmount, 
+            " + " . number_format($aftertaxAmount, 1) . " Points (after tax) as a tip from " . $CURUSER['username'] . " (Forum Post #" . $postId . ")" . ($message ? ": " . htmlspecialchars($message) : ""), 
+            \App\Models\BonusLogs::BUSINESS_TYPE_RECEIVE_GIFT
+        );
+        
+        // 发送系统消息通知
+        $messageContent = "您收到了来自 [b]" . $CURUSER['username'] . "[/b] 的打赏：[b]" . number_format($aftertaxAmount, 1) . "[/b] 魔力值（税后）";
+        if ($message) {
+            $messageContent .= "\n\n留言：" . htmlspecialchars($message);
+        }
+        $messageContent .= "\n\n[url=forums.php?action=viewtopic&topicid=" . get_single_value("posts", "topicid", "WHERE id=" . sqlesc($postId)) . "#post" . $postId . "]查看帖子[/url]";
+        
+        sql_query("INSERT INTO messages (sender, receiver, msg, added) VALUES (0, " . sqlesc($userId) . ", " . sqlesc($messageContent) . ", " . sqlesc(date("Y-m-d H:i:s")) . ")");
+        
+        exit(json_encode(['success' => true, 'message' => '打赏成功！']));
+        
+    } catch (\Throwable $e) {
+        exit(json_encode(['success' => false, 'message' => $e->getMessage()]));
+    }
+}
 
 class AjaxInterface{
 
