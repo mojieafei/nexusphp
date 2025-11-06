@@ -2541,25 +2541,28 @@ function get_style_highlight()
 
 function display_homepage_banner()
 {
-	$bannerDir = ROOT_PATH . 'public/banner/';
-	if (!is_dir($bannerDir)) {
+	global $CURUSER;
+	
+	// 从数据库获取当前用户可见的banner
+	$userClass = $CURUSER ? (int)$CURUSER['class'] : 0;
+	$banners = \App\Models\Banner::getActiveBanners($userClass);
+	
+	if ($banners->isEmpty()) {
 		return;
 	}
 	
+	// 将数据库数据转换为原有格式
 	$bannerFiles = [];
-	$allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm'];
-	
-	$files = scandir($bannerDir);
-	foreach ($files as $file) {
-		if ($file === '.' || $file === '..') continue;
-		$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-		if (in_array($ext, $allowedExtensions)) {
-			$bannerFiles[] = [
-				'file' => $file,
-				'ext' => $ext,
-				'type' => in_array($ext, ['mp4', 'webm']) ? 'video' : 'image'
-			];
-		}
+	foreach ($banners as $banner) {
+		$ext = pathinfo(parse_url($banner->resource_url, PHP_URL_PATH), PATHINFO_EXTENSION);
+		$bannerFiles[] = [
+			'file' => $banner->getFullResourceUrl(),
+			'ext' => $ext ?: 'mp4',
+			'type' => $banner->resource_type,
+			'jump_url' => $banner->jump_url,
+			'title' => $banner->title,
+			'id' => $banner->id
+		];
 	}
 	
 	if (empty($bannerFiles)) {
@@ -2568,7 +2571,23 @@ function display_homepage_banner()
 	
 	// 输出轮播HTML和CSS - 与导航栏等宽（1600px），高度根据内容自适应
 	echo '<div class="homepage-banner-container" style="width: ' . CONTENT_WIDTH . 'px; margin: 0 auto; overflow: hidden; position: relative; box-sizing: border-box;">';
-	echo '<div class="banner-slider" style="position: relative; width: 100%; min-height: 200px; background: #000; cursor: grab;">';
+	
+	// 宇航员主题Loading效果
+	echo '<div class="banner-loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 360px; background: linear-gradient(135deg, #0a1628 0%, #1a2642 50%, #0f1b33 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; transition: opacity 0.5s ease;">';
+	echo '<div class="astronaut-container" style="position: relative; width: 80px; height: 80px; margin-bottom: 20px;">';
+	echo '<div class="astronaut" style="width: 60px; height: 60px; background: linear-gradient(145deg, #e8f0ff 0%, #b8d4ff 100%); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 4px 20px rgba(184, 212, 255, 0.4); animation: float 3s ease-in-out infinite;">';
+	echo '<div style="width: 20px; height: 20px; background: rgba(10, 22, 40, 0.6); border-radius: 50%; position: absolute; top: 20px; left: 20px;"></div>';
+	echo '</div>';
+	echo '<div class="orbit" style="position: absolute; width: 100%; height: 100%; border: 2px dashed rgba(184, 212, 255, 0.3); border-radius: 50%; animation: rotate 4s linear infinite;"></div>';
+	echo '</div>';
+	echo '<div class="loading-text" style="color: #b8d4ff; font-size: 14px; font-family: Arial, sans-serif; letter-spacing: 1px;">Loading Banner...</div>';
+	echo '<style>';
+	echo '@keyframes float { 0%, 100% { transform: translate(-50%, -50%) translateY(0px); } 50% { transform: translate(-50%, -50%) translateY(-10px); } }';
+	echo '@keyframes rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+	echo '</style>';
+	echo '</div>';
+	
+	echo '<div class="banner-slider" style="position: relative; width: 100%; min-height: 360px; background: #000; cursor: grab; opacity: 0; transition: opacity 0.5s ease;">';
 	
 	// 添加悬浮 logo
 	echo '<div class="banner-logo" style="position: absolute; top: 20px; left: 20px; z-index: 100; opacity: 0.9; transition: opacity 0.3s;">';
@@ -2577,17 +2596,20 @@ function display_homepage_banner()
 	
 	foreach ($bannerFiles as $index => $banner) {
 		$display = $index === 0 ? 'block' : 'none';
-		$path = 'banner/' . htmlspecialchars($banner['file']);
+		$path = htmlspecialchars($banner['file']);
+		$jumpUrl = !empty($banner['jump_url']) ? htmlspecialchars($banner['jump_url']) : '';
+		$clickStyle = $jumpUrl ? 'cursor: pointer;' : '';
+		$dataJumpUrl = $jumpUrl ? 'data-jump-url="' . $jumpUrl . '"' : '';
 		
 		if ($banner['type'] === 'video') {
-			echo '<div class="banner-item" style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">';
-			echo '<video class="banner-video" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto;" autoplay muted loop playsinline>';
-			echo '<source src="' . $path . '" type="video/' . $banner['ext'] . '">';
+			echo '<div class="banner-item" ' . $dataJumpUrl . ' style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%; ' . $clickStyle . '">';
+			echo '<video class="banner-video" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto; pointer-events: none;" autoplay muted loop playsinline>';
+			echo '<source src="' . $path . '" type="video/' . htmlspecialchars($banner['ext']) . '">';
 			echo '</video>';
 			echo '</div>';
 		} else {
-			echo '<div class="banner-item" style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">';
-			echo '<img class="banner-image" src="' . $path . '" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto;" alt="Banner">';
+			echo '<div class="banner-item" ' . $dataJumpUrl . ' style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%; ' . $clickStyle . '">';
+			echo '<img class="banner-image" src="' . $path . '" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto; pointer-events: none;" alt="' . htmlspecialchars($banner['title']) . '">';
 			echo '</div>';
 		}
 	}
@@ -2620,11 +2642,37 @@ function display_homepage_banner()
 			var totalItems = items.length;
 			var container = document.querySelector(".homepage-banner-container .banner-slider");
 			var bannerContainer = document.querySelector(".homepage-banner-container");
+			var loadingDiv = document.querySelector(".banner-loading");
 			var leftArrow = document.querySelector(".banner-arrow-left");
 			var rightArrow = document.querySelector(".banner-arrow-right");
 			var startX = 0;
 			var currentX = 0;
 			var isDragging = false;
+			var loadedCount = 0;
+			var totalResources = items.length;
+			
+			// 隐藏Loading的函数
+			function hideLoading() {
+				if (loadingDiv) {
+					loadingDiv.style.opacity = "0";
+					setTimeout(function() {
+						loadingDiv.style.display = "none";
+					}, 500);
+				}
+				container.style.opacity = "1";
+			}
+			
+			// 点击banner跳转
+			items.forEach(function(item) {
+				var jumpUrl = item.getAttribute("data-jump-url");
+				if (jumpUrl) {
+					item.addEventListener("click", function(e) {
+						if (!isDragging) {
+							window.location.href = jumpUrl;
+						}
+					});
+				}
+			});
 			
 			// 根据当前显示的banner调整容器高度
 			function adjustBannerHeight() {
@@ -2682,31 +2730,58 @@ function display_homepage_banner()
 				setTimeout(adjustBannerHeight, 100);
 			}
 			
-			// 监听视频加载完成
+			// 监听资源加载完成
 			items.forEach(function(item) {
 				var video = item.querySelector(".banner-video");
 				var image = item.querySelector(".banner-image");
 				
 				if (video) {
 					video.addEventListener("loadedmetadata", function() {
+						loadedCount++;
 						if (item.style.display !== "none") {
 							adjustBannerHeight();
 						}
+						// 第一个资源加载完就隐藏Loading
+						if (loadedCount === 1) {
+							hideLoading();
+						}
 					});
+					// 如果视频已经加载完成
+					if (video.readyState >= 1) {
+						loadedCount++;
+						if (loadedCount === 1) {
+							hideLoading();
+						}
+					}
 				}
 				
 				if (image) {
 					if (image.complete) {
+						loadedCount++;
 						adjustBannerHeight();
+						if (loadedCount === 1) {
+							hideLoading();
+						}
 					} else {
 						image.addEventListener("load", function() {
+							loadedCount++;
 							if (item.style.display !== "none") {
 								adjustBannerHeight();
+							}
+							if (loadedCount === 1) {
+								hideLoading();
 							}
 						});
 					}
 				}
 			});
+			
+			// 设置超时，5秒后强制隐藏Loading
+			setTimeout(function() {
+				if (loadingDiv && loadingDiv.style.opacity !== "0") {
+					hideLoading();
+				}
+			}, 5000);
 			
 		// 移动端禁用高度自动调整，避免闪屏
 		if (window.innerWidth > 1200) {
@@ -2870,13 +2945,37 @@ function display_homepage_banner()
 		var container = document.querySelector(".homepage-banner-container .banner-slider");
 		var bannerContainer = document.querySelector(".homepage-banner-container");
 		var items = document.querySelectorAll(".homepage-banner-container .banner-item");
+		var loadingDiv = document.querySelector(".banner-loading");
 		
 		if (!container || !bannerContainer || items.length === 0) return;
 		
 		var currentIndex = 0;
+		var loadedCount = 0;
+		
 		items.forEach(function(item, i) {
 			if (item.style.display !== "none") {
 				currentIndex = i;
+			}
+		});
+		
+		// 隐藏Loading的函数
+		function hideLoading() {
+			if (loadingDiv) {
+				loadingDiv.style.opacity = "0";
+				setTimeout(function() {
+					loadingDiv.style.display = "none";
+				}, 500);
+			}
+			container.style.opacity = "1";
+		}
+		
+		// 点击banner跳转
+		items.forEach(function(item) {
+			var jumpUrl = item.getAttribute("data-jump-url");
+			if (jumpUrl) {
+				item.addEventListener("click", function(e) {
+					window.location.href = jumpUrl;
+				});
 			}
 		});
 		
@@ -2925,24 +3024,49 @@ function display_homepage_banner()
 			
 			if (video) {
 				video.addEventListener("loadedmetadata", function() {
+					loadedCount++;
 					if (item.style.display !== "none") {
 						adjustBannerHeight();
 					}
+					if (loadedCount === 1) {
+						hideLoading();
+					}
 				});
+				if (video.readyState >= 1) {
+					loadedCount++;
+					if (loadedCount === 1) {
+						hideLoading();
+					}
+				}
 			}
 			
 			if (image) {
 				if (image.complete) {
+					loadedCount++;
 					adjustBannerHeight();
+					if (loadedCount === 1) {
+						hideLoading();
+					}
 				} else {
 					image.addEventListener("load", function() {
+						loadedCount++;
 						if (item.style.display !== "none") {
 							adjustBannerHeight();
+						}
+						if (loadedCount === 1) {
+							hideLoading();
 						}
 					});
 				}
 			}
 		});
+		
+		// 设置超时，5秒后强制隐藏Loading
+		setTimeout(function() {
+			if (loadingDiv && loadingDiv.style.opacity !== "0") {
+				hideLoading();
+			}
+		}, 5000);
 		
 		// 移动端禁用高度自动调整，避免闪屏
 		if (window.innerWidth > 1200) {
