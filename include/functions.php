@@ -3478,7 +3478,10 @@ if ($CURUSER) {
 <?php
 // 显示banner轮播
 display_homepage_banner();
-?><table class="mainouter" width="<?php echo CONTENT_WIDTH ?>" cellspacing="0" cellpadding="0" align="center" style="margin-top: 0;">
+?>
+<!-- PJAX容器开始 -->
+<div id="pjax-container">
+<table class="mainouter" width="<?php echo CONTENT_WIDTH ?>" cellspacing="0" cellpadding="0" align="center" style="margin-top: 0;">
 	<tr><td id="nav_block" class="text" align="center">
 <?php if (!$CURUSER) { ?>
 			<a href="login.php"><font class="big"><b><?php echo $lang_functions['text_login'] ?></b></font></a> / <a href="signup.php"><font class="big"><b><?php echo $lang_functions['text_signup'] ?></b></font></a>
@@ -3858,6 +3861,10 @@ function stdfoot() {
 	if ($add_key_shortcut != "")
 	print($add_key_shortcut);
 	print("</div>");
+	
+	// PJAX容器结束标签 - 在页脚之前关闭，确保页脚在容器外
+    print("\n</div><!-- PJAX容器结束 -->\n");
+	
 	if ($analyticscode_tweak)
 		print("\n".$analyticscode_tweak."\n");
 //	$hook->dump();
@@ -3876,6 +3883,19 @@ jQuery(document).ready(function(){
 JS;
     print($js);
     print('<img id="nexus-preview" style="display: none; position: absolute" src="" />');
+    
+    // PJAX初始化
+    print('<script type="application/javascript" src="js/jquery.pjax.js"></script>');
+    print('<script type="application/javascript">');
+    print('jQuery(document).ready(function($) {');
+    print('  $(document).pjax("a:not([target]):not([data-pjax-ignore]):not([href^=\'#\']):not([href$=\'.torrent\']):not([href*=\'download\']):not([href*=\'getattachment\']):not([href*=\'logout\'])", "#pjax-container", {');
+    print('    timeout: 5000,');
+    print('    scrollTo: 0');
+    print('  });');
+    print('  console.log("PJAX已启用：全站局部刷新");');
+    print('});');
+    print('</script>');
+    
 	print("</body></html>");
 
 	//echo replacePngTags(ob_get_clean());
