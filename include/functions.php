@@ -3180,6 +3180,14 @@ if ($CURUSER){
 	}}
 }
 ?>
+<?php
+// 性能模式CSS - 针对低配置设备
+if ($CURUSER && isset($CURUSER['performance_mode']) && $CURUSER['performance_mode'] == 'performance') {
+?>
+<link rel="stylesheet" href="<?php echo $css_uri?>performance.css<?php echo $cssupdatedate?>" type="text/css" />
+<?php
+}
+?>
 <link rel="alternate" type="application/rss+xml" title="Latest Torrents" href="torrentrss.php" />
 <script type="text/javascript" src="js/curtain_imageresizer.js<?php echo $cssupdatedate?>"></script>
 <script type="text/javascript" src="js/ajaxbasic.js<?php echo $cssupdatedate?>"></script>

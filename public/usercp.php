@@ -84,17 +84,17 @@ if ($action){
 		case "personal":
 			if ($type == 'save') {
 				$updateset = array();
-				$parked = $_POST["parked"];
+				$parked = $_POST["parked"] ?? 'no';
 				if ($parked != 'yes')
 					$parked = 'no';
-				$acceptpms = $_POST["acceptpms"];
-				$deletepms = ($_POST["deletepms"] != "" ? "yes" : "no");
-				$savepms = ($_POST["savepms"] != "" ? "yes" : "no");
-				$commentpm = $_POST["commentpm"];
-				$gender = $_POST["gender"];
-				$country = $_POST["country"];
-				if ($showschool = 'yes'){
-					$school = $_POST["school"];
+				$acceptpms = $_POST["acceptpms"] ?? 'yes';
+				$deletepms = (isset($_POST["deletepms"]) && $_POST["deletepms"] != "" ? "yes" : "no");
+				$savepms = (isset($_POST["savepms"]) && $_POST["savepms"] != "" ? "yes" : "no");
+				$commentpm = $_POST["commentpm"] ?? 'yes';
+				$gender = $_POST["gender"] ?? 'N/A';
+				$country = $_POST["country"] ?? 107;
+				if ($showschool == 'yes'){
+					$school = $_POST["school"] ?? null;
 					$updateset[] = "school = ".sqlesc($school);
 					}
 				$download = $_POST["download"];
@@ -130,6 +130,12 @@ if ($action){
 
 				$updateset[] = "info = " . sqlesc($info);
 				$updateset[] = "tracker_url_id = " . sqlesc($_POST["tracker_url_id"]);
+				
+				// 性能模式
+				$performanceMode = $_POST["performance_mode"] ?? 'default';
+				if (in_array($performanceMode, ['default', 'performance'])) {
+					$updateset[] = "performance_mode = " . sqlesc($performanceMode);
+				}
 
 				//notifs
                 if (!empty($_POST['notifs'])) {
@@ -228,6 +234,13 @@ tr($lang_usercp['row_school'], "<select name=school>$schools</select>", 1);
   </select><input type=text name=avatar style=\"width: 400px\" value=\"" . htmlspecialchars($CURUSER["avatar"] ?? '') .
   "\"><br />\n".$lang_usercp['text_avatar_note'].($enablebitbucket_main == 'yes' ? $lang_usercp['text_bitbucket_note'] : ""),1);
   tr($lang_usercp['row_info'], "<textarea name=\"info\" style=\"width:700px\" rows=\"10\" >" . htmlspecialchars($CURUSER["info"]) . "</textarea><br />".$lang_usercp['text_info_note'], 1);
+  
+  // 性能模式选项
+  $performanceMode = isset($CURUSER['performance_mode']) ? $CURUSER['performance_mode'] : 'default';
+  $performanceOptions = '<input type="radio" name="performance_mode" value="default"' . ($performanceMode == 'default' ? ' checked' : '') . '> 默认模式（完整特效）';
+  $performanceOptions .= '<br /><input type="radio" name="performance_mode" value="performance"' . ($performanceMode == 'performance' ? ' checked' : '') . '> ⚡ 性能模式（禁用动画和特效，适合低配置设备）';
+  tr_small('性能模式', $performanceOptions . '<br /><font class="small">性能模式会禁用所有动画、毛玻璃效果、阴影等高性能消耗特效，让页面更流畅</font>', 1);
+  
   submit();
   print("</table></form>");
   stdfoot();

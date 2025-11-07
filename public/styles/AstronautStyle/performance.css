@@ -1,0 +1,254 @@
+/*
+ * 性能优化模式 - 针对低配置设备
+ * 禁用所有动画、毛玻璃、阴影等高性能消耗特效
+ */
+
+/* 全局禁用动画和过渡 */
+*,
+*::before,
+*::after {
+    animation: none !important;
+    transition: none !important;
+    backdrop-filter: none !important;
+    transform: none !important;
+}
+
+/* 移除星空背景 */
+body::before {
+    display: none !important;
+}
+
+/* 简化body背景 - 增加更多颜色层次 */
+body {
+    background:
+        radial-gradient(ellipse at top, rgba(0, 212, 255, 0.12) 0%, transparent 40%),
+        radial-gradient(ellipse at bottom right, rgba(168, 85, 247, 0.12) 0%, transparent 40%),
+        linear-gradient(135deg, #0a0e1a 0%, #1a1845 30%, #2d1b4e 60%, #1a0f2e 100%) !important;
+    background-attachment: scroll !important;
+}
+
+/* 移除所有伪元素装饰 */
+table::before,
+td.colhead::before,
+h2::after,
+#nav::before,
+input[type="submit"]::before,
+button::before,
+.torrenttable::before {
+    display: none !important;
+}
+
+/* 简化阴影效果 */
+table,
+#nav,
+h2,
+input[type="submit"],
+button,
+.torrenttable,
+.rowfollow,
+.colhead {
+    box-shadow: none !important;
+}
+
+/* 移除毛玻璃效果 */
+#nav,
+table,
+.torrenttable,
+input,
+textarea,
+select {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* 增强导航栏样式 - 更醒目的视觉效果 */
+#nav {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(168, 85, 247, 0.15)) !important;
+    border: 2px solid rgba(0, 212, 255, 0.5) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+}
+
+#nav a {
+    color: #e5e7eb !important;
+    padding: 10px 16px !important;
+}
+
+#nav a:hover {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(168, 85, 247, 0.25)) !important;
+    color: #00d4ff !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    transform: none !important;
+    text-shadow: none !important;
+}
+
+#nav li.selected > a {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(168, 85, 247, 0.3)) !important;
+    color: #00d4ff !important;
+    border: 1px solid rgba(0, 212, 255, 0.5) !important;
+    border-radius: 8px !important;
+}
+
+/* 增强按钮样式 - 保持视觉吸引力 */
+input[type="submit"],
+button {
+    background: linear-gradient(135deg, #00d4ff, #a855f7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    color: #fff !important;
+    font-weight: bold !important;
+    box-shadow: none !important;
+}
+
+input[type="submit"]:hover,
+button:hover {
+    background: linear-gradient(135deg, #00a8cc, #8b3fc7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* 增强表格样式 - 更丰富的视觉效果 */
+.torrenttable,
+table {
+    background: linear-gradient(135deg, rgba(10, 22, 40, 0.85), rgba(26, 24, 69, 0.85)) !important;
+    border: 2px solid rgba(0, 212, 255, 0.4) !important;
+    border-radius: 12px !important;
+}
+
+.rowfollow {
+    background: rgba(15, 27, 51, 0.7) !important;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.15) !important;
+}
+
+.rowfollow:hover {
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.12), rgba(168, 85, 247, 0.12)) !important;
+}
+
+.colhead {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(168, 85, 247, 0.25)) !important;
+    border-bottom: 2px solid rgba(0, 212, 255, 0.4) !important;
+    color: #00d4ff !important;
+    font-weight: bold !important;
+}
+
+/* 禁用 Banner 动画 */
+.homepage-banner-container video,
+.homepage-banner-container img {
+    animation: none !important;
+}
+
+.banner-slider {
+    transition: none !important;
+}
+
+/* 移除流星雨等装饰性特效 */
+.meteor-trail,
+#meteor-shower-container {
+    display: none !important;
+}
+
+/* 增强输入框样式 - 更好的视觉反馈 */
+input[type="text"],
+input[type="password"],
+textarea,
+select {
+    background: linear-gradient(135deg, rgba(15, 27, 51, 0.9), rgba(26, 24, 69, 0.9)) !important;
+    border: 2px solid rgba(0, 212, 255, 0.4) !important;
+    border-radius: 8px !important;
+    color: #e5e7eb !important;
+    padding: 8px 12px !important;
+    box-shadow: none !important;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+    background: linear-gradient(135deg, rgba(15, 27, 51, 1), rgba(26, 24, 69, 1)) !important;
+    border: 2px solid rgba(0, 212, 255, 0.7) !important;
+    outline: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* 移除所有 keyframes 动画 */
+@keyframes starfield-move { to { background-position: 0 0; } }
+@keyframes nav-glow { to { background-position: 0 0; } }
+@keyframes pulse { to { opacity: 1; } }
+@keyframes float { to { transform: none; } }
+@keyframes rotate { to { transform: none; } }
+@keyframes spin { to { transform: none; } }
+
+/* 禁用图片加载动画 */
+img {
+    animation: none !important;
+}
+
+/* 简化链接效果 */
+a:hover {
+    text-shadow: none !important;
+    transform: none !important;
+}
+
+/* 移除页面元素的3D变换 */
+table,
+.torrenttable,
+#nav {
+    transform: none !important;
+    perspective: none !important;
+}
+
+/* 优化种子列表 - 增强悬停效果 */
+.torrenttable tr:hover {
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.15), rgba(168, 85, 247, 0.1)) !important;
+    border-left: 3px solid #00d4ff !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* 增强链接样式 */
+a {
+    color: #00d4ff !important;
+    text-decoration: none !important;
+}
+
+a:hover {
+    color: #a855f7 !important;
+}
+
+/* 标题样式增强 */
+h1, h2, h3 {
+    color: #00d4ff !important;
+    border-bottom: 2px solid rgba(0, 212, 255, 0.3) !important;
+    padding-bottom: 8px !important;
+}
+
+/* 禁用打赏按钮动画 */
+.f_tip,
+.donate-btn-stellar,
+.meteor-btn-stellar {
+    animation: none !important;
+    transition: none !important;
+}
+
+/* 性能提示 */
+body::after {
+    content: '⚡ 性能模式';
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.9), rgba(16, 185, 129, 0.9));
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    z-index: 9999;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
