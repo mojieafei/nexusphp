@@ -3884,7 +3884,7 @@ JS;
     print('<script type="application/javascript" src="js/jquery.pjax.js"></script>');
     print('<script type="application/javascript">');
     print('jQuery(document).ready(function($) {');
-    print('  $(document).pjax("a:not([target]):not([data-pjax-ignore]):not([href^=\'#\']):not([href$=\'.torrent\']):not([href*=\'download\']):not([href*=\'getattachment\']):not([href*=\'logout\'])", "#pjax-container", {');
+    print('  $(document).pjax("a:not([target]):not([data-pjax-ignore]):not([href^=\'#\']):not([href^=\'javascript:\']):not([href$=\'.torrent\']):not([href*=\'download\']):not([href*=\'getattachment\']):not([href*=\'logout\'])", "#pjax-container", {');
     print('    timeout: 5000,');
     print('    scrollTo: 0');
     print('  });');

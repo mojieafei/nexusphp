@@ -60,12 +60,26 @@ if ($action === 'forumtip') {
             \App\Models\BonusLogs::BUSINESS_TYPE_RECEIVE_GIFT
         );
         
+        // 获取主题ID
+        $topicId = get_single_value("posts", "topicid", "WHERE id=" . sqlesc($postId));
+        
+        // 记录打赏到专门的表
+        \App\Models\ForumTip::create([
+            'from_uid' => $CURUSER['id'],
+            'to_uid' => $userId,
+            'post_id' => $postId,
+            'topic_id' => $topicId,
+            'amount' => $amount,
+            'amount_after_tax' => $aftertaxAmount,
+            'message' => $message ? htmlspecialchars($message) : null,
+        ]);
+        
         // 发送系统消息通知
         $messageContent = "您收到了来自 [b]" . $CURUSER['username'] . "[/b] 的打赏：[b]" . number_format($aftertaxAmount, 1) . "[/b] 魔力值（税后）";
         if ($message) {
             $messageContent .= "\n\n留言：" . htmlspecialchars($message);
         }
-        $messageContent .= "\n\n[url=forums.php?action=viewtopic&topicid=" . get_single_value("posts", "topicid", "WHERE id=" . sqlesc($postId)) . "#post" . $postId . "]查看帖子[/url]";
+        $messageContent .= "\n\n[url=forums.php?action=viewtopic&topicid=" . $topicId . "#post" . $postId . "]查看帖子[/url]";
         
         sql_query("INSERT INTO messages (sender, receiver, msg, added) VALUES (0, " . sqlesc($userId) . ", " . sqlesc($messageContent) . ", " . sqlesc(date("Y-m-d H:i:s")) . ")");
         

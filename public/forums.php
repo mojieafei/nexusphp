@@ -837,7 +837,62 @@ if ($action == "viewtopic")
 
 		if (($CURUSER["id"] == $posterid && !$locked) || user_can('postmanage') || $is_forummod)
 		print("<a href=\"".htmlspecialchars("?action=editpost&postid=".$postid)."\"><img class=\"f_edit\" src=\"pic/trans.gif\" alt=\"Edit\" title=\"".$lang_forums['title_edit_post']."\" /></a>");
-		print("</td></tr></table>");
+		print("</td></tr>");
+		
+		// 显示打赏记录列表
+		$tips = \App\Models\ForumTip::getPostTips($postid);
+		if ($tips && count($tips) > 0) {
+			$tipCount = count($tips);
+			$showLimit = 3; // 默认显示3条
+			
+			print("<tr><td colspan=\"2\" class=\"rowfollow\" style=\"padding:15px; background:rgba(0,212,255,0.03); border-top:1px solid rgba(0,212,255,0.1);\">");
+			print("<div style=\"margin-bottom:10px; color:#00d4ff; font-weight:bold; font-size:14px;\">💰 收到的打赏 (" . $tipCount . ")</div>");
+			print("<div id=\"tip-list-" . $postid . "\" style=\"display:flex; flex-direction:column; gap:8px;\">");
+			
+			$index = 0;
+			foreach ($tips as $tip) {
+				$tipFrom = $tip->fromUser;
+				if (!$tipFrom) continue;
+				
+				$tipTime = gettime($tip->created_at, true, false);
+				$tipUsername = get_username($tipFrom->id);
+				$tipAmount = number_format($tip->amount, 1);
+				
+				// 超过显示限制的隐藏
+				$hiddenStyle = ($index >= $showLimit) ? ' display:none;' : '';
+				
+				print("<div class=\"tip-item-" . $postid . "\" style=\"display:flex; align-items:center; padding:10px; background:rgba(10,22,40,0.5); border-radius:8px; border:1px solid rgba(0,212,255,0.15);" . $hiddenStyle . "\">");
+				print("<div style=\"flex:1; color:#b8d4ff; font-size:13px;\">");
+				print("<span style=\"color:#00d4ff; font-weight:bold;\">" . $tipUsername . "</span> ");
+				print("打赏了 <span style=\"color:#6ee7b7; font-weight:bold;\">" . $tipAmount . "</span> 魔力值");
+				
+				if ($tip->message) {
+					print(" <span style=\"color:#9ca3af;\">·</span> ");
+					print("<span style=\"color:#cbd5e1; font-style:italic;\">\"" . htmlspecialchars($tip->message) . "\"</span>");
+				}
+				
+				print("</div>");
+				print("<div style=\"color:#6b7280; font-size:12px; white-space:nowrap; margin-left:10px;\">" . $tipTime . "</div>");
+				print("</div>");
+				
+				$index++;
+			}
+			
+			print("</div>");
+			
+			// 显示展开/收起按钮（只在超过限制时显示）
+			if ($tipCount > $showLimit) {
+				print("<div style=\"text-align:center; margin-top:10px;\">");
+				print("<button id=\"tip-toggle-" . $postid . "\" onclick=\"toggleTips(" . $postid . ", " . $tipCount . ")\" style=\"padding:6px 20px; background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.3); border-radius:6px; color:#00d4ff; cursor:pointer; font-size:13px; transition:all 0.2s;\" onmouseover=\"this.style.background='rgba(0,212,255,0.2)'\" onmouseout=\"this.style.background='rgba(0,212,255,0.1)'\">");
+				print("展开全部 (" . ($tipCount - $showLimit) . "+)");
+				print("</button>");
+				print("</div>");
+			}
+			
+			print("</td></tr>");
+		}
+		
+		print("</table>");
 	}
 
 	//------ Mod options
@@ -935,33 +990,72 @@ if ($action == "viewtopic")
 
 	print(key_shortcut($page,$pages-1));
 
-	// 打赏弹窗HTML和JavaScript
 	?>
-	<div id="tipModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; overflow-y:auto;">
-		<div id="tipModalContent" style="position:absolute; left:50%; transform:translateX(-50%); background:#1a2642; border-radius:12px; padding:30px; width:90%; max-width:500px; box-shadow:0 0 30px rgba(0,212,255,0.3); border:1px solid rgba(0,212,255,0.5); margin:40px 0;">
-			<h2 style="color:#00d4ff; margin-top:0; text-align:center;">💫 打赏</h2>
-			<p style="color:#b8d4ff; text-align:center; margin-bottom:20px;">打赏给 <span id="tipUsername" style="color:#00d4ff; font-weight:bold;"></span></p>
-
-			<div style="margin-bottom:20px;">
-				<label style="color:#b8d4ff; display:block; margin-bottom:8px;">打赏魔力值 (最少100):</label>
-				<input type="number" id="tipAmount" min="100" value="100" style="width:100%; padding:12px; border-radius:6px; border:1px solid rgba(0,212,255,0.3); background:#0f1b33; color:#fff; font-size:16px;" />
-			</div>
-
-			<div style="margin-bottom:20px;">
-				<label style="color:#b8d4ff; display:block; margin-bottom:8px;">留言（可选）:</label>
-				<input type="text" id="tipMessage" maxlength="100" placeholder="说点什么..." style="width:100%; padding:12px; border-radius:6px; border:1px solid rgba(0,212,255,0.3); background:#0f1b33; color:#fff; font-size:14px;" />
-			</div>
-
-			<div style="display:flex; gap:10px; justify-content:center;">
-				<button onclick="submitTip()" style="padding:12px 30px; background:linear-gradient(135deg, #00d4ff, #a855f7); border:none; border-radius:6px; color:#fff; font-weight:bold; cursor:pointer; font-size:16px;">确认打赏</button>
-				<button onclick="closeTipModal()" style="padding:12px 30px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; cursor:pointer; font-size:16px;">取消</button>
-			</div>
-		</div>
-	</div>
-
 	<script>
+	// 打赏弹窗 - 使用JS动态创建并添加到body，确保viewport居中
 	var currentTipUserId = 0;
 	var currentTipPostId = 0;
+	var tipModal = null;
+	var tipResultModal = null;
+	var tipResultShouldReload = false;
+	var isSubmittingTip = false; // 防重复提交标志
+
+	// 初始化弹窗（添加到body）
+	(function() {
+		// 创建打赏输入弹窗
+		tipModal = document.createElement('div');
+		tipModal.id = 'tipModal';
+		tipModal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:10000;';
+		tipModal.innerHTML = `
+			<div id="tipModalContent" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#1a2642; border-radius:12px; padding:30px; width:90%; max-width:500px; box-shadow:0 0 30px rgba(0,212,255,0.3); border:1px solid rgba(0,212,255,0.5);">
+				<h2 style="color:#00d4ff; margin-top:0; text-align:center;">💫 打赏</h2>
+				<p style="color:#b8d4ff; text-align:center; margin-bottom:20px;">打赏给 <span id="tipUsername" style="color:#00d4ff; font-weight:bold;"></span></p>
+
+				<div style="margin-bottom:20px;">
+					<label style="color:#b8d4ff; display:block; margin-bottom:8px;">打赏魔力值 (最少100):</label>
+					<input type="number" id="tipAmount" min="100" value="100" style="width:100%; padding:12px; border-radius:6px; border:1px solid rgba(0,212,255,0.3); background:#0f1b33; color:#fff; font-size:16px;" />
+				</div>
+
+				<div style="margin-bottom:20px;">
+					<label style="color:#b8d4ff; display:block; margin-bottom:8px;">留言（可选）:</label>
+					<input type="text" id="tipMessage" maxlength="100" placeholder="说点什么..." style="width:100%; padding:12px; border-radius:6px; border:1px solid rgba(0,212,255,0.3); background:#0f1b33; color:#fff; font-size:14px;" />
+				</div>
+
+				<div style="display:flex; gap:10px; justify-content:center;">
+					<button onclick="submitTip()" style="padding:12px 30px; background:linear-gradient(135deg, #00d4ff, #a855f7); border:none; border-radius:6px; color:#fff; font-weight:bold; cursor:pointer; font-size:16px;">确认打赏</button>
+					<button onclick="closeTipModal()" style="padding:12px 30px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; cursor:pointer; font-size:16px;">取消</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(tipModal);
+
+		// 创建结果弹窗
+		tipResultModal = document.createElement('div');
+		tipResultModal.id = 'tipResultModal';
+		tipResultModal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); z-index:10001;';
+		tipResultModal.innerHTML = `
+			<div id="tipResultCard" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:linear-gradient(160deg, #0f1b33, #132846); border-radius:16px; padding:32px 28px; width:90%; max-width:420px; box-shadow:0 20px 60px rgba(0,212,255,0.25); border:1px solid rgba(0,212,255,0.35); text-align:center;">
+				<div id="tipResultIcon" style="display:flex; justify-content:center; align-items:center; width:68px; height:68px; margin:0 auto 20px; border-radius:50%; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.35); color:#6ee7b7; font-size:30px;">&#10003;</div>
+				<h3 id="tipResultTitle" style="color:#6ee7b7; margin:0 0 12px; font-size:22px;">打赏成功</h3>
+				<p id="tipResultMessage" style="color:#cbd5f5; margin:0 0 24px; font-size:15px; line-height:1.6;">感谢你的支持，帖子作者已收到你的打赏。</p>
+				<button id="tipResultButton" onclick="confirmTipResult()" style="padding:12px 32px; background:linear-gradient(120deg, #00d4ff, #34d399); border:none; border-radius:999px; color:#041126; font-weight:bold; cursor:pointer; font-size:16px;">知道了</button>
+			</div>
+		`;
+		document.body.appendChild(tipResultModal);
+
+		// 点击背景关闭
+		tipModal.addEventListener('click', function(e) {
+			if (e.target === this) {
+				closeTipModal();
+			}
+		});
+
+		tipResultModal.addEventListener('click', function(e) {
+			if (e.target === this) {
+				confirmTipResult();
+			}
+		});
+	})();
 
 	function openTipModal(userId, postId, username) {
 		currentTipUserId = userId;
@@ -970,85 +1064,228 @@ if ($action == "viewtopic")
 		document.getElementById('tipAmount').value = 100;
 		document.getElementById('tipMessage').value = '';
 
-		var modal = document.getElementById('tipModal');
-		var modalContent = document.getElementById('tipModalContent');
-		modal.style.display = 'block';
-
-		// 让弹窗出现在当前可见区域的中心
-		setTimeout(function() {
-			var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-			var viewportHeight = window.innerHeight;
-			var contentHeight = modalContent.offsetHeight;
-
-			// 计算弹窗应该在页面中的绝对位置（当前滚动位置 + 视口中心 - 弹窗高度的一半）
-			var topPosition = scrollTop + (viewportHeight - contentHeight) / 500;
-			// 确保不会太靠上
-			topPosition = Math.max(scrollTop + 20, topPosition);
-
-			modalContent.style.top = topPosition + 'px';
-		}, 10);
+		if (tipModal) {
+			tipModal.style.display = 'block';
+			document.body.style.overflow = 'hidden';
+		}
 	}
 
 	function closeTipModal() {
-		document.getElementById('tipModal').style.display = 'none';
+		if (tipModal) {
+			tipModal.style.display = 'none';
+		}
+		document.body.style.overflow = '';
 	}
 
 	function submitTip() {
-		var amount = parseInt(document.getElementById('tipAmount').value);
+		// 防重复提交检查
+		if (isSubmittingTip) {
+			return;
+		}
+
+		var amount = parseInt(document.getElementById('tipAmount').value, 10);
 		var message = document.getElementById('tipMessage').value;
 
-		if (amount < 100) {
-			alert('打赏金额最少为100魔力值！');
-			return;
-		}
-
 		if (isNaN(amount) || amount <= 0) {
-			alert('请输入有效的金额！');
+			showTipResult({
+				type: 'error',
+				title: '金额无效',
+				message: '请输入有效的金额！'
+			});
 			return;
 		}
 
-		// AJAX提交
+		if (amount < 100) {
+			showTipResult({
+				type: 'error',
+				title: '金额太少',
+				message: '打赏金额最少为100魔力值！'
+			});
+			return;
+		}
+
+		// 获取按钮元素
+		var submitBtn = document.querySelector('#tipModal button[onclick="submitTip()"]');
+		var originalBtnText = submitBtn ? submitBtn.textContent : '';
+
+		// 禁用按钮并显示加载状态
+		isSubmittingTip = true;
+		if (submitBtn) {
+			submitBtn.disabled = true;
+			submitBtn.style.opacity = '0.6';
+			submitBtn.style.cursor = 'not-allowed';
+			submitBtn.innerHTML = '<span style="display:inline-block; width:14px; height:14px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:8px;"></span>处理中...';
+			
+			// 添加旋转动画
+			if (!document.getElementById('tip-loading-animation')) {
+				var style = document.createElement('style');
+				style.id = 'tip-loading-animation';
+				style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+				document.head.appendChild(style);
+			}
+		}
+
 		var xhr = new XMLHttpRequest();
 		xhr.open('POST', 'ajax.php?action=forumtip', true);
 		xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 
 		xhr.onload = function() {
+			// 恢复按钮状态
+			isSubmittingTip = false;
+			if (submitBtn) {
+				submitBtn.disabled = false;
+				submitBtn.style.opacity = '1';
+				submitBtn.style.cursor = 'pointer';
+				submitBtn.textContent = originalBtnText;
+			}
+
 			if (xhr.status === 200) {
 				try {
 					var response = JSON.parse(xhr.responseText);
 					if (response.success) {
-						alert('打赏成功！');
 						closeTipModal();
-						location.reload();
+						showTipResult({
+							type: 'success',
+							title: '打赏成功',
+							message: response.message || '感谢你的支持，帖子作者已收到你的打赏。',
+							reload: true
+						});
 					} else {
-						alert('打赏失败：' + (response.message || '未知错误'));
+						showTipResult({
+							type: 'error',
+							title: '打赏失败',
+							message: response.message || '未知错误，请稍后重试。'
+						});
 					}
-				} catch(e) {
-					alert('响应解析失败');
+				} catch (e) {
+					showTipResult({
+						type: 'error',
+						title: '响应解析失败',
+						message: '系统没有正确返回数据，请稍后再试。'
+					});
 				}
 			} else {
-				alert('请求失败，状态码：' + xhr.status);
+				showTipResult({
+					type: 'error',
+					title: '请求失败',
+					message: '请求失败，状态码：' + xhr.status
+				});
 			}
 		};
 
 		xhr.onerror = function() {
-			alert('网络错误，请稍后重试');
+			// 恢复按钮状态
+			isSubmittingTip = false;
+			if (submitBtn) {
+				submitBtn.disabled = false;
+				submitBtn.style.opacity = '1';
+				submitBtn.style.cursor = 'pointer';
+				submitBtn.textContent = originalBtnText;
+			}
+
+			showTipResult({
+				type: 'error',
+				title: '网络错误',
+				message: '网络错误，请稍后重试。'
+			});
 		};
 
 		var params = 'userid=' + encodeURIComponent(currentTipUserId) +
-					 '&postid=' + encodeURIComponent(currentTipPostId) +
-					 '&amount=' + encodeURIComponent(amount) +
-					 '&message=' + encodeURIComponent(message);
+				 '&postid=' + encodeURIComponent(currentTipPostId) +
+				 '&amount=' + encodeURIComponent(amount) +
+				 '&message=' + encodeURIComponent(message);
 
 		xhr.send(params);
 	}
 
-	// 点击弹窗外部关闭
-	document.getElementById('tipModal').addEventListener('click', function(e) {
-		if (e.target === this) {
-			closeTipModal();
+	function showTipResult(options) {
+		var opts = options || {};
+		var type = opts.type === 'error' ? 'error' : 'success';
+		var title = opts.title || (type === 'success' ? '操作成功' : '操作失败');
+		var message = opts.message || (type === 'success' ? '操作已完成。' : '请稍后再试。');
+
+		tipResultShouldReload = !!opts.reload;
+
+		// 获取动态创建的元素
+		var tipResultCard = document.getElementById('tipResultCard');
+		var tipResultIcon = document.getElementById('tipResultIcon');
+		var tipResultTitle = document.getElementById('tipResultTitle');
+		var tipResultMessageEl = document.getElementById('tipResultMessage');
+		var tipResultButton = document.getElementById('tipResultButton');
+
+		if (!tipResultModal || !tipResultCard || !tipResultIcon || !tipResultTitle || !tipResultMessageEl) {
+			alert(title + '：' + message);
+			if (tipResultShouldReload) {
+				location.reload();
+			}
+			return;
 		}
-	});
+
+		var icon = type === 'success' ? '&#10003;' : '&#10005;';
+		var iconColor = type === 'success' ? '#6ee7b7' : '#f87171';
+		var iconBackground = type === 'success' ? 'rgba(110, 231, 183, 0.12)' : 'rgba(248, 113, 113, 0.12)';
+		var iconBorder = type === 'success' ? 'rgba(110, 231, 183, 0.35)' : 'rgba(248, 113, 113, 0.35)';
+		var cardGradient = type === 'success' ? 'linear-gradient(160deg, #0f1b33, #132846)' : 'linear-gradient(160deg, #321728, #3b1f1f)';
+		var cardBorder = type === 'success' ? 'rgba(0, 212, 255, 0.35)' : 'rgba(248, 113, 113, 0.35)';
+		var buttonGradient = type === 'success' ? 'linear-gradient(120deg, #00d4ff, #34d399)' : 'linear-gradient(120deg, #fb7185, #f97316)';
+		var buttonTextColor = type === 'success' ? '#041126' : '#ffffff';
+
+		tipResultIcon.innerHTML = icon;
+		tipResultIcon.style.color = iconColor;
+		tipResultIcon.style.background = iconBackground;
+		tipResultIcon.style.borderColor = iconBorder;
+		tipResultTitle.textContent = title;
+		tipResultTitle.style.color = iconColor;
+		tipResultMessageEl.textContent = message;
+		tipResultCard.style.background = cardGradient;
+		tipResultCard.style.borderColor = cardBorder;
+
+		if (tipResultButton) {
+			tipResultButton.style.background = buttonGradient;
+			tipResultButton.style.color = buttonTextColor;
+			tipResultButton.textContent = type === 'success' ? '知道了' : '关闭';
+		}
+
+		tipResultModal.style.display = 'block';
+		document.body.style.overflow = 'hidden';
+	}
+
+	function confirmTipResult() {
+		if (tipResultModal) {
+			tipResultModal.style.display = 'none';
+		}
+		document.body.style.overflow = '';
+
+		if (tipResultShouldReload) {
+			location.reload();
+		}
+	}
+
+	// 打赏列表展开/收起
+	function toggleTips(postId, totalCount) {
+		var items = document.querySelectorAll('.tip-item-' + postId);
+		var button = document.getElementById('tip-toggle-' + postId);
+		var isExpanded = button.getAttribute('data-expanded') === 'true';
+		var showLimit = 3;
+		
+		if (isExpanded) {
+			// 收起：只显示前3条
+			items.forEach(function(item, index) {
+				if (index >= showLimit) {
+					item.style.display = 'none';
+				}
+			});
+			button.textContent = '展开全部 (' + (totalCount - showLimit) + '+)';
+			button.setAttribute('data-expanded', 'false');
+		} else {
+			// 展开：显示全部
+			items.forEach(function(item) {
+				item.style.display = 'flex';
+			});
+			button.textContent = '收起';
+			button.setAttribute('data-expanded', 'true');
+		}
+	}
 	</script>
 	<?php
 
