@@ -944,7 +944,7 @@ EOD;
             print('<input type="hidden" name="chpassword" />');
 			tr_small($lang_usercp['row_type_password_again'], "<input type=\"password\" class=\"passagain\" style=\"width: 200px\" />", 1);
 			tr_small($lang_usercp['row_privacy_level'],  priv("normal", $lang_usercp['radio_normal']) . " " . priv("low", $lang_usercp['radio_low']) . " " . priv("strong", $lang_usercp['radio_strong']), 1);
-            submit("button");
+            submit();
 			print("</table></form>");
 
             render_password_hash_js("security", "password", "chpassword", false,"passagain");
