@@ -969,22 +969,22 @@ if ($action == "viewtopic")
 		document.getElementById('tipUsername').textContent = username;
 		document.getElementById('tipAmount').value = 100;
 		document.getElementById('tipMessage').value = '';
-		
+
 		var modal = document.getElementById('tipModal');
 		var modalContent = document.getElementById('tipModalContent');
 		modal.style.display = 'block';
-		
+
 		// 让弹窗出现在当前可见区域的中心
 		setTimeout(function() {
 			var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 			var viewportHeight = window.innerHeight;
 			var contentHeight = modalContent.offsetHeight;
-			
+
 			// 计算弹窗应该在页面中的绝对位置（当前滚动位置 + 视口中心 - 弹窗高度的一半）
-			var topPosition = scrollTop + (viewportHeight - contentHeight) / 2;
+			var topPosition = scrollTop + (viewportHeight - contentHeight) / 500;
 			// 确保不会太靠上
 			topPosition = Math.max(scrollTop + 20, topPosition);
-			
+
 			modalContent.style.top = topPosition + 'px';
 		}, 10);
 	}
