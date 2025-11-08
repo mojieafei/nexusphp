@@ -3,13 +3,19 @@
  * 禁用所有动画、毛玻璃、阴影等高性能消耗特效
  */
 
-/* 全局禁用动画和过渡 */
-*,
-*::before,
-*::after {
+/* 全局禁用动画和过渡 - 但流星除外 */
+*:not(.meteor-trail):not(.meteor-trail *),
+*:not(.meteor-trail)::before,
+*:not(.meteor-trail)::after {
     animation: none !important;
     transition: none !important;
     backdrop-filter: none !important;
+}
+
+/* transform 单独处理，流星需要保留 */
+*:not(.meteor-trail):not(.meteor-trail *),
+*:not(.meteor-trail)::before,
+*:not(.meteor-trail)::after {
     transform: none !important;
 }
 
@@ -144,10 +150,9 @@ table {
     transition: none !important;
 }
 
-/* 移除流星雨等装饰性特效 */
-.meteor-trail,
+/* 流星雨容器保留 */
 #meteor-shower-container {
-    display: none !important;
+    /* 已在全局规则中排除 .meteor-trail */
 }
 
 /* 增强输入框样式 - 更好的视觉反馈 */
