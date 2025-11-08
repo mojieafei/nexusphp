@@ -367,6 +367,38 @@ class Update extends Install
             $this->initTrackerUrl('update');
             NexusDB::cache_del("nexus_plugin_store_all");
         }
+
+        /**
+         * 星尘农场游戏 - 初始化
+         * @since 1.9.x
+         */
+        if (!Schema::hasTable("stardust_farms")) {
+            $this->doLog("[STARDUST_FARM] Creating tables...");
+            $this->runMigrate("database/migrations/2025_11_08_000001_create_stardust_farm_tables.php");
+            $this->doLog("[STARDUST_FARM] Tables created!");
+            
+            // 初始化作物数据（10种天体）
+            $this->doLog("[STARDUST_FARM] Initializing crops...");
+            $this->initStardustCrops();
+            $this->doLog("[STARDUST_FARM] Crops initialized!");
+            
+            // 初始化成就数据
+            $this->doLog("[STARDUST_FARM] Initializing achievements...");
+            $this->initStardustAchievements();
+            $this->doLog("[STARDUST_FARM] Achievements initialized!");
+            
+            $this->doLog("[STARDUST_FARM] Installation completed! 🌍🪐☀️");
+        }
+        
+        /**
+         * 星尘农场 - 广播系统
+         * @since 1.9.x
+         */
+        if (!Schema::hasTable("stardust_broadcasts")) {
+            $this->doLog("[STARDUST_FARM_BROADCAST] Creating broadcasts table...");
+            $this->runMigrate("database/migrations/2025_11_08_000002_create_stardust_broadcasts_table.php");
+            $this->doLog("[STARDUST_FARM_BROADCAST] Broadcasts table created!");
+        }
     }
 
     public function runExtraMigrate()
@@ -596,7 +628,158 @@ class Update extends Install
         fclose($fp);
     }
 
+    /**
+     * 初始化星尘农场作物数据
+     */
+    private function initStardustCrops()
+    {
+        $crops = [
+            ['name' => '月球', 'name_en' => 'Moon', 'emoji' => '🌙', 'seed_price' => 50, 'grow_duration' => 120, 'fragment_min' => 1, 'fragment_max' => 2, 'experience' => 10, 'level_required' => 1, 'sort_order' => 1],
+            ['name' => '水星', 'name_en' => 'Mercury', 'emoji' => '☿️', 'seed_price' => 100, 'grow_duration' => 240, 'fragment_min' => 1, 'fragment_max' => 2, 'experience' => 20, 'level_required' => 1, 'sort_order' => 2],
+            ['name' => '金星', 'name_en' => 'Venus', 'emoji' => '♀️', 'seed_price' => 150, 'grow_duration' => 360, 'fragment_min' => 1, 'fragment_max' => 2, 'experience' => 30, 'level_required' => 2, 'sort_order' => 3],
+            ['name' => '地球', 'name_en' => 'Earth', 'emoji' => '🌍', 'seed_price' => 200, 'grow_duration' => 480, 'fragment_min' => 1, 'fragment_max' => 2, 'experience' => 40, 'level_required' => 3, 'sort_order' => 4],
+            ['name' => '火星', 'name_en' => 'Mars', 'emoji' => '♂️', 'seed_price' => 250, 'grow_duration' => 720, 'fragment_min' => 1, 'fragment_max' => 2, 'experience' => 50, 'level_required' => 4, 'sort_order' => 5],
+            ['name' => '木星', 'name_en' => 'Jupiter', 'emoji' => '♃', 'seed_price' => 400, 'grow_duration' => 1440, 'fragment_min' => 1, 'fragment_max' => 3, 'experience' => 80, 'level_required' => 5, 'sort_order' => 6],
+            ['name' => '土星', 'name_en' => 'Saturn', 'emoji' => '♄', 'seed_price' => 500, 'grow_duration' => 2160, 'fragment_min' => 1, 'fragment_max' => 3, 'experience' => 100, 'level_required' => 6, 'sort_order' => 7],
+            ['name' => '天王星', 'name_en' => 'Uranus', 'emoji' => '⛢', 'seed_price' => 600, 'grow_duration' => 2880, 'fragment_min' => 1, 'fragment_max' => 3, 'experience' => 120, 'level_required' => 7, 'sort_order' => 8],
+            ['name' => '海王星', 'name_en' => 'Neptune', 'emoji' => '♆', 'seed_price' => 700, 'grow_duration' => 3600, 'fragment_min' => 2, 'fragment_max' => 4, 'experience' => 150, 'level_required' => 8, 'sort_order' => 9],
+            ['name' => '太阳', 'name_en' => 'Sun', 'emoji' => '☀️', 'seed_price' => 2000, 'grow_duration' => 4320, 'fragment_min' => 2, 'fragment_max' => 5, 'experience' => 300, 'level_required' => 10, 'sort_order' => 10],
+        ];
 
+        foreach ($crops as $crop) {
+            NexusDB::table('stardust_crops')->insert(array_merge($crop, [
+                'is_active' => true,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]));
+        }
+    }
 
+    /**
+     * 初始化星尘农场成就数据
+     */
+    private function initStardustAchievements()
+    {
+        $achievements = [
+            [
+                'name' => '重建太阳系',
+                'name_en' => 'Rebuild Solar System',
+                'description' => '集齐9大天体（8大行星+太阳）各1个完整行星',
+                'icon' => '🌟',
+                'type' => 'collect',
+                'conditions' => json_encode(['planets' => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 'each_count' => 1]),
+                'reward_stardust' => 10000,
+                'is_repeatable' => true,
+                'sort_order' => 1,
+            ],
+            [
+                'name' => '星际农夫',
+                'name_en' => 'Star Farmer',
+                'description' => '累计收获100个碎片',
+                'icon' => '👨‍🌾',
+                'type' => 'collect',
+                'conditions' => json_encode(['total_fragments' => 100]),
+                'reward_stardust' => 500,
+                'is_repeatable' => false,
+                'sort_order' => 2,
+            ],
+            [
+                'name' => '资深农夫',
+                'name_en' => 'Veteran Farmer',
+                'description' => '累计收获500个碎片',
+                'icon' => '🎖️',
+                'type' => 'collect',
+                'conditions' => json_encode(['total_fragments' => 500]),
+                'reward_stardust' => 2000,
+                'is_repeatable' => false,
+                'sort_order' => 3,
+            ],
+            [
+                'name' => '好邻居',
+                'name_en' => 'Good Neighbor',
+                'description' => '帮助好友浇水50次',
+                'icon' => '💧',
+                'type' => 'interaction',
+                'conditions' => json_encode(['water_times' => 50]),
+                'reward_stardust' => 300,
+                'is_repeatable' => false,
+                'sort_order' => 4,
+            ],
+            [
+                'name' => '神秘访客',
+                'name_en' => 'Mysterious Visitor',
+                'description' => '访问100个不同的农场',
+                'icon' => '👣',
+                'type' => 'interaction',
+                'conditions' => json_encode(['visit_unique_farms' => 100]),
+                'reward_stardust' => 500,
+                'is_repeatable' => false,
+                'sort_order' => 5,
+            ],
+            [
+                'name' => '星际大盗',
+                'name_en' => 'Star Thief',
+                'description' => '累计偷取100个碎片',
+                'icon' => '🦹',
+                'type' => 'interaction',
+                'conditions' => json_encode(['steal_times' => 100]),
+                'reward_stardust' => 800,
+                'is_repeatable' => false,
+                'sort_order' => 6,
+            ],
+            [
+                'name' => '首次收获',
+                'name_en' => 'First Harvest',
+                'description' => '完成第一次作物收获',
+                'icon' => '🌱',
+                'type' => 'special',
+                'conditions' => json_encode(['first_harvest' => true]),
+                'reward_stardust' => 50,
+                'is_repeatable' => false,
+                'sort_order' => 7,
+            ],
+            [
+                'name' => '土地大亨',
+                'name_en' => 'Land Tycoon',
+                'description' => '拥有12块土地',
+                'icon' => '🏆',
+                'type' => 'special',
+                'conditions' => json_encode(['land_slots' => 12]),
+                'reward_stardust' => 1000,
+                'is_repeatable' => false,
+                'sort_order' => 8,
+            ],
+            [
+                'name' => '太阳收藏家',
+                'name_en' => 'Sun Collector',
+                'description' => '拥有10个完整的太阳',
+                'icon' => '☀️',
+                'type' => 'collect',
+                'conditions' => json_encode(['planet_id' => 10, 'count' => 10]),
+                'reward_stardust' => 5000,
+                'is_repeatable' => false,
+                'sort_order' => 9,
+            ],
+            [
+                'name' => '财富自由',
+                'name_en' => 'Wealthy',
+                'description' => '拥有100000星尘',
+                'icon' => '💰',
+                'type' => 'special',
+                'conditions' => json_encode(['stardust' => 100000]),
+                'reward_stardust' => 10000,
+                'is_repeatable' => false,
+                'sort_order' => 10,
+            ],
+        ];
+
+        foreach ($achievements as $achievement) {
+            NexusDB::table('stardust_achievements')->insert(array_merge($achievement, [
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]));
+        }
+    }
 
 }
+

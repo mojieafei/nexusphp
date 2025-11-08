@@ -6,6 +6,11 @@ loggedinorreturn();
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 $params = $_POST['params'] ?? [];
 
+// 如果 params 是 JSON 字符串，解码它
+if (is_string($params)) {
+    $params = json_decode($params, true) ?? [];
+}
+
 // 特殊处理：论坛打赏
 if ($action === 'forumtip') {
     try {
@@ -106,8 +111,14 @@ if ($action === 'meteor_game_submit') {
             throw new \InvalidArgumentException('用户验证失败');
         }
         
+        // 获取用户密码哈希（用于Token验证）
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            throw new \InvalidArgumentException('用户不存在');
+        }
+        
         // 2. Token验证（防止简单的接口调用）
-        $expectedToken = md5($userId . $score . $comboMax . $duration . date('Y-m-d') . $CURUSER['passhash']);
+        $expectedToken = md5($userId . $score . $comboMax . $duration . date('Y-m-d') . $user->passhash);
         if ($gameToken !== $expectedToken) {
             // 记录可疑行为
             write_log("游戏作弊尝试 - 用户ID: {$userId}, IP: {$ipAddress}, 分数: {$score}", 'mod');
@@ -153,7 +164,16 @@ if ($action === 'meteor_game_submit') {
             throw new \InvalidArgumentException('提交过于频繁，请等待30秒');
         }
         
-        // 8. 检查短时间内的异常高分（1小时内提交4次以上超高分视为异常）
+        // 8. 检查每日提交次数限制（每个自然日最多5次）
+        $todaySubmitCount = \App\Models\MeteorGameScore::where('user_id', $userId)
+            ->whereDate('created_at', today())
+            ->count();
+            
+        if ($todaySubmitCount >= 5) {
+            throw new \InvalidArgumentException('今日提交次数已达上限（5次），明天再来吧！');
+        }
+        
+        // 9. 检查短时间内的异常高分（1小时内提交4次以上超高分视为异常）
         $recentHighScores = \App\Models\MeteorGameScore::where('user_id', $userId)
             ->where('score', '>', 4000)
             ->where('created_at', '>=', now()->subHour())
@@ -164,22 +184,49 @@ if ($action === 'meteor_game_submit') {
             throw new \InvalidArgumentException('检测到异常游戏行为，请稍后再试');
         }
         
-        // 9. 检查异常负分（故意只接怪物刷负分的异常行为）
+        // 10. 检查异常负分（故意只接怪物刷负分的异常行为）
         if ($score < -2000) {
             write_log("游戏异常行为 - 用户ID: {$userId}, 异常负分: {$score}", 'mod');
             // 负分太低也记录，但不阻止（可能是真的玩得很差）
         }
         
-        // 保存分数
-        \App\Models\MeteorGameScore::create([
-            'user_id' => $userId,
-            'score' => $score,
-            'combo_max' => $comboMax,
-            'duration' => $duration,
-            'ip_address' => $ipAddress,
-        ]);
-        
-        exit(json_encode(['success' => true, 'message' => '分数提交成功！']));
+        // 使用事务，确保星尘发放的原子性
+        try {
+            $stardustReward = 0;
+            $remainingSubmits = 5 - ($todaySubmitCount + 1);
+            
+            \Nexus\Database\NexusDB::transaction(function() use ($userId, $score, $comboMax, $duration, $ipAddress, &$stardustReward) {
+                // 保存分数记录
+                \App\Models\MeteorGameScore::create([
+                    'user_id' => $userId,
+                    'score' => $score,
+                    'combo_max' => $comboMax,
+                    'duration' => $duration,
+                    'ip_address' => $ipAddress,
+                ]);
+                
+                // 计算星尘奖励（100积分 = 10星尘，只有正分才发放）
+                if ($score > 0) {
+                    $stardustReward = intval(floor($score / 10)); // 100分 = 10星尘
+                    
+                    // 使用星尘农场系统添加星尘
+                    $farm = \App\Models\StardustFarm::getOrCreateForUser($userId);
+                    $farm->addStardust($stardustReward, 'game', "流星游戏得分：{$score}");
+                }
+            });
+            
+            exit(json_encode([
+                'success' => true, 
+                'message' => '分数提交成功！',
+                'stardust_reward' => $stardustReward,
+                'remaining_submits' => $remainingSubmits,
+                'score' => $score
+            ]));
+            
+        } catch (\Exception $e) {
+            write_log("流星游戏提交失败 - 用户ID: {$userId}, 错误: {$e->getMessage()}", 'error');
+            throw new \InvalidArgumentException('分数保存失败，请重试');
+        }
         
     } catch (\Throwable $e) {
         exit(json_encode(['success' => false, 'message' => $e->getMessage()]));
@@ -209,6 +256,35 @@ if ($action === 'meteor_game_leaderboard') {
         
     } catch (\Throwable $e) {
         exit(json_encode(['success' => false, 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]));
+    }
+}
+
+// 流星游戏 - 获取今日剩余提交次数
+if ($action === 'meteor_game_remaining') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+        
+        $userId = $CURUSER['id'];
+        
+        // 查询今日已提交次数
+        $todaySubmitCount = \App\Models\MeteorGameScore::where('user_id', $userId)
+            ->whereDate('created_at', today())
+            ->count();
+        
+        $remainingSubmits = max(0, 5 - $todaySubmitCount);
+        
+        exit(json_encode([
+            'success' => true, 
+            'remaining_submits' => $remainingSubmits,
+            'today_submits' => $todaySubmitCount,
+            'max_submits' => 5
+        ]));
+        
+    } catch (\Throwable $e) {
+        exit(json_encode(['success' => false, 'message' => $e->getMessage()]));
     }
 }
 
@@ -384,6 +460,157 @@ class AjaxInterface{
         $user = \App\Models\User::query()->findOrFail($CURUSER['id'], \App\Models\User::$commonFields);
         $user->tokens()->where('id', $params['id'])->delete();
         return true;
+    }
+
+    // ========== 星尘农场 API ==========
+
+    /**
+     * 获取农场数据
+     */
+    public static function getStardustFarm($params)
+    {
+        global $CURUSER;
+        $repo = new \App\Repositories\StardustFarmRepository();
+        $targetUserId = isset($params['user_id']) ? intval($params['user_id']) : $CURUSER['id'];
+        return $repo->getUserFarmData($targetUserId);
+    }
+
+    /**
+     * 种植作物
+     */
+    public static function plantStardustCrop($params)
+    {
+        global $CURUSER;
+        if (empty($params['land_id']) || empty($params['crop_id'])) {
+            throw new \InvalidArgumentException("land_id and crop_id are required");
+        }
+        $repo = new \App\Repositories\StardustFarmRepository();
+        return $repo->plantCrop($CURUSER['id'], intval($params['land_id']), intval($params['crop_id']));
+    }
+
+    /**
+     * 收获作物
+     */
+    public static function harvestStardustCrop($params)
+    {
+        global $CURUSER;
+        if (empty($params['land_id'])) {
+            throw new \InvalidArgumentException("land_id is required");
+        }
+        $repo = new \App\Repositories\StardustFarmRepository();
+        return $repo->harvestCrop($CURUSER['id'], intval($params['land_id']));
+    }
+
+    /**
+     * 合成行星
+     */
+    public static function craftStardustPlanet($params)
+    {
+        global $CURUSER;
+        if (empty($params['crop_id'])) {
+            throw new \InvalidArgumentException("crop_id is required");
+        }
+        $repo = new \App\Repositories\StardustFarmRepository();
+        return $repo->craftPlanet($CURUSER['id'], intval($params['crop_id']));
+    }
+
+    /**
+     * 购买土地
+     */
+    public static function purchaseStardustLand($params)
+    {
+        global $CURUSER;
+        $repo = new \App\Repositories\StardustFarmRepository();
+        return $repo->purchaseLand($CURUSER['id']);
+    }
+
+    /**
+     * 浇水（帮助好友）
+     */
+    public static function waterStardustLand($params)
+    {
+        global $CURUSER;
+        if (empty($params['target_user_id']) || empty($params['land_id'])) {
+            throw new \InvalidArgumentException("target_user_id and land_id are required");
+        }
+        $repo = new \App\Repositories\StardustFarmRepository();
+        return $repo->waterFriendLand($CURUSER['id'], intval($params['target_user_id']), intval($params['land_id']));
+    }
+
+    /**
+     * 偷碎片
+     */
+    public static function stealStardustFragment($params)
+    {
+        global $CURUSER;
+        if (empty($params['target_user_id']) || empty($params['land_id'])) {
+            throw new \InvalidArgumentException("target_user_id and land_id are required");
+        }
+        $repo = new \App\Repositories\StardustFarmRepository();
+        return $repo->stealFragment($CURUSER['id'], intval($params['target_user_id']), intval($params['land_id']));
+    }
+
+    /**
+     * 访问好友农场
+     */
+    public static function visitStardustFarm($params)
+    {
+        global $CURUSER;
+        if (empty($params['target_user_id'])) {
+            throw new \InvalidArgumentException("target_user_id is required");
+        }
+        $repo = new \App\Repositories\StardustFarmRepository();
+        return $repo->visitFriend($CURUSER['id'], intval($params['target_user_id']));
+    }
+
+    /**
+     * 获取互动历史
+     */
+    public static function getStardustInteractions($params)
+    {
+        global $CURUSER;
+        $repo = new \App\Repositories\StardustFarmRepository();
+        return $repo->getInteractionHistory($CURUSER['id']);
+    }
+
+    /**
+     * 获取成就列表
+     */
+    public static function getStardustAchievements($params)
+    {
+        global $CURUSER;
+        $repo = new \App\Repositories\StardustAchievementRepository();
+        return $repo->getUserAchievements($CURUSER['id']);
+    }
+
+    /**
+     * 检查并解锁成就
+     */
+    public static function checkStardustAchievements($params)
+    {
+        global $CURUSER;
+        $repo = new \App\Repositories\StardustAchievementRepository();
+        return $repo->checkAndUnlockAchievements($CURUSER['id']);
+    }
+
+    /**
+     * 获取排行榜
+     */
+    public static function getStardustLeaderboard($params)
+    {
+        $type = $params['type'] ?? 'wealth';
+        $limit = isset($params['limit']) ? intval($params['limit']) : 50;
+        $repo = new \App\Repositories\StardustAchievementRepository();
+        return $repo->getLeaderboard($type, $limit);
+    }
+
+    /**
+     * 获取广播消息
+     */
+    public static function getStardustBroadcasts($params)
+    {
+        $limit = isset($params['limit']) ? intval($params['limit']) : 50;
+        return \App\Models\StardustBroadcast::getRecent($limit);
     }
 }
 

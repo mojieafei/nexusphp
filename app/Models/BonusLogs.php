@@ -57,6 +57,7 @@ class BonusLogs extends NexusModel
     const BUSINESS_TYPE_SEEDING_OFFICIAL_ADDITION = 10002;
     const BUSINESS_TYPE_SEEDING_HAREM_ADDITION = 10003;
     const BUSINESS_TYPE_SEEDING_MEDAL_ADDITION = 10004;
+    const BUSINESS_TYPE_STARDUST_FARM_ADDITION = 10005;
 
     public static array $businessTypes = [
         self::BUSINESS_TYPE_CANCEL_HIT_AND_RUN => ['text' => 'Cancel H&R'],
@@ -94,6 +95,7 @@ class BonusLogs extends NexusModel
         self::BUSINESS_TYPE_SEEDING_OFFICIAL_ADDITION => ['text' => 'Seeding official addition'],
         self::BUSINESS_TYPE_SEEDING_HAREM_ADDITION => ['text' => 'Seeding harem addition'],
         self::BUSINESS_TYPE_SEEDING_MEDAL_ADDITION => ['text' => 'Seeding medal addition'],
+        self::BUSINESS_TYPE_STARDUST_FARM_ADDITION => ['text' => 'Stardust farm addition'],
     ];
 
     public static array $businessTypeBonus = [
@@ -101,7 +103,8 @@ class BonusLogs extends NexusModel
         self::BUSINESS_TYPE_SEEDING_DONOR_ADDITION,
         self::BUSINESS_TYPE_SEEDING_OFFICIAL_ADDITION,
         self::BUSINESS_TYPE_SEEDING_HAREM_ADDITION,
-        self::BUSINESS_TYPE_SEEDING_MEDAL_ADDITION
+        self::BUSINESS_TYPE_SEEDING_MEDAL_ADDITION,
+        self::BUSINESS_TYPE_STARDUST_FARM_ADDITION
     ];
 
     public function getBusinessTypeTextAttribute()

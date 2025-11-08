@@ -2,6 +2,10 @@
 require_once("../include/bittorrent.php");
 dbconn();
 loggedinorreturn();
+
+// 获取用户密码哈希用于Token生成
+$user = \App\Models\User::find($CURUSER['id']);
+$userPasshash = $user ? $user->passhash : '';
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -74,13 +78,16 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     background: rgba(0, 0, 0, 0.95);
-    padding: 50px;
+    padding: 40px 30px;
     border-radius: 20px;
     border: 3px solid rgba(138, 43, 226, 0.8);
     color: #fff;
     text-align: center;
     z-index: 100;
     min-width: 450px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
     box-shadow: 0 0 50px rgba(138, 43, 226, 0.5);
 }
 
@@ -323,30 +330,50 @@ body {
     }
     
     .game-start-screen {
-        min-width: 90%;
-        padding: 30px 20px;
+        min-width: 85vw;
+        max-width: 95vw;
+        max-height: 90vh;
+        padding: 20px 15px;
     }
     
     .game-start-screen h2 {
-        font-size: 32px;
+        font-size: 28px;
+        margin-bottom: 15px;
     }
     
     .game-start-screen .game-desc {
-        font-size: 14px;
+        font-size: 13px;
+        margin-bottom: 15px;
+    }
+    
+    .game-start-screen .game-desc > div {
+        padding: 12px !important;
+    }
+    
+    .game-start-screen .game-rules {
+        padding: 15px;
+        margin-bottom: 20px;
     }
     
     .game-start-screen .game-rules h3 {
-        font-size: 16px;
+        font-size: 15px;
+        margin-bottom: 10px;
     }
     
     .game-start-screen .game-rules li {
-        font-size: 14px;
-        padding: 6px 0;
+        font-size: 12px;
+        padding: 4px 0;
+        line-height: 1.5;
     }
     
     .game-start-screen button {
-        padding: 15px 40px;
-        font-size: 18px;
+        padding: 12px 30px;
+        font-size: 16px;
+    }
+    
+    #submitLimitInfo {
+        font-size: 12px !important;
+        padding: 10px !important;
     }
     
     .game-over-screen {
@@ -388,6 +415,9 @@ body {
                     在60秒内尽可能多地捕获失控的行星，同时避开危险的宇宙怪物。记住：捕获行星得分，捕获怪物扣分！
                 </p>
             </div>
+            <div id="submitLimitInfo" style="background: rgba(255, 215, 0, 0.15); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 215, 0, 0.3); text-align: center; font-size: 14px;">
+                <span style="color: #ffd700;">⏳ 正在加载今日提交信息...</span>
+            </div>
         </div>
         <div class="game-rules">
             <h3>🎮 操作指南</h3>
@@ -400,6 +430,15 @@ body {
                 <li>⚠️ 注意：漏掉行星或捕获怪物都会中断连击</li>
             </ul>
         </div>
+        <div style="background: rgba(78, 205, 196, 0.15); padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 3px solid #4ECDC4;">
+            <h3 style="color: #4ECDC4; font-size: 16px; margin-bottom: 10px;">⭐ 星尘奖励与用途</h3>
+            <ul style="list-style: none; padding: 0; font-size: 14px; line-height: 1.8; color: #e5e7eb;">
+                <li style="padding: 5px 0;">💎 <strong>获得星尘</strong>：每得100分 = 10星尘（正分才有奖励）</li>
+                <li style="padding: 5px 0;">🌱 <strong>种植天体</strong>：星尘可用于购买行星种子，在星尘农场中种植</li>
+                <li style="padding: 5px 0;">🌍 <strong>重建太阳系</strong>：收集9个碎片合成完整行星，集齐9大天体重建太阳系！</li>
+                <li style="padding: 5px 0;">🎯 <strong>游戏入口</strong>：右上角绿色按钮 → <a href="stardust_farm.php" style="color: #4ECDC4; text-decoration: underline;">星尘农场</a></li>
+            </ul>
+        </div>
         <button onclick="startGame()">🚀 开始救援任务</button>
     </div>
     
@@ -407,8 +446,13 @@ body {
         <h2>游戏结束！</h2>
         <div class="final-score" id="finalScore">0</div>
         <div>最高连击: <span id="finalCombo">0</span></div>
+        <div id="stardustReward" style="margin: 15px 0; padding: 12px; background: rgba(78, 205, 196, 0.2); border-radius: 8px; border: 1px solid #4ECDC4;">
+            <span style="color: #4ECDC4; font-size: 18px; font-weight: bold;">⭐ 获得星尘: <span id="stardustAmount">0</span></span>
+            <div style="font-size: 12px; color: #aaa; margin-top: 5px;">可在<a href="stardust_farm.php" style="color: #4ECDC4;">星尘农场</a>中种植行星种子</div>
+        </div>
         <div id="submitStatus" style="margin: 20px 0; color: #ffd700;"></div>
         <button onclick="restartGame()">再玩一次</button>
+        <button onclick="location.href='stardust_farm.php'" style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);">🌍 进入星尘农场</button>
         <button onclick="location.href='index.php'">返回首页</button>
     </div>
 </div>
@@ -902,7 +946,7 @@ function submitScore() {
     const duration = 60 - gameState.timeLeft;
     
     // 生成Token（与后端保持一致）
-    const tokenString = userId.toString() + score.toString() + comboMax.toString() + duration.toString() + '<?php echo date("Y-m-d"); ?>' + '<?php echo $CURUSER['passhash']; ?>';
+    const tokenString = userId.toString() + score.toString() + comboMax.toString() + duration.toString() + '<?php echo date("Y-m-d"); ?>' + '<?php echo $userPasshash; ?>';
     const gameToken = md5(tokenString);
     
     const formData = new FormData();
@@ -935,22 +979,34 @@ function submitScore() {
             const data = JSON.parse(text);
             const statusEl = document.getElementById('submitStatus');
             if (data.success) {
-                statusEl.textContent = '✓ 分数已提交到排行榜！';
+                // 显示星尘奖励
+                const stardustAmount = data.stardust_reward || 0;
+                document.getElementById('stardustAmount').textContent = stardustAmount;
+                
+                // 显示提交状态和剩余次数
+                let message = '✓ 分数已提交到排行榜！';
+                if (stardustAmount > 0) {
+                    message += ` 获得 ${stardustAmount} ⭐星尘！`;
+                }
+                if (data.remaining_submits !== undefined) {
+                    message += ` (今日剩余提交次数: ${data.remaining_submits})`;
+                }
+                statusEl.textContent = message;
                 statusEl.style.color = '#4ECDC4';
                 loadLeaderboard('today');
             } else {
-                statusEl.textContent = '提交失败: ' + data.message;
+                statusEl.textContent = '❌ ' + data.message;
                 statusEl.style.color = '#FF6B6B';
             }
         } catch (e) {
             console.error('JSON parse error:', e);
-            document.getElementById('submitStatus').textContent = '提交失败: 服务器响应错误';
+            document.getElementById('submitStatus').textContent = '❌ 提交失败: 服务器响应错误';
             document.getElementById('submitStatus').style.color = '#FF6B6B';
         }
     })
     .catch(error => {
         console.error('Fetch error:', error);
-        document.getElementById('submitStatus').textContent = '提交失败: ' + error.message;
+        document.getElementById('submitStatus').textContent = '❌ 提交失败: ' + error.message;
         document.getElementById('submitStatus').style.color = '#FF6B6B';
     });
 }
@@ -1055,11 +1111,38 @@ canvas.addEventListener('touchmove', (e) => {
     touchX = newTouchX;
 });
 
+// 加载今日剩余提交次数
+function loadRemainingSubmits() {
+    fetch('ajax.php?action=meteor_game_remaining')
+        .then(response => response.json())
+        .then(data => {
+            const infoEl = document.getElementById('submitLimitInfo');
+            if (data.success) {
+                const remaining = data.remaining_submits;
+                const today = data.today_submits;
+                
+                if (remaining > 0) {
+                    infoEl.innerHTML = `<span style="color: #4ECDC4;">✨ 今日剩余提交次数: <strong>${remaining}/5</strong> | 每次得分可获得星尘奖励（100积分=1✨星尘）</span>`;
+                } else {
+                    infoEl.innerHTML = `<span style="color: #FF6B6B;">⚠️ 今日提交次数已用完 (${today}/5)，明天再来吧！游戏仍可继续玩，但不计入排行榜。</span>`;
+                }
+            } else {
+                infoEl.innerHTML = `<span style="color: #FF6B6B;">❌ 加载失败: ${data.message}</span>`;
+            }
+        })
+        .catch(error => {
+            console.error('加载剩余次数失败:', error);
+            document.getElementById('submitLimitInfo').innerHTML = `<span style="color: #FF6B6B;">❌ 加载失败</span>`;
+        });
+}
+
 // 页面加载完成后的初始化
 // 只渲染背景，不启动游戏
 requestAnimationFrame(gameLoop);
 // 加载排行榜
 loadLeaderboard('today');
+// 加载剩余提交次数
+loadRemainingSubmits();
 </script>
 </body>
 </html>

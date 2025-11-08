@@ -147,6 +147,14 @@ class CalculateUserSeedBonus implements ShouldQueue
                 $this->appendBonusLogInsert($bonusLogInsert, $uid, BonusLogs::BUSINESS_TYPE_SEEDING_MEDAL_ADDITION, $oldValue, $medalAddition);
                 $oldValue += $medalAddition;
             }
+            // 星尘农场加成
+            if (isset($seedBonusResult['stardust_farm_additional_factor']) && $seedBonusResult['stardust_farm_additional_factor'] > 0) {
+                $stardustFarmAddition = $seedBonusResult['medal_bonus'] * $seedBonusResult['stardust_farm_additional_factor'];
+                $all_bonus += $stardustFarmAddition;
+                $bonusLog .= ", stardustFarmAdditionFactor: {$seedBonusResult['stardust_farm_additional_factor']}, stardustFarmBonus: {$seedBonusResult['medal_bonus']}, stardustFarmAddition: $stardustFarmAddition, all_bonus: $all_bonus";
+                $this->appendBonusLogInsert($bonusLogInsert, $uid, BonusLogs::BUSINESS_TYPE_STARDUST_FARM_ADDITION, $oldValue, $stardustFarmAddition);
+                $oldValue += $stardustFarmAddition;
+            }
             do_log($bonusLog);
             $dividend = 3600 / $autoclean_interval_one;
             $all_bonus = $all_bonus / $dividend;

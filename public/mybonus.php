@@ -525,6 +525,17 @@ if ($bonusTableResult['has_official_addition']) {
     print("</ul>");
 }
 
+if ($bonusTableResult['has_stardust_farm_addition']) {
+    print("<h1>🌍 通过星尘农场获得</h1>");
+    print("<ul>");
+    print("<li>每合成1个完整行星，魔力值获取速度提升 <strong>2%</strong></li>");
+    print("<li>最多可合成10个不同行星，达到 <strong>20%</strong> 的魔力值加成</li>");
+    print("<li>当前已合成行星数：<strong>" . round($bonusTableResult['stardust_farm_addition_factor'] / 0.02) . "</strong> 个</li>");
+    print("<li>当前星尘农场加成系数：<strong>" . $bonusTableResult['stardust_farm_addition_factor'] . "</strong></li>");
+    print("<li>📢 <a href=\"stardust_farm.php\" style=\"color: #4ECDC4; font-weight: bold;\">👉 进入星尘农场</a> 种植天体、合成行星，提升魔力值获取速度！</li>");
+    print("</ul>");
+}
+
 if ($bonusTableResult['has_harem_addition']) {
     print("<h1>".$lang_mybonus['text_get_by_harem']."</h1>");
     print("<ul>");
