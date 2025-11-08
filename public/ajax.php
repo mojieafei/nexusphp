@@ -114,9 +114,15 @@ if ($action === 'meteor_game_submit') {
             throw new \InvalidArgumentException('游戏数据验证失败');
         }
         
-        // 3. 分数合理性检查
-        if ($score < 0 || $score > 999999) {
-            throw new \InvalidArgumentException('分数异常');
+        // 3. 分数合理性检查（现在有负分怪物，允许负分但有下限）
+        // 最坏情况：全部接到黑洞 = 60秒 * (1000ms/400ms) * (-50) ≈ -7500
+        $minTheoreticalScore = -10000; // 留余量
+        // 最好情况：全部接太阳+满连击 = 60秒 * (1000ms/400ms) * 50 * 1.1 ≈ 8250
+        $maxTheoreticalScore = 10000; // 留余量
+        
+        if ($score < $minTheoreticalScore || $score > $maxTheoreticalScore) {
+            write_log("游戏作弊尝试 - 用户ID: {$userId}, 分数异常: {$score}", 'mod');
+            throw new \InvalidArgumentException('分数超出合理范围');
         }
         
         // 4. 时长检查（游戏固定60秒，允许±3秒误差）
@@ -125,19 +131,17 @@ if ($action === 'meteor_game_submit') {
             throw new \InvalidArgumentException('游戏时长异常');
         }
         
-        // 5. 分数与连击的合理性检查
-        // 最低分流星10分，最高50分，连击最多增加10%
-        // 理论最高分 = 60秒 * (1000ms/800ms) * 50分 * 1.1 ≈ 4125
-        $maxTheoreticalScore = 5000; // 留一些余量
-        if ($score > $maxTheoreticalScore) {
-            write_log("游戏作弊尝试 - 用户ID: {$userId}, 分数过高: {$score}", 'mod');
-            throw new \InvalidArgumentException('分数超出合理范围');
-        }
-        
-        // 6. 连击数检查（60秒最多能接75个流星左右）
-        if ($comboMax > 100) {
+        // 5. 连击数检查（有怪物会清零连击，理论最大连击约50-60）
+        if ($comboMax > 80) {
             write_log("游戏作弊尝试 - 用户ID: {$userId}, 连击数过高: {$comboMax}", 'mod');
             throw new \InvalidArgumentException('连击数异常');
+        }
+        
+        // 6. 分数与连击的合理性交叉验证
+        // 如果分数很高但连击很低，可能是作弊
+        if ($score > 5000 && $comboMax < 20) {
+            write_log("游戏作弊尝试 - 用户ID: {$userId}, 高分({$score})但低连击({$comboMax})", 'mod');
+            throw new \InvalidArgumentException('游戏数据异常');
         }
         
         // 7. 检查提交频率（30秒内只能提交一次）
@@ -149,15 +153,21 @@ if ($action === 'meteor_game_submit') {
             throw new \InvalidArgumentException('提交过于频繁，请等待30秒');
         }
         
-        // 8. 检查短时间内的异常高分（1小时内提交3次以上超高分视为异常）
+        // 8. 检查短时间内的异常高分（1小时内提交4次以上超高分视为异常）
         $recentHighScores = \App\Models\MeteorGameScore::where('user_id', $userId)
-            ->where('score', '>', 3000)
+            ->where('score', '>', 4000)
             ->where('created_at', '>=', now()->subHour())
             ->count();
             
-        if ($recentHighScores >= 3) {
-            write_log("游戏作弊嫌疑 - 用户ID: {$userId}, 1小时内{$recentHighScores}次高分", 'mod');
+        if ($recentHighScores >= 4) {
+            write_log("游戏作弊嫌疑 - 用户ID: {$userId}, 1小时内{$recentHighScores}次超高分", 'mod');
             throw new \InvalidArgumentException('检测到异常游戏行为，请稍后再试');
+        }
+        
+        // 9. 检查异常负分（故意只接怪物刷负分的异常行为）
+        if ($score < -2000) {
+            write_log("游戏异常行为 - 用户ID: {$userId}, 异常负分: {$score}", 'mod');
+            // 负分太低也记录，但不阻止（可能是真的玩得很差）
         }
         
         // 保存分数

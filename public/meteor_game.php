@@ -336,21 +336,29 @@ body {
     
     <!-- 开始游戏界面 -->
     <div class="game-start-screen" id="gameStartScreen">
-        <h2>🌠 接流星小游戏 🌠</h2>
-        <div class="game-desc">
-            移动托盘接住下落的流星，连续接到可获得连击加成！
+        <h2>🌠 星际救援计划 🌠</h2>
+        <div class="game-desc" style="margin-bottom: 25px;">
+            <div style="background: rgba(138, 43, 226, 0.15); padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 3px solid #8a2be2;">
+                <p style="margin: 0 0 10px 0; color: #ffd700; font-weight: bold;">📡 紧急任务简报</p>
+                <p style="margin: 0; line-height: 1.8; font-size: 14px;">
+                    公元2525年，一场神秘的时空乱流席卷太阳系，导致各大行星脱离轨道，向地球坠落！
+                    更糟糕的是，时空裂缝中涌出了大量宇宙怪物！作为星际救援队的成员，你需要驾驶重力捕获器，
+                    在60秒内尽可能多地捕获失控的行星，同时避开危险的宇宙怪物。记住：捕获行星得分，捕获怪物扣分！
+                </p>
+            </div>
         </div>
         <div class="game-rules">
-            <h3>游戏规则</h3>
+            <h3>🎮 操作指南</h3>
             <ul>
-                <li>游戏时长：60秒</li>
-                <li>操作方式：键盘 ← → 或 A D 键移动托盘</li>
-                <li>流星类型：金色(10分)、红色(20分)、青色(30分)、紫色(50分)</li>
-                <li>连击加成：连续接到流星可获得额外分数</li>
-                <li>漏掉流星会清零连击数</li>
+                <li>⏱️ 任务时限：60秒</li>
+                <li>🎯 控制方式：键盘 ← → 或 A D 键移动重力捕获器</li>
+                <li>✅ 行星加分：🌙月球(+10) 🌍地球(+15) 🔴火星(+20) 🪐木星(+30) 🪐土星(+35) ☀️太阳(+50)</li>
+                <li>❌ 怪物扣分：👾外星虫(-15) ☄️陨石怪(-25) 🕳️黑洞(-50)</li>
+                <li>⚡ 连击奖励：连续捕获行星获得额外积分(+10%)</li>
+                <li>⚠️ 注意：漏掉行星或捕获怪物都会中断连击</li>
             </ul>
         </div>
-        <button onclick="startGame()">🚀 开始游戏</button>
+        <button onclick="startGame()">🚀 开始救援任务</button>
     </div>
     
     <div class="game-over-screen" id="gameOverScreen">
@@ -525,12 +533,18 @@ let gameState = {
 let animationId;
 let timerInterval;
 
-// 流星类型
+// 太阳系行星类型（正分）
 const METEOR_TYPES = [
-    { color: '#FFD700', score: 10, size: 20, speed: 3, chance: 0.5 },  // 金色普通
-    { color: '#FF6B6B', score: 20, size: 18, speed: 4, chance: 0.3 },  // 红色快速
-    { color: '#4ECDC4', score: 30, size: 25, speed: 2.5, chance: 0.15 }, // 青色大号
-    { color: '#9B59B6', score: 50, size: 15, speed: 5, chance: 0.05 }  // 紫色稀有
+    { name: '月球', emoji: '🌙', score: 10, size: 20, speed: 3, chance: 0.30, type: 'good' },  // 月球 - 最常见
+    { name: '地球', emoji: '🌍', score: 15, size: 22, speed: 3.5, chance: 0.23, type: 'good' },  // 地球
+    { name: '火星', emoji: '🔴', score: 20, size: 18, speed: 4, chance: 0.18, type: 'good' },  // 火星 - 快速
+    { name: '木星', emoji: '🪐', score: 30, size: 28, speed: 2.5, chance: 0.10, type: 'good' }, // 木星 - 大号
+    { name: '土星', emoji: '🪐', score: 35, size: 26, speed: 2.8, chance: 0.04, type: 'good' }, // 土星 - 稀有
+    { name: '太阳', emoji: '☀️', score: 50, size: 30, speed: 2, chance: 0.02, type: 'good' },  // 太阳 - 超稀有
+    // 宇宙怪物（负分）
+    { name: '外星虫', emoji: '👾', score: -15, size: 22, speed: 3.8, chance: 0.08, type: 'bad' }, // 普通怪物
+    { name: '陨石怪', emoji: '☄️', score: -25, size: 24, speed: 4.2, chance: 0.04, type: 'bad' }, // 快速怪物
+    { name: '黑洞', emoji: '🕳️', score: -50, size: 28, speed: 2.5, chance: 0.01, type: 'bad' }  // 超级危险
 ];
 
 // 创建流星
@@ -555,49 +569,125 @@ function createMeteor() {
     };
 }
 
-// 绘制玩家托盘
+// 绘制玩家飞船
 function drawPlayer() {
     const p = gameState.player;
-    ctx.fillStyle = 'linear-gradient(to bottom, #667eea, #764ba2)';
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#8a2be2';
+    ctx.save();
     
-    // 绘制托盘
+    // 飞船主体渐变色
+    const gradient = ctx.createLinearGradient(p.x - p.width/2, p.y, p.x + p.width/2, p.y + p.height);
+    gradient.addColorStop(0, '#667eea');
+    gradient.addColorStop(1, '#764ba2');
+    
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#00d4ff';
+    
+    // 绘制飞船主体（三角形 + 两翼）
+    ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.roundRect(p.x - p.width/2, p.y, p.width, p.height, 10);
-    ctx.fillStyle = '#667eea';
+    
+    // 中央驾驶舱（三角形）
+    ctx.moveTo(p.x, p.y); // 顶部中心
+    ctx.lineTo(p.x - 25, p.y + p.height); // 左下
+    ctx.lineTo(p.x + 25, p.y + p.height); // 右下
+    ctx.closePath();
     ctx.fill();
     
-    // 绘制边框
-    ctx.strokeStyle = '#8a2be2';
-    ctx.lineWidth = 3;
+    // 左翼
+    ctx.beginPath();
+    ctx.moveTo(p.x - 25, p.y + 10);
+    ctx.lineTo(p.x - p.width/2, p.y + p.height - 5);
+    ctx.lineTo(p.x - 25, p.y + p.height);
+    ctx.closePath();
+    ctx.fillStyle = '#8a2be2';
+    ctx.fill();
+    
+    // 右翼
+    ctx.beginPath();
+    ctx.moveTo(p.x + 25, p.y + 10);
+    ctx.lineTo(p.x + p.width/2, p.y + p.height - 5);
+    ctx.lineTo(p.x + 25, p.y + p.height);
+    ctx.closePath();
+    ctx.fill();
+    
+    // 绘制飞船边框
+    ctx.strokeStyle = '#00d4ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x - 25, p.y + p.height);
+    ctx.lineTo(p.x - p.width/2, p.y + p.height - 5);
+    ctx.moveTo(p.x - 25, p.y + p.height);
+    ctx.lineTo(p.x + 25, p.y + p.height);
+    ctx.moveTo(p.x + 25, p.y + p.height);
+    ctx.lineTo(p.x + p.width/2, p.y + p.height - 5);
+    ctx.lineTo(p.x + 25, p.y + 10);
+    ctx.lineTo(p.x, p.y);
     ctx.stroke();
     
-    ctx.shadowBlur = 0;
+    // 绘制驾驶舱窗口
+    ctx.fillStyle = '#00d4ff';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#00d4ff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y + 15, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 绘制推进器火焰（动态效果）
+    const flameIntensity = Math.sin(Date.now() * 0.01) * 0.3 + 0.7;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#ff6b35';
+    
+    // 左推进器
+    ctx.fillStyle = `rgba(255, 107, 53, ${flameIntensity})`;
+    ctx.beginPath();
+    ctx.moveTo(p.x - p.width/2 + 10, p.y + p.height - 5);
+    ctx.lineTo(p.x - p.width/2 + 5, p.y + p.height + 8);
+    ctx.lineTo(p.x - p.width/2 + 15, p.y + p.height + 5);
+    ctx.closePath();
+    ctx.fill();
+    
+    // 右推进器
+    ctx.beginPath();
+    ctx.moveTo(p.x + p.width/2 - 10, p.y + p.height - 5);
+    ctx.lineTo(p.x + p.width/2 - 5, p.y + p.height + 8);
+    ctx.lineTo(p.x + p.width/2 - 15, p.y + p.height + 5);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.restore();
 }
 
-// 绘制流星
+// 绘制行星/怪物
 function drawMeteor(meteor) {
     if (meteor.caught) return;
     
     ctx.save();
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = meteor.color;
     
-    // 绘制流星
-    ctx.fillStyle = meteor.color;
-    ctx.beginPath();
-    ctx.arc(meteor.x, meteor.y, meteor.size, 0, Math.PI * 2);
-    ctx.fill();
+    // 如果是怪物，添加微弱的红色提示
+    if (meteor.type === 'bad') {
+        // 只添加淡淡的红色光晕，不要太明显
+        const warningAlpha = Math.sin(Date.now() * 0.008) * 0.15 + 0.25;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = `rgba(255, 50, 50, ${warningAlpha})`;
+        ctx.strokeStyle = `rgba(255, 100, 100, ${warningAlpha * 0.5})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(meteor.x, meteor.y, meteor.size * 1.3, 0, Math.PI * 2);
+        ctx.stroke();
+    }
     
-    // 绘制光晕
-    const gradient = ctx.createRadialGradient(meteor.x, meteor.y, 0, meteor.x, meteor.y, meteor.size * 1.5);
-    gradient.addColorStop(0, meteor.color + '80');
-    gradient.addColorStop(1, meteor.color + '00');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(meteor.x, meteor.y, meteor.size * 1.5, 0, Math.PI * 2);
-    ctx.fill();
+    // 绘制 emoji
+    ctx.font = meteor.size * 2 + 'px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // 根据类型设置发光效果（怪物也用白光，更低调）
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+    
+    // 绘制 emoji
+    ctx.fillText(meteor.emoji, meteor.x, meteor.y);
     
     ctx.restore();
 }
@@ -631,15 +721,41 @@ function updateGame(currentTime) {
             // 碰撞检测
             if (checkCollision(meteor)) {
                 meteor.caught = true;
-                gameState.score += meteor.score * (1 + gameState.combo * 0.1);
-                gameState.combo++;
-                gameState.maxCombo = Math.max(gameState.maxCombo, gameState.combo);
                 
-                // 移除已捕获的流星
+                if (meteor.type === 'bad') {
+                    // 捕获到怪物 - 扣分并清零连击
+                    gameState.score += meteor.score; // 负分
+                    gameState.combo = 0; // 清零连击
+                    
+                    // 强烈的屏幕震动效果
+                    let shakeCount = 0;
+                    const shakeInterval = setInterval(() => {
+                        if (shakeCount < 8) {
+                            const intensity = 15 - shakeCount * 1.5; // 震动逐渐减弱
+                            canvas.style.transform = 'translate(' + 
+                                (Math.random() * intensity - intensity/2) + 'px, ' + 
+                                (Math.random() * intensity - intensity/2) + 'px) rotate(' + 
+                                (Math.random() * 4 - 2) + 'deg)';
+                            shakeCount++;
+                        } else {
+                            clearInterval(shakeInterval);
+                            canvas.style.transform = 'translate(0, 0) rotate(0deg)';
+                        }
+                    }, 50);
+                } else {
+                    // 捕获到行星 - 加分和连击
+                    gameState.score += meteor.score * (1 + gameState.combo * 0.1);
+                    gameState.combo++;
+                    gameState.maxCombo = Math.max(gameState.maxCombo, gameState.combo);
+                }
+                
+                // 移除已捕获的对象
                 gameState.meteors.splice(index, 1);
             } else if (meteor.y > canvas.height) {
-                // 流星掉落，连击清零
-                gameState.combo = 0;
+                // 掉落 - 只有行星掉落才清零连击，怪物掉落没影响
+                if (meteor.type === 'good') {
+                    gameState.combo = 0;
+                }
                 gameState.meteors.splice(index, 1);
             }
         }
