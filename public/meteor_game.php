@@ -22,17 +22,20 @@ body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
+    background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 50%, #2a2f4a 100%);
+    display: flex;
 }
 
+/* 左侧游戏区 */
 .game-container {
     position: relative;
-    width: 100vw;
-    height: 70vh;
-    background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 50%, #2a2f4a 100%);
+    flex: 1;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: 20px;
 }
 
 #gameCanvas {
@@ -40,8 +43,8 @@ body {
     border-radius: 10px;
     box-shadow: 0 0 30px rgba(138, 43, 226, 0.3);
     background: rgba(0, 0, 0, 0.3);
-    max-width: 100%;
-    max-height: 80%;
+    max-width: 90%;
+    max-height: 85%;
 }
 
 .game-info {
@@ -190,60 +193,73 @@ body {
     box-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
 }
 
+/* 右侧排行榜区 */
 .leaderboard {
-    height: 30vh;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    border-top: 2px solid rgba(138, 43, 226, 0.5);
+    width: 380px;
+    height: 100vh;
+    padding: 30px 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border-left: 3px solid rgba(138, 43, 226, 0.8);
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .leaderboard h3 {
     color: #8a2be2;
     text-align: center;
-    font-size: 28px;
-    margin-bottom: 20px;
-    text-shadow: 0 0 15px rgba(138, 43, 226, 0.8);
+    font-size: 32px;
+    margin-bottom: 25px;
+    text-shadow: 0 0 20px rgba(138, 43, 226, 1);
 }
 
 .leaderboard-tabs {
     display: flex;
     justify-content: center;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 8px;
+    margin-bottom: 25px;
+    flex-shrink: 0;
 }
 
 .leaderboard-tabs button {
     background: rgba(138, 43, 226, 0.3);
     color: white;
     border: 2px solid rgba(138, 43, 226, 0.5);
-    padding: 10px 30px;
-    border-radius: 10px;
+    padding: 10px 20px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s;
+    font-size: 14px;
 }
 
 .leaderboard-tabs button.active {
     background: rgba(138, 43, 226, 0.8);
     border-color: #8a2be2;
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.6);
 }
 
 .leaderboard-table {
     width: 100%;
     color: #fff;
     border-collapse: collapse;
+    flex: 1;
 }
 
 .leaderboard-table th {
     background: rgba(138, 43, 226, 0.5);
-    padding: 15px;
+    padding: 12px 10px;
     text-align: left;
     border-bottom: 2px solid rgba(138, 43, 226, 0.8);
+    font-size: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .leaderboard-table td {
-    padding: 12px 15px;
+    padding: 10px;
     border-bottom: 1px solid rgba(138, 43, 226, 0.3);
+    font-size: 13px;
 }
 
 .leaderboard-table tr:hover {
@@ -251,7 +267,7 @@ body {
 }
 
 .rank-medal {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
 }
 
@@ -259,25 +275,51 @@ body {
 .rank-2 { color: #c0c0c0; }
 .rank-3 { color: #cd7f32; }
 
-@media (max-width: 768px) {
+/* 响应式布局：小屏幕改为上下布局 */
+@media (max-width: 1200px) {
+    body {
+        flex-direction: column;
+    }
+    
     .game-container {
         height: 65vh;
+        width: 100vw;
     }
     
     .leaderboard {
+        width: 100vw;
         height: 35vh;
+        border-left: none;
+        border-top: 3px solid rgba(138, 43, 226, 0.8);
     }
     
     .game-info {
-        font-size: 16px;
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    .game-info {
+        font-size: 14px;
         top: 10px;
         left: 10px;
         right: 10px;
     }
     
     .game-info > div {
-        padding: 8px 12px;
-        font-size: 14px;
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+    
+    .leaderboard h3 {
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+    
+    .leaderboard-table th,
+    .leaderboard-table td {
+        padding: 8px 5px;
+        font-size: 12px;
     }
     
     .game-start-screen {
@@ -625,35 +667,25 @@ function drawPlayer() {
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
     
-    // 绘制驾驶舱窗口
+    // 绘制驾驶舱窗口（移除发光效果）
     ctx.fillStyle = '#00d4ff';
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = '#00d4ff';
+    ctx.shadowBlur = 0;
     ctx.beginPath();
-    ctx.arc(p.x, p.y + 15, 5, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y + 15, 4, 0, Math.PI * 2);
     ctx.fill();
     
-    // 绘制推进器火焰（动态效果）
-    const flameIntensity = Math.sin(Date.now() * 0.01) * 0.3 + 0.7;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#ff6b35';
+    // 绘制推进器火焰（简化版，用计数器代替sin计算）
+    if (!gameState.flameCounter) gameState.flameCounter = 0;
+    const flameIntensity = (gameState.flameCounter++ % 20 < 10) ? 0.8 : 0.6;
     
-    // 左推进器
+    ctx.shadowBlur = 0;
     ctx.fillStyle = `rgba(255, 107, 53, ${flameIntensity})`;
-    ctx.beginPath();
-    ctx.moveTo(p.x - p.width/2 + 10, p.y + p.height - 5);
-    ctx.lineTo(p.x - p.width/2 + 5, p.y + p.height + 8);
-    ctx.lineTo(p.x - p.width/2 + 15, p.y + p.height + 5);
-    ctx.closePath();
-    ctx.fill();
     
-    // 右推进器
-    ctx.beginPath();
-    ctx.moveTo(p.x + p.width/2 - 10, p.y + p.height - 5);
-    ctx.lineTo(p.x + p.width/2 - 5, p.y + p.height + 8);
-    ctx.lineTo(p.x + p.width/2 - 15, p.y + p.height + 5);
-    ctx.closePath();
-    ctx.fill();
+    // 左推进器（简化为矩形）
+    ctx.fillRect(p.x - p.width/2 + 8, p.y + p.height - 2, 6, 8);
+    
+    // 右推进器（简化为矩形）
+    ctx.fillRect(p.x + p.width/2 - 14, p.y + p.height - 2, 6, 8);
     
     ctx.restore();
 }
@@ -664,29 +696,22 @@ function drawMeteor(meteor) {
     
     ctx.save();
     
-    // 如果是怪物，添加微弱的红色提示
+    // 如果是怪物，添加微弱的红色提示（无光晕）
     if (meteor.type === 'bad') {
-        // 只添加淡淡的红色光晕，不要太明显
-        const warningAlpha = Math.sin(Date.now() * 0.008) * 0.15 + 0.25;
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = `rgba(255, 50, 50, ${warningAlpha})`;
-        ctx.strokeStyle = `rgba(255, 100, 100, ${warningAlpha * 0.5})`;
-        ctx.lineWidth = 1.5;
+        const warningAlpha = Math.sin(Date.now() * 0.008) * 0.1 + 0.2;
+        ctx.strokeStyle = `rgba(255, 100, 100, ${warningAlpha})`;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(meteor.x, meteor.y, meteor.size * 1.3, 0, Math.PI * 2);
+        ctx.arc(meteor.x, meteor.y, meteor.size * 1.2, 0, Math.PI * 2);
         ctx.stroke();
     }
     
-    // 绘制 emoji
+    // 绘制 emoji（移除光晕效果，更清晰）
     ctx.font = meteor.size * 2 + 'px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.shadowBlur = 0; // 完全移除光晕
     
-    // 根据类型设置发光效果（怪物也用白光，更低调）
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
-    
-    // 绘制 emoji
     ctx.fillText(meteor.emoji, meteor.x, meteor.y);
     
     ctx.restore();
@@ -772,17 +797,28 @@ function updateGame(currentTime) {
 
 // 渲染游戏
 function renderGame() {
-    // 清空画布
-    ctx.fillStyle = 'rgba(10, 14, 39, 0.3)';
+    // 清空画布（使用纯色填充，不用半透明拖尾效果）
+    ctx.fillStyle = '#0a0e27';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // 绘制星空背景
-    for (let i = 0; i < 50; i++) {
-        const x = (Date.now() * 0.01 + i * 50) % canvas.width;
-        const y = (i * 37) % canvas.height;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.fillRect(x, y, 2, 2);
+    // 绘制静态星空背景（减少到30个星星，降低计算量）
+    if (!gameState.stars) {
+        // 初始化时生成固定星星位置
+        gameState.stars = [];
+        for (let i = 0; i < 30; i++) {
+            gameState.stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                alpha: Math.random() * 0.5 + 0.3
+            });
+        }
     }
+    
+    // 绘制静态星星（不再动态计算位置）
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    gameState.stars.forEach(star => {
+        ctx.fillRect(star.x, star.y, 1.5, 1.5);
+    });
     
     // 绘制所有流星
     gameState.meteors.forEach(meteor => drawMeteor(meteor));
@@ -790,9 +826,12 @@ function renderGame() {
     // 绘制玩家
     drawPlayer();
     
-    // 更新UI
-    document.getElementById('scoreDisplay').textContent = Math.floor(gameState.score);
-    document.getElementById('comboDisplay').textContent = gameState.combo;
+    // 更新UI（降低更新频率）
+    if (!gameState.uiUpdateCounter) gameState.uiUpdateCounter = 0;
+    if (gameState.uiUpdateCounter++ % 3 === 0) {
+        document.getElementById('scoreDisplay').textContent = Math.floor(gameState.score);
+        document.getElementById('comboDisplay').textContent = gameState.combo;
+    }
 }
 
 // 开始游戏
@@ -1024,4 +1063,5 @@ loadLeaderboard('today');
 </script>
 </body>
 </html>
+
 
