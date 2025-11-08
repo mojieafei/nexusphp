@@ -1,0 +1,911 @@
+<?php
+require_once("../include/bittorrent.php");
+dbconn();
+loggedinorreturn();
+?>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接流星小游戏 - <?php echo $SITENAME; ?></title>
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+.game-container {
+    position: relative;
+    width: 100vw;
+    height: 70vh;
+    background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 50%, #2a2f4a 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#gameCanvas {
+    border: 2px solid rgba(138, 43, 226, 0.5);
+    border-radius: 10px;
+    box-shadow: 0 0 30px rgba(138, 43, 226, 0.3);
+    background: rgba(0, 0, 0, 0.3);
+    max-width: 100%;
+    max-height: 80%;
+}
+
+.game-info {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    color: #fff;
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(138, 43, 226, 0.8);
+    z-index: 10;
+}
+
+.game-info > div {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 2px solid rgba(138, 43, 226, 0.5);
+}
+
+.game-start-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.95);
+    padding: 50px;
+    border-radius: 20px;
+    border: 3px solid rgba(138, 43, 226, 0.8);
+    color: #fff;
+    text-align: center;
+    z-index: 100;
+    min-width: 450px;
+    box-shadow: 0 0 50px rgba(138, 43, 226, 0.5);
+}
+
+.game-start-screen h2 {
+    font-size: 42px;
+    margin-bottom: 20px;
+    color: #8a2be2;
+    text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+}
+
+.game-start-screen .game-desc {
+    font-size: 16px;
+    color: #e5e7eb;
+    margin-bottom: 30px;
+    line-height: 1.8;
+}
+
+.game-start-screen .game-rules {
+    background: rgba(138, 43, 226, 0.2);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+.game-start-screen .game-rules h3 {
+    color: #ffd700;
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.game-start-screen .game-rules ul {
+    list-style: none;
+    padding: 0;
+}
+
+.game-start-screen .game-rules li {
+    padding: 8px 0;
+    color: #e5e7eb;
+}
+
+.game-start-screen .game-rules li::before {
+    content: '⭐ ';
+    margin-right: 8px;
+}
+
+.game-start-screen button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 18px 50px;
+    font-size: 22px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
+}
+
+.game-start-screen button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(138, 43, 226, 0.8);
+}
+
+.game-over-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.95);
+    padding: 40px;
+    border-radius: 20px;
+    border: 3px solid rgba(138, 43, 226, 0.8);
+    color: #fff;
+    text-align: center;
+    display: none;
+    z-index: 100;
+    min-width: 400px;
+    box-shadow: 0 0 50px rgba(138, 43, 226, 0.5);
+}
+
+.game-over-screen h2 {
+    font-size: 36px;
+    margin-bottom: 20px;
+    color: #8a2be2;
+    text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+}
+
+.game-over-screen .final-score {
+    font-size: 48px;
+    color: #ffd700;
+    margin: 20px 0;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+}
+
+.game-over-screen button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 10px;
+    transition: all 0.3s;
+}
+
+.game-over-screen button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+}
+
+.leaderboard {
+    height: 30vh;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border-top: 2px solid rgba(138, 43, 226, 0.5);
+    overflow-y: auto;
+}
+
+.leaderboard h3 {
+    color: #8a2be2;
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 15px rgba(138, 43, 226, 0.8);
+}
+
+.leaderboard-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.leaderboard-tabs button {
+    background: rgba(138, 43, 226, 0.3);
+    color: white;
+    border: 2px solid rgba(138, 43, 226, 0.5);
+    padding: 10px 30px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.leaderboard-tabs button.active {
+    background: rgba(138, 43, 226, 0.8);
+    border-color: #8a2be2;
+}
+
+.leaderboard-table {
+    width: 100%;
+    color: #fff;
+    border-collapse: collapse;
+}
+
+.leaderboard-table th {
+    background: rgba(138, 43, 226, 0.5);
+    padding: 15px;
+    text-align: left;
+    border-bottom: 2px solid rgba(138, 43, 226, 0.8);
+}
+
+.leaderboard-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(138, 43, 226, 0.3);
+}
+
+.leaderboard-table tr:hover {
+    background: rgba(138, 43, 226, 0.2);
+}
+
+.rank-medal {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.rank-1 { color: #ffd700; }
+.rank-2 { color: #c0c0c0; }
+.rank-3 { color: #cd7f32; }
+
+@media (max-width: 768px) {
+    .game-container {
+        height: 65vh;
+    }
+    
+    .leaderboard {
+        height: 35vh;
+    }
+    
+    .game-info {
+        font-size: 16px;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+    }
+    
+    .game-info > div {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+    
+    .game-start-screen {
+        min-width: 90%;
+        padding: 30px 20px;
+    }
+    
+    .game-start-screen h2 {
+        font-size: 32px;
+    }
+    
+    .game-start-screen .game-desc {
+        font-size: 14px;
+    }
+    
+    .game-start-screen .game-rules h3 {
+        font-size: 16px;
+    }
+    
+    .game-start-screen .game-rules li {
+        font-size: 14px;
+        padding: 6px 0;
+    }
+    
+    .game-start-screen button {
+        padding: 15px 40px;
+        font-size: 18px;
+    }
+    
+    .game-over-screen {
+        min-width: 90%;
+        padding: 20px;
+    }
+    
+    .leaderboard h3 {
+        font-size: 20px;
+        margin-bottom: 10px;
+    }
+    
+    .leaderboard-tabs button {
+        padding: 8px 20px;
+        font-size: 14px;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="game-container">
+    <div class="game-info" style="display: none;">
+        <div>得分: <span id="scoreDisplay">0</span></div>
+        <div>连击: <span id="comboDisplay">0</span></div>
+        <div>时间: <span id="timerDisplay">60</span>秒</div>
+    </div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <!-- 开始游戏界面 -->
+    <div class="game-start-screen" id="gameStartScreen">
+        <h2>🌠 接流星小游戏 🌠</h2>
+        <div class="game-desc">
+            移动托盘接住下落的流星，连续接到可获得连击加成！
+        </div>
+        <div class="game-rules">
+            <h3>游戏规则</h3>
+            <ul>
+                <li>游戏时长：60秒</li>
+                <li>操作方式：键盘 ← → 或 A D 键移动托盘</li>
+                <li>流星类型：金色(10分)、红色(20分)、青色(30分)、紫色(50分)</li>
+                <li>连击加成：连续接到流星可获得额外分数</li>
+                <li>漏掉流星会清零连击数</li>
+            </ul>
+        </div>
+        <button onclick="startGame()">🚀 开始游戏</button>
+    </div>
+    
+    <div class="game-over-screen" id="gameOverScreen">
+        <h2>游戏结束！</h2>
+        <div class="final-score" id="finalScore">0</div>
+        <div>最高连击: <span id="finalCombo">0</span></div>
+        <div id="submitStatus" style="margin: 20px 0; color: #ffd700;"></div>
+        <button onclick="restartGame()">再玩一次</button>
+        <button onclick="location.href='index.php'">返回首页</button>
+    </div>
+</div>
+
+<div class="leaderboard">
+    <h3>🏆 排行榜 🏆</h3>
+    <div class="leaderboard-tabs">
+        <button class="active" onclick="loadLeaderboard('today', this)">今日</button>
+        <button onclick="loadLeaderboard('7days', this)">近7天</button>
+        <button onclick="loadLeaderboard('alltime', this)">总榜</button>
+    </div>
+    <table class="leaderboard-table">
+        <thead>
+            <tr>
+                <th>排名</th>
+                <th>玩家</th>
+                <th>分数</th>
+                <th>最高连击</th>
+                <th>时间</th>
+            </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+            <tr><td colspan="5" style="text-align:center;">加载中...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+// MD5 函数（用于Token生成）
+function md5(string) {
+    function md5_RotateLeft(lValue, iShiftBits) {
+        return (lValue << iShiftBits) | (lValue >>> (32 - iShiftBits));
+    }
+    function md5_AddUnsigned(lX, lY) {
+        var lX4, lY4, lX8, lY8, lResult;
+        lX8 = (lX & 0x80000000);
+        lY8 = (lY & 0x80000000);
+        lX4 = (lX & 0x40000000);
+        lY4 = (lY & 0x40000000);
+        lResult = (lX & 0x3FFFFFFF) + (lY & 0x3FFFFFFF);
+        if (lX4 & lY4) return (lResult ^ 0x80000000 ^ lX8 ^ lY8);
+        if (lX4 | lY4) {
+            if (lResult & 0x40000000) return (lResult ^ 0xC0000000 ^ lX8 ^ lY8);
+            else return (lResult ^ 0x40000000 ^ lX8 ^ lY8);
+        } else {
+            return (lResult ^ lX8 ^ lY8);
+        }
+    }
+    function md5_F(x, y, z) { return (x & y) | ((~x) & z); }
+    function md5_G(x, y, z) { return (x & z) | (y & (~z)); }
+    function md5_H(x, y, z) { return (x ^ y ^ z); }
+    function md5_I(x, y, z) { return (y ^ (x | (~z))); }
+    function md5_FF(a, b, c, d, x, s, ac) {
+        a = md5_AddUnsigned(a, md5_AddUnsigned(md5_AddUnsigned(md5_F(b, c, d), x), ac));
+        return md5_AddUnsigned(md5_RotateLeft(a, s), b);
+    }
+    function md5_GG(a, b, c, d, x, s, ac) {
+        a = md5_AddUnsigned(a, md5_AddUnsigned(md5_AddUnsigned(md5_G(b, c, d), x), ac));
+        return md5_AddUnsigned(md5_RotateLeft(a, s), b);
+    }
+    function md5_HH(a, b, c, d, x, s, ac) {
+        a = md5_AddUnsigned(a, md5_AddUnsigned(md5_AddUnsigned(md5_H(b, c, d), x), ac));
+        return md5_AddUnsigned(md5_RotateLeft(a, s), b);
+    }
+    function md5_II(a, b, c, d, x, s, ac) {
+        a = md5_AddUnsigned(a, md5_AddUnsigned(md5_AddUnsigned(md5_I(b, c, d), x), ac));
+        return md5_AddUnsigned(md5_RotateLeft(a, s), b);
+    }
+    function md5_ConvertToWordArray(string) {
+        var lWordCount, lMessageLength = string.length, lNumberOfWords_temp1 = lMessageLength + 8,
+            lNumberOfWords_temp2 = (lNumberOfWords_temp1 - (lNumberOfWords_temp1 % 64)) / 64,
+            lNumberOfWords = (lNumberOfWords_temp2 + 1) * 16, lWordArray = Array(lNumberOfWords - 1),
+            lBytePosition = 0, lByteCount = 0;
+        while (lByteCount < lMessageLength) {
+            lWordCount = (lByteCount - (lByteCount % 4)) / 4;
+            lBytePosition = (lByteCount % 4) * 8;
+            lWordArray[lWordCount] = (lWordArray[lWordCount] | (string.charCodeAt(lByteCount) << lBytePosition));
+            lByteCount++;
+        }
+        lWordCount = (lByteCount - (lByteCount % 4)) / 4;
+        lBytePosition = (lByteCount % 4) * 8;
+        lWordArray[lWordCount] = lWordArray[lWordCount] | (0x80 << lBytePosition);
+        lWordArray[lNumberOfWords - 2] = lMessageLength << 3;
+        lWordArray[lNumberOfWords - 1] = lMessageLength >>> 29;
+        return lWordArray;
+    }
+    function md5_WordToHex(lValue) {
+        var WordToHexValue = "", WordToHexValue_temp = "", lByte, lCount;
+        for (lCount = 0; lCount <= 3; lCount++) {
+            lByte = (lValue >>> (lCount * 8)) & 255;
+            WordToHexValue_temp = "0" + lByte.toString(16);
+            WordToHexValue = WordToHexValue + WordToHexValue_temp.substr(WordToHexValue_temp.length - 2, 2);
+        }
+        return WordToHexValue;
+    }
+    var x = Array(), k, AA, BB, CC, DD, a, b, c, d, S11 = 7, S12 = 12, S13 = 17, S14 = 22, S21 = 5, S22 = 9, S23 = 14, S24 = 20,
+        S31 = 4, S32 = 11, S33 = 16, S34 = 23, S41 = 6, S42 = 10, S43 = 15, S44 = 21;
+    x = md5_ConvertToWordArray(string);
+    a = 0x67452301; b = 0xEFCDAB89; c = 0x98BADCFE; d = 0x10325476;
+    for (k = 0; k < x.length; k += 16) {
+        AA = a; BB = b; CC = c; DD = d;
+        a = md5_FF(a, b, c, d, x[k + 0], S11, 0xD76AA478); d = md5_FF(d, a, b, c, x[k + 1], S12, 0xE8C7B756);
+        c = md5_FF(c, d, a, b, x[k + 2], S13, 0x242070DB); b = md5_FF(b, c, d, a, x[k + 3], S14, 0xC1BDCEEE);
+        a = md5_FF(a, b, c, d, x[k + 4], S11, 0xF57C0FAF); d = md5_FF(d, a, b, c, x[k + 5], S12, 0x4787C62A);
+        c = md5_FF(c, d, a, b, x[k + 6], S13, 0xA8304613); b = md5_FF(b, c, d, a, x[k + 7], S14, 0xFD469501);
+        a = md5_FF(a, b, c, d, x[k + 8], S11, 0x698098D8); d = md5_FF(d, a, b, c, x[k + 9], S12, 0x8B44F7AF);
+        c = md5_FF(c, d, a, b, x[k + 10], S13, 0xFFFF5BB1); b = md5_FF(b, c, d, a, x[k + 11], S14, 0x895CD7BE);
+        a = md5_FF(a, b, c, d, x[k + 12], S11, 0x6B901122); d = md5_FF(d, a, b, c, x[k + 13], S12, 0xFD987193);
+        c = md5_FF(c, d, a, b, x[k + 14], S13, 0xA679438E); b = md5_FF(b, c, d, a, x[k + 15], S14, 0x49B40821);
+        a = md5_GG(a, b, c, d, x[k + 1], S21, 0xF61E2562); d = md5_GG(d, a, b, c, x[k + 6], S22, 0xC040B340);
+        c = md5_GG(c, d, a, b, x[k + 11], S23, 0x265E5A51); b = md5_GG(b, c, d, a, x[k + 0], S24, 0xE9B6C7AA);
+        a = md5_GG(a, b, c, d, x[k + 5], S21, 0xD62F105D); d = md5_GG(d, a, b, c, x[k + 10], S22, 0x2441453);
+        c = md5_GG(c, d, a, b, x[k + 15], S23, 0xD8A1E681); b = md5_GG(b, c, d, a, x[k + 4], S24, 0xE7D3FBC8);
+        a = md5_GG(a, b, c, d, x[k + 9], S21, 0x21E1CDE6); d = md5_GG(d, a, b, c, x[k + 14], S22, 0xC33707D6);
+        c = md5_GG(c, d, a, b, x[k + 3], S23, 0xF4D50D87); b = md5_GG(b, c, d, a, x[k + 8], S24, 0x455A14ED);
+        a = md5_GG(a, b, c, d, x[k + 13], S21, 0xA9E3E905); d = md5_GG(d, a, b, c, x[k + 2], S22, 0xFCEFA3F8);
+        c = md5_GG(c, d, a, b, x[k + 7], S23, 0x676F02D9); b = md5_GG(b, c, d, a, x[k + 12], S24, 0x8D2A4C8A);
+        a = md5_HH(a, b, c, d, x[k + 5], S31, 0xFFFA3942); d = md5_HH(d, a, b, c, x[k + 8], S32, 0x8771F681);
+        c = md5_HH(c, d, a, b, x[k + 11], S33, 0x6D9D6122); b = md5_HH(b, c, d, a, x[k + 14], S34, 0xFDE5380C);
+        a = md5_HH(a, b, c, d, x[k + 1], S31, 0xA4BEEA44); d = md5_HH(d, a, b, c, x[k + 4], S32, 0x4BDECFA9);
+        c = md5_HH(c, d, a, b, x[k + 7], S33, 0xF6BB4B60); b = md5_HH(b, c, d, a, x[k + 10], S34, 0xBEBFBC70);
+        a = md5_HH(a, b, c, d, x[k + 13], S31, 0x289B7EC6); d = md5_HH(d, a, b, c, x[k + 0], S32, 0xEAA127FA);
+        c = md5_HH(c, d, a, b, x[k + 3], S33, 0xD4EF3085); b = md5_HH(b, c, d, a, x[k + 6], S34, 0x4881D05);
+        a = md5_HH(a, b, c, d, x[k + 9], S31, 0xD9D4D039); d = md5_HH(d, a, b, c, x[k + 12], S32, 0xE6DB99E5);
+        c = md5_HH(c, d, a, b, x[k + 15], S33, 0x1FA27CF8); b = md5_HH(b, c, d, a, x[k + 2], S34, 0xC4AC5665);
+        a = md5_II(a, b, c, d, x[k + 0], S41, 0xF4292244); d = md5_II(d, a, b, c, x[k + 7], S42, 0x432AFF97);
+        c = md5_II(c, d, a, b, x[k + 14], S43, 0xAB9423A7); b = md5_II(b, c, d, a, x[k + 5], S44, 0xFC93A039);
+        a = md5_II(a, b, c, d, x[k + 12], S41, 0x655B59C3); d = md5_II(d, a, b, c, x[k + 3], S42, 0x8F0CCC92);
+        c = md5_II(c, d, a, b, x[k + 10], S43, 0xFFEFF47D); b = md5_II(b, c, d, a, x[k + 1], S44, 0x85845DD1);
+        a = md5_II(a, b, c, d, x[k + 8], S41, 0x6FA87E4F); d = md5_II(d, a, b, c, x[k + 15], S42, 0xFE2CE6E0);
+        c = md5_II(c, d, a, b, x[k + 6], S43, 0xA3014314); b = md5_II(b, c, d, a, x[k + 13], S44, 0x4E0811A1);
+        a = md5_II(a, b, c, d, x[k + 4], S41, 0xF7537E82); d = md5_II(d, a, b, c, x[k + 11], S42, 0xBD3AF235);
+        c = md5_II(c, d, a, b, x[k + 2], S43, 0x2AD7D2BB); b = md5_II(b, c, d, a, x[k + 9], S44, 0xEB86D391);
+        a = md5_AddUnsigned(a, AA); b = md5_AddUnsigned(b, BB); c = md5_AddUnsigned(c, CC); d = md5_AddUnsigned(d, DD);
+    }
+    return (md5_WordToHex(a) + md5_WordToHex(b) + md5_WordToHex(c) + md5_WordToHex(d)).toLowerCase();
+}
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// 游戏状态
+let gameState = {
+    score: 0,
+    combo: 0,
+    maxCombo: 0,
+    timeLeft: 60,
+    gameOver: false,
+    gameStarted: false,
+    meteors: [],
+    player: {
+        x: canvas.width / 2,
+        y: canvas.height - 60,
+        width: 120,
+        height: 30,
+        speed: 8
+    },
+    keys: {},
+    lastMeteorTime: 0,
+    meteorInterval: 800
+};
+
+// 游戏循环和定时器变量
+let animationId;
+let timerInterval;
+
+// 流星类型
+const METEOR_TYPES = [
+    { color: '#FFD700', score: 10, size: 20, speed: 3, chance: 0.5 },  // 金色普通
+    { color: '#FF6B6B', score: 20, size: 18, speed: 4, chance: 0.3 },  // 红色快速
+    { color: '#4ECDC4', score: 30, size: 25, speed: 2.5, chance: 0.15 }, // 青色大号
+    { color: '#9B59B6', score: 50, size: 15, speed: 5, chance: 0.05 }  // 紫色稀有
+];
+
+// 创建流星
+function createMeteor() {
+    const rand = Math.random();
+    let cumulativeChance = 0;
+    let meteorType = METEOR_TYPES[0];
+    
+    for (let type of METEOR_TYPES) {
+        cumulativeChance += type.chance;
+        if (rand < cumulativeChance) {
+            meteorType = type;
+            break;
+        }
+    }
+    
+    return {
+        x: Math.random() * (canvas.width - meteorType.size * 2) + meteorType.size,
+        y: -meteorType.size,
+        ...meteorType,
+        caught: false
+    };
+}
+
+// 绘制玩家托盘
+function drawPlayer() {
+    const p = gameState.player;
+    ctx.fillStyle = 'linear-gradient(to bottom, #667eea, #764ba2)';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#8a2be2';
+    
+    // 绘制托盘
+    ctx.beginPath();
+    ctx.roundRect(p.x - p.width/2, p.y, p.width, p.height, 10);
+    ctx.fillStyle = '#667eea';
+    ctx.fill();
+    
+    // 绘制边框
+    ctx.strokeStyle = '#8a2be2';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    ctx.shadowBlur = 0;
+}
+
+// 绘制流星
+function drawMeteor(meteor) {
+    if (meteor.caught) return;
+    
+    ctx.save();
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = meteor.color;
+    
+    // 绘制流星
+    ctx.fillStyle = meteor.color;
+    ctx.beginPath();
+    ctx.arc(meteor.x, meteor.y, meteor.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 绘制光晕
+    const gradient = ctx.createRadialGradient(meteor.x, meteor.y, 0, meteor.x, meteor.y, meteor.size * 1.5);
+    gradient.addColorStop(0, meteor.color + '80');
+    gradient.addColorStop(1, meteor.color + '00');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(meteor.x, meteor.y, meteor.size * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+}
+
+// 碰撞检测
+function checkCollision(meteor) {
+    const p = gameState.player;
+    return meteor.y + meteor.size >= p.y &&
+           meteor.y + meteor.size <= p.y + p.height &&
+           meteor.x >= p.x - p.width/2 &&
+           meteor.x <= p.x + p.width/2;
+}
+
+// 更新游戏
+function updateGame(currentTime) {
+    if (gameState.gameOver) return;
+    
+    // 生成新流星
+    if (currentTime - gameState.lastMeteorTime > gameState.meteorInterval) {
+        gameState.meteors.push(createMeteor());
+        gameState.lastMeteorTime = currentTime;
+        // 随着时间推移，流星生成速度加快
+        gameState.meteorInterval = Math.max(400, 800 - (60 - gameState.timeLeft) * 10);
+    }
+    
+    // 更新流星位置
+    gameState.meteors.forEach((meteor, index) => {
+        if (!meteor.caught) {
+            meteor.y += meteor.speed;
+            
+            // 碰撞检测
+            if (checkCollision(meteor)) {
+                meteor.caught = true;
+                gameState.score += meteor.score * (1 + gameState.combo * 0.1);
+                gameState.combo++;
+                gameState.maxCombo = Math.max(gameState.maxCombo, gameState.combo);
+                
+                // 移除已捕获的流星
+                gameState.meteors.splice(index, 1);
+            } else if (meteor.y > canvas.height) {
+                // 流星掉落，连击清零
+                gameState.combo = 0;
+                gameState.meteors.splice(index, 1);
+            }
+        }
+    });
+    
+    // 更新玩家位置
+    if (gameState.keys['ArrowLeft'] || gameState.keys['a'] || gameState.keys['A']) {
+        gameState.player.x = Math.max(gameState.player.width/2, gameState.player.x - gameState.player.speed);
+    }
+    if (gameState.keys['ArrowRight'] || gameState.keys['d'] || gameState.keys['D']) {
+        gameState.player.x = Math.min(canvas.width - gameState.player.width/2, gameState.player.x + gameState.player.speed);
+    }
+}
+
+// 渲染游戏
+function renderGame() {
+    // 清空画布
+    ctx.fillStyle = 'rgba(10, 14, 39, 0.3)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 绘制星空背景
+    for (let i = 0; i < 50; i++) {
+        const x = (Date.now() * 0.01 + i * 50) % canvas.width;
+        const y = (i * 37) % canvas.height;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fillRect(x, y, 2, 2);
+    }
+    
+    // 绘制所有流星
+    gameState.meteors.forEach(meteor => drawMeteor(meteor));
+    
+    // 绘制玩家
+    drawPlayer();
+    
+    // 更新UI
+    document.getElementById('scoreDisplay').textContent = Math.floor(gameState.score);
+    document.getElementById('comboDisplay').textContent = gameState.combo;
+}
+
+// 开始游戏
+function startGame() {
+    // 隐藏开始界面
+    document.getElementById('gameStartScreen').style.display = 'none';
+    
+    // 显示游戏信息
+    document.querySelector('.game-info').style.display = 'flex';
+    
+    // 重置游戏状态
+    gameState.score = 0;
+    gameState.combo = 0;
+    gameState.maxCombo = 0;
+    gameState.timeLeft = 60;
+    gameState.gameOver = false;
+    gameState.gameStarted = true;
+    gameState.meteors = [];
+    gameState.lastMeteorTime = 0;
+    
+    // 启动游戏循环
+    animationId = requestAnimationFrame(gameLoop);
+    
+    // 启动倒计时
+    timerInterval = setInterval(() => {
+        if (!gameState.gameOver && gameState.gameStarted) {
+            gameState.timeLeft--;
+            document.getElementById('timerDisplay').textContent = gameState.timeLeft;
+            
+            if (gameState.timeLeft <= 0) {
+                endGame();
+            }
+        }
+    }, 1000);
+}
+
+// 游戏循环
+function gameLoop(currentTime) {
+    if (gameState.gameStarted && !gameState.gameOver) {
+        updateGame(currentTime);
+    }
+    renderGame();
+    
+    if (!gameState.gameOver) {
+        animationId = requestAnimationFrame(gameLoop);
+    }
+}
+
+// 结束游戏
+function endGame() {
+    gameState.gameOver = true;
+    clearInterval(timerInterval);
+    cancelAnimationFrame(animationId);
+    
+    document.getElementById('finalScore').textContent = Math.floor(gameState.score);
+    document.getElementById('finalCombo').textContent = gameState.maxCombo;
+    document.getElementById('gameOverScreen').style.display = 'block';
+    
+    // 提交分数
+    submitScore();
+}
+
+// 提交分数
+function submitScore() {
+    const userId = <?php echo $CURUSER['id']; ?>;
+    const score = Math.floor(gameState.score);
+    const comboMax = gameState.maxCombo;
+    const duration = 60 - gameState.timeLeft;
+    
+    // 生成Token（与后端保持一致）
+    const tokenString = userId.toString() + score.toString() + comboMax.toString() + duration.toString() + '<?php echo date("Y-m-d"); ?>' + '<?php echo $CURUSER['passhash']; ?>';
+    const gameToken = md5(tokenString);
+    
+    const formData = new FormData();
+    formData.append('action', 'meteor_game_submit');
+    formData.append('user_id', userId);
+    formData.append('score', score);
+    formData.append('combo_max', comboMax);
+    formData.append('duration', duration);
+    formData.append('game_token', gameToken);
+    
+    console.log('提交分数:', {
+        user_id: userId,
+        score: score,
+        combo_max: comboMax,
+        duration: duration,
+        token: gameToken
+    });
+    
+    fetch('ajax.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.text();
+    })
+    .then(text => {
+        console.log('Response text:', text);
+        try {
+            const data = JSON.parse(text);
+            const statusEl = document.getElementById('submitStatus');
+            if (data.success) {
+                statusEl.textContent = '✓ 分数已提交到排行榜！';
+                statusEl.style.color = '#4ECDC4';
+                loadLeaderboard('today');
+            } else {
+                statusEl.textContent = '提交失败: ' + data.message;
+                statusEl.style.color = '#FF6B6B';
+            }
+        } catch (e) {
+            console.error('JSON parse error:', e);
+            document.getElementById('submitStatus').textContent = '提交失败: 服务器响应错误';
+            document.getElementById('submitStatus').style.color = '#FF6B6B';
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        document.getElementById('submitStatus').textContent = '提交失败: ' + error.message;
+        document.getElementById('submitStatus').style.color = '#FF6B6B';
+    });
+}
+
+// 重新开始游戏
+function restartGame() {
+    location.reload();
+}
+
+// 加载排行榜
+function loadLeaderboard(type, clickedButton) {
+    console.log('加载排行榜:', type);
+    
+    // 更新按钮状态
+    document.querySelectorAll('.leaderboard-tabs button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // 如果是点击按钮触发，高亮该按钮；否则高亮默认的"今日"按钮
+    if (clickedButton) {
+        clickedButton.classList.add('active');
+    } else {
+        // 初始加载时，默认高亮第一个按钮（今日）
+        const defaultBtn = document.querySelector('.leaderboard-tabs button');
+        if (defaultBtn) defaultBtn.classList.add('active');
+    }
+    
+    const tbody = document.getElementById('leaderboardBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">加载中...</td></tr>';
+    
+    fetch('ajax.php?action=meteor_game_leaderboard&type=' + type)
+        .then(response => {
+            console.log('排行榜响应状态:', response.status);
+            return response.text();
+        })
+        .then(text => {
+            console.log('排行榜响应内容:', text);
+            try {
+                const data = JSON.parse(text);
+                console.log('排行榜数据:', data);
+                
+                if (data.success) {
+                    if (data.data && data.data.length > 0) {
+                        tbody.innerHTML = data.data.map(record => {
+                            let rankDisplay = record.rank;
+                            if (record.rank === 1) rankDisplay = '<span class="rank-medal rank-1">🥇</span>';
+                            else if (record.rank === 2) rankDisplay = '<span class="rank-medal rank-2">🥈</span>';
+                            else if (record.rank === 3) rankDisplay = '<span class="rank-medal rank-3">🥉</span>';
+                            
+                            return `<tr>
+                                <td>${rankDisplay}</td>
+                                <td>${record.username}</td>
+                                <td>${record.score}</td>
+                                <td>${record.combo_max}</td>
+                                <td>${record.created_at}</td>
+                            </tr>`;
+                        }).join('');
+                        console.log('排行榜已更新，共', data.data.length, '条记录');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">暂无记录</td></tr>';
+                        console.log('排行榜无记录');
+                    }
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">加载失败: ' + data.message + '</td></tr>';
+                    console.error('排行榜加载失败:', data.message);
+                    if (data.trace) {
+                        console.error('错误堆栈:', data.trace);
+                    }
+                }
+            } catch (e) {
+                console.error('JSON解析错误:', e);
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">数据解析失败</td></tr>';
+            }
+        })
+        .catch(error => {
+            console.error('请求错误:', error);
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">加载失败: ' + error.message + '</td></tr>';
+        });
+}
+
+// 键盘事件
+document.addEventListener('keydown', (e) => {
+    gameState.keys[e.key] = true;
+});
+
+document.addEventListener('keyup', (e) => {
+    gameState.keys[e.key] = false;
+});
+
+// 触摸事件（移动端支持）
+let touchX = 0;
+canvas.addEventListener('touchstart', (e) => {
+    touchX = e.touches[0].clientX;
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const newTouchX = e.touches[0].clientX;
+    const deltaX = newTouchX - touchX;
+    gameState.player.x += deltaX * 0.5;
+    gameState.player.x = Math.max(gameState.player.width/2, Math.min(canvas.width - gameState.player.width/2, gameState.player.x));
+    touchX = newTouchX;
+});
+
+// 页面加载完成后的初始化
+// 只渲染背景，不启动游戏
+requestAnimationFrame(gameLoop);
+// 加载排行榜
+loadLeaderboard('today');
+</script>
+</body>
+</html>
+

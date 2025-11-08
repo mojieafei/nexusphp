@@ -561,7 +561,7 @@ img.bar_end {
         0 0 30px rgba(0, 212, 255, 0.15),
         inset 0 0 15px rgba(0, 212, 255, 0.05);
     position: relative;
-    z-index: 999999 !important;
+    z-index: 999 !important;
 }
 
 #nav::before {
@@ -944,7 +944,7 @@ table.mainouter {
     position: fixed;
     top: 1.2rem;
     right: 1.2rem;
-    z-index: 9999;
+    z-index: 9999999;
 }
 
 /* 按钮本体（圆形，太空光晕） */
@@ -980,7 +980,35 @@ table.mainouter {
     position: fixed;
     top: 5.2rem;
     right: 1.2rem;
-    z-index: 9999;
+    z-index: 9999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+/* 接流星小游戏按钮 */
+.meteor-game-launch {
+    padding: 10px 18px;
+    border-radius: 999px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0a0f1f;
+    background: linear-gradient(135deg, #facc15, #f97316);
+    box-shadow: 0 12px 25px rgba(250, 204, 21, 0.35);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.meteor-game-launch:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px rgba(250, 204, 21, 0.45);
+}
+
+.meteor-game-launch:active {
+    transform: translateY(0);
+    box-shadow: 0 8px 20px rgba(250, 204, 21, 0.25);
 }
 
 /* 流星雨按钮本体 */
@@ -1014,6 +1042,52 @@ table.mainouter {
     stroke: #fff;
     fill: #fff;
     filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+}
+
+/* 接流星游戏按钮 */
+.meteor-game-btn {
+    position: fixed;
+    top: 9.2rem;
+    right: 1.2rem;
+    z-index: 9999999;
+}
+
+.meteor-game-btn a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6), 0 0 40px rgba(118, 75, 162, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    animation: game-btn-pulse 3s ease-in-out infinite 1s;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.meteor-game-btn a:hover {
+    transform: scale(1.15) rotate(10deg);
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.9), 0 0 60px rgba(118, 75, 162, 0.6), inset 0 0 12px rgba(255, 255, 255, 0.4);
+    animation: none;
+}
+
+.meteor-game-btn a:active {
+    transform: scale(0.95);
+}
+
+.meteor-game-btn svg {
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+}
+
+@keyframes game-btn-pulse {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.6), 0 0 40px rgba(118, 75, 162, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(102, 126, 234, 0.8), 0 0 50px rgba(118, 75, 162, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.3);
+    }
 }
 
 /* 粒子淡出动画 */

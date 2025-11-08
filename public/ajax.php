@@ -90,6 +90,118 @@ if ($action === 'forumtip') {
     }
 }
 
+// 流星游戏 - 提交分数
+if ($action === 'meteor_game_submit') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        $userId = intval($_POST['user_id'] ?? 0);
+        $score = intval($_POST['score'] ?? 0);
+        $comboMax = intval($_POST['combo_max'] ?? 0);
+        $duration = intval($_POST['duration'] ?? 60);
+        $gameToken = $_POST['game_token'] ?? '';
+        $ipAddress = getip();
+        
+        // 1. 用户验证
+        if (!$CURUSER || $CURUSER['id'] != $userId) {
+            throw new \InvalidArgumentException('用户验证失败');
+        }
+        
+        // 2. Token验证（防止简单的接口调用）
+        $expectedToken = md5($userId . $score . $comboMax . $duration . date('Y-m-d') . $CURUSER['passhash']);
+        if ($gameToken !== $expectedToken) {
+            // 记录可疑行为
+            write_log("游戏作弊尝试 - 用户ID: {$userId}, IP: {$ipAddress}, 分数: {$score}", 'mod');
+            throw new \InvalidArgumentException('游戏数据验证失败');
+        }
+        
+        // 3. 分数合理性检查
+        if ($score < 0 || $score > 999999) {
+            throw new \InvalidArgumentException('分数异常');
+        }
+        
+        // 4. 时长检查（游戏固定60秒，允许±3秒误差）
+        if ($duration < 57 || $duration > 63) {
+            write_log("游戏作弊尝试 - 用户ID: {$userId}, 时长异常: {$duration}秒", 'mod');
+            throw new \InvalidArgumentException('游戏时长异常');
+        }
+        
+        // 5. 分数与连击的合理性检查
+        // 最低分流星10分，最高50分，连击最多增加10%
+        // 理论最高分 = 60秒 * (1000ms/800ms) * 50分 * 1.1 ≈ 4125
+        $maxTheoreticalScore = 5000; // 留一些余量
+        if ($score > $maxTheoreticalScore) {
+            write_log("游戏作弊尝试 - 用户ID: {$userId}, 分数过高: {$score}", 'mod');
+            throw new \InvalidArgumentException('分数超出合理范围');
+        }
+        
+        // 6. 连击数检查（60秒最多能接75个流星左右）
+        if ($comboMax > 100) {
+            write_log("游戏作弊尝试 - 用户ID: {$userId}, 连击数过高: {$comboMax}", 'mod');
+            throw new \InvalidArgumentException('连击数异常');
+        }
+        
+        // 7. 检查提交频率（30秒内只能提交一次）
+        $lastSubmit = \App\Models\MeteorGameScore::where('user_id', $userId)
+            ->where('created_at', '>=', now()->subSeconds(30))
+            ->first();
+            
+        if ($lastSubmit) {
+            throw new \InvalidArgumentException('提交过于频繁，请等待30秒');
+        }
+        
+        // 8. 检查短时间内的异常高分（1小时内提交3次以上超高分视为异常）
+        $recentHighScores = \App\Models\MeteorGameScore::where('user_id', $userId)
+            ->where('score', '>', 3000)
+            ->where('created_at', '>=', now()->subHour())
+            ->count();
+            
+        if ($recentHighScores >= 3) {
+            write_log("游戏作弊嫌疑 - 用户ID: {$userId}, 1小时内{$recentHighScores}次高分", 'mod');
+            throw new \InvalidArgumentException('检测到异常游戏行为，请稍后再试');
+        }
+        
+        // 保存分数
+        \App\Models\MeteorGameScore::create([
+            'user_id' => $userId,
+            'score' => $score,
+            'combo_max' => $comboMax,
+            'duration' => $duration,
+            'ip_address' => $ipAddress,
+        ]);
+        
+        exit(json_encode(['success' => true, 'message' => '分数提交成功！']));
+        
+    } catch (\Throwable $e) {
+        exit(json_encode(['success' => false, 'message' => $e->getMessage()]));
+    }
+}
+
+// 流星游戏 - 获取排行榜
+if ($action === 'meteor_game_leaderboard') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        $type = $_GET['type'] ?? 'alltime'; // today, 7days, alltime
+        
+        $leaderboard = \App\Models\MeteorGameScore::getLeaderboard($type, 50);
+        
+        $data = $leaderboard->map(function($record, $index) {
+            return [
+                'rank' => $index + 1,
+                'username' => $record->user->username ?? '未知用户',
+                'user_class' => $record->user->class ?? 0,
+                'score' => $record->score,
+                'combo_max' => $record->combo_max,
+                'created_at' => $record->created_at->format('Y-m-d H:i:s'),
+            ];
+        })->values()->toArray(); // 转为数组并重置索引
+        
+        exit(json_encode(['success' => true, 'data' => $data, 'count' => count($data)]));
+        
+    } catch (\Throwable $e) {
+        exit(json_encode(['success' => false, 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]));
+    }
+}
+
 class AjaxInterface{
 
     public static function toggleUserMedalStatus($params)

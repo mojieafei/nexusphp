@@ -3272,6 +3272,20 @@ if ($CURUSER) {
         </svg>
     </a>
 </div>
+<!-- 接流星游戏按钮 -->
+<div class="meteor-game-btn">
+    <a href="meteor_game.php" target="_blank" title="进入接流星小游戏 🎮">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="17" width="18" height="3" rx="1.5" stroke="#fff" stroke-width="2" fill="none"/>
+            <circle cx="8" cy="6" r="2" fill="#FFD700"/>
+            <circle cx="12" cy="4" r="1.5" fill="#FF6B6B"/>
+            <circle cx="16" cy="8" r="2.5" fill="#4ECDC4"/>
+            <path d="M8 8 L8 15" stroke="#FFD700" stroke-width="1.5" stroke-dasharray="2 2"/>
+            <path d="M12 6 L12 15" stroke="#FF6B6B" stroke-width="1.5" stroke-dasharray="2 2"/>
+            <path d="M16 10.5 L16 15" stroke="#4ECDC4" stroke-width="1.5" stroke-dasharray="2 2"/>
+        </svg>
+    </a>
+</div>
 <script>
 (function() {
     const btn = document.getElementById('meteorShowerToggle');
@@ -3471,6 +3485,8 @@ if ($CURUSER) {
         });
     }
 })();
+
+// 接流星游戏按钮已改为直接链接，无需额外JS
 </script>
 <?php
 }
