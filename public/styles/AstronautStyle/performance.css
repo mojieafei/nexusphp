@@ -124,6 +124,45 @@ table {
     border-radius: 12px !important;
 }
 
+#calendar .fc {
+    background: transparent !important;
+    color: #e5e7eb !important;
+}
+
+#calendar table {
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+
+#calendar table::before {
+    display: none !important;
+}
+
+#calendar .fc-scrollgrid,
+#calendar .fc-daygrid,
+#calendar .fc-daygrid-day,
+#calendar .fc-daygrid-day-frame {
+    background: transparent !important;
+    backdrop-filter: none !important;
+}
+
+#calendar .fc-daygrid-day-number,
+#calendar .fc-daygrid-day-top,
+#calendar .fc-daygrid-day-events {
+    color: #e5e7eb !important;
+}
+
+#calendar .fc-day-today {
+    background: rgba(0, 212, 255, 0.12) !important;
+}
+
+#calendar .fc-highlight {
+    background: rgba(0, 212, 255, 0.18) !important;
+}
+
 .rowfollow {
     background: rgba(15, 27, 51, 0.7) !important;
     border-bottom: 1px solid rgba(0, 212, 255, 0.15) !important;
@@ -144,6 +183,34 @@ table {
 .homepage-banner-container video,
 .homepage-banner-container img {
     animation: none !important;
+}
+
+.homepage-banner-container .banner-video-toggle {
+    position: absolute !important;
+    right: 16px !important;
+    bottom: 16px !important;
+    padding: 8px 16px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(0, 212, 255, 0.4) !important;
+    background: rgba(10, 22, 40, 0.9) !important;
+    color: #e5e7eb !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.4px !important;
+    box-shadow: none !important;
+    display: none;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease !important;
+    z-index: 180 !important;
+}
+
+.homepage-banner-container .banner-video-toggle:hover:not(:disabled) {
+    background: rgba(0, 212, 255, 0.2) !important;
+    border-color: rgba(0, 212, 255, 0.6) !important;
+}
+
+.homepage-banner-container .banner-video-toggle:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
 }
 
 .banner-slider {

@@ -1,0 +1,255 @@
+/*
+ * 极简模式 (Minimal UI)
+ * 目标：移除所有装饰性视觉效果与大资源组件，只保留基础布局与对比度
+ */
+
+/* 通用禁用动画 / 渐变 / 滤镜（保留流星雨效果） */
+*:not(.meteor-trail):not(.meteor-trail *),
+*:not(.meteor-trail)::before,
+*:not(.meteor-trail)::after {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+
+/* 基础背景改为纯色 */
+body {
+    background: #0b0d18 !important;
+    color: #e5e7eb !important;
+    font-family: 'Segoe UI', Tahoma, Arial, Helvetica, sans-serif;
+}
+
+body::before,
+body::after {
+    display: none !important;
+}
+
+/* 主要容器去除玻璃态与渐变 */
+#outer,
+td.outer,
+td.embedded,
+table,
+.torrenttable,
+.rowfollow,
+.colhead {
+    background: #111c2d !important;
+    border: 1px solid #1f2f45 !important;
+    border-radius: 4px !important;
+}
+
+.rowfollow:nth-child(even) {
+    background: #0f1624 !important;
+}
+
+.colhead {
+    background: #15263c !important;
+    color: #8bd4ff !important;
+    font-weight: 600 !important;
+}
+
+/* 导航栏压缩为简单色块 */
+#nav {
+    background: #15263c !important;
+    border: 1px solid #1f2f45 !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+}
+
+#nav a {
+    color: #dbeafe !important;
+    padding: 6px 10px !important;
+}
+
+#nav a:hover,
+#nav li.selected > a {
+    background: #1e3a5f !important;
+    color: #93c5fd !important;
+}
+
+/* 输入组件 */
+input,
+select,
+textarea,
+button {
+    background: #0f1a2a !important;
+    border: 1px solid #274163 !important;
+    border-radius: 4px !important;
+    color: #e5e7eb !important;
+    padding: 6px 10px !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+    outline: 2px solid #2563eb !important;
+}
+
+input[type="submit"],
+button {
+    background: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+    color: #f8fafc !important;
+    font-weight: 600 !important;
+}
+
+input[type="submit"]:hover,
+button:hover {
+    background: #1e40af !important;
+}
+
+/* 链接简化 */
+a {
+    color: #60a5fa !important;
+}
+
+a:hover {
+    color: #3b82f6 !important;
+}
+
+/* Banner 调整 */
+.homepage-banner-container {
+    background: #0f172a !important;
+    border: 1px solid #1f2f45 !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+}
+
+.homepage-banner-container .banner-slider {
+    background: #0b1221 !important;
+    box-shadow: none !important;
+}
+
+.homepage-banner-container .banner-logo {
+    display: none !important;
+}
+
+.homepage-banner-container .banner-arrow,
+.homepage-banner-container .banner-indicators {
+    display: none !important;
+}
+
+.space-bg-layer,
+.parallax-layer,
+.dynamic-bg {
+    display: none !important;
+}
+
+#meteor-shower-container {
+    position: fixed !important;
+    inset: 0 !important;
+    pointer-events: none !important;
+    opacity: 0.6 !important;
+}
+
+#meteor-shower-container canvas,
+#meteor-shower-container .meteor-trail {
+    filter: none !important;
+    mix-blend-mode: screen !important;
+}
+
+#calendar .fc {
+    background: transparent !important;
+    color: #e5e7eb !important;
+}
+
+#calendar table {
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+
+#calendar table::before {
+    display: none !important;
+}
+
+#calendar .fc-scrollgrid,
+#calendar .fc-daygrid,
+#calendar .fc-daygrid-day,
+#calendar .fc-daygrid-day-frame {
+    background: transparent !important;
+}
+
+#calendar .fc-daygrid-day-number,
+#calendar .fc-daygrid-day-top,
+#calendar .fc-daygrid-day-events {
+    color: #e5e7eb !important;
+}
+
+#calendar .fc-day-today {
+    background: #1e3a5f !important;
+}
+
+#calendar .fc-highlight {
+    background: rgba(37, 99, 235, 0.35) !important;
+}
+
+.homepage-banner-container .banner-video-toggle {
+    position: absolute !important;
+    right: 16px !important;
+    bottom: 16px !important;
+    padding: 8px 18px !important;
+    border-radius: 999px !important;
+    border: 1px solid #274163 !important;
+    background: rgba(30, 61, 102, 0.9) !important;
+    color: #f8fafc !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px !important;
+    display: none;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease !important;
+    z-index: 180 !important;
+}
+
+.homepage-banner-container .banner-video-toggle:hover:not(:disabled) {
+    background: rgba(37, 99, 235, 0.85) !important;
+    border-color: rgba(37, 99, 235, 0.9) !important;
+}
+
+.homepage-banner-container .banner-video-toggle:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+/* 提示条 */
+.notice,
+.alert,
+.message {
+    background: #0f1a2a !important;
+    border: 1px solid #1f2f45 !important;
+    color: #e5e7eb !important;
+}
+
+/* 表格线条更细 */
+td,
+th {
+    border-color: #1f2f45 !important;
+}
+
+/* 页脚 */
+.filament-main-footer,
+.filament-footer {
+    background: transparent !important;
+    color: #6b7280 !important;
+}
+
+/* 图片与媒体元素去动画 */
+img,
+video {
+    animation: none !important;
+    filter: none !important;
+}
+
+/* 低性能设备避免 fixed 背景造成重绘 */
+html,
+body {
+    background-attachment: scroll !important;
+}
+

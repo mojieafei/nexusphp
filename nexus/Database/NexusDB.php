@@ -256,11 +256,36 @@ class NexusDB
         return $result;
     }
 
+    public static function selectOne(string $sql, array $bindings = [])
+    {
+        if (!IN_NEXUS) {
+            $result = DB::selectOne($sql, $bindings);
+            if (is_null($result)) {
+                return null;
+            }
+            return json_decode(json_encode($result), true);
+        }
+        if (!empty($bindings)) {
+            $escaped = array_map('sqlesc', $bindings);
+            foreach ($escaped as $value) {
+                $pos = strpos($sql, '?');
+                if ($pos === false) {
+                    break;
+                }
+                $sql = substr_replace($sql, $value, $pos, 1);
+            }
+        }
+        $res = sql_query($sql);
+        $row = mysql_fetch_assoc($res);
+        return $row ?: null;
+    }
+
     public static function bootEloquent(array $config)
     {
         $capsule = new Capsule(Container::getInstance());
         $connectionName = self::ELOQUENT_CONNECTION_NAME;
         $capsule->addConnection($config, $connectionName);
+        $capsule->getDatabaseManager()->setDefaultConnection($connectionName);
         $capsule->setAsGlobal();
         $capsule->bootEloquent();
         $connection = self::$eloquentConnection = $capsule->getConnection($connectionName);

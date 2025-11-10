@@ -240,7 +240,7 @@ class StardustAchievementRepository extends BaseRepository
                 if (isset($conditions['total_fragments'])) {
                     // 累计收获碎片数
                     $sql = "SELECT COUNT(*) as count FROM stardust_transaction_logs 
-                            WHERE user_id = {$userId} AND action = 'harvest'";
+                            WHERE user_id = {$userId} AND source = 'harvest'";
                     $result = NexusDB::selectOne($sql);
                     return [
                         'current' => (int)($result['count'] ?? 0),
@@ -248,7 +248,7 @@ class StardustAchievementRepository extends BaseRepository
                     ];
                 } elseif (isset($conditions['planets'])) {
                     // 重建太阳系：集齐所有行星
-                    $sql = "SELECT COUNT(DISTINCT crop_id) as count FROM stardust_inventories 
+                    $sql = "SELECT COUNT(DISTINCT item_id) as count FROM stardust_inventories 
                             WHERE user_id = {$userId} AND item_type = 'planet'";
                     $result = NexusDB::selectOne($sql);
                     return [
@@ -258,7 +258,7 @@ class StardustAchievementRepository extends BaseRepository
                 } elseif (isset($conditions['planet_id'])) {
                     // 特定行星收藏
                     $sql = "SELECT quantity FROM stardust_inventories 
-                            WHERE user_id = {$userId} AND item_type = 'planet' AND crop_id = {$conditions['planet_id']}";
+                            WHERE user_id = {$userId} AND item_type = 'planet' AND item_id = {$conditions['planet_id']}";
                     $result = NexusDB::selectOne($sql);
                     return [
                         'current' => (int)($result['quantity'] ?? 0),
@@ -279,7 +279,7 @@ class StardustAchievementRepository extends BaseRepository
                 if (isset($conditions['water_times'])) {
                     // 浇水次数
                     $sql = "SELECT COUNT(*) as count FROM stardust_interactions 
-                            WHERE user_id = {$userId} AND action = 'water'";
+                            WHERE from_user_id = {$userId} AND action = 'water'";
                     $result = NexusDB::selectOne($sql);
                     return [
                         'current' => (int)($result['count'] ?? 0),
@@ -287,8 +287,8 @@ class StardustAchievementRepository extends BaseRepository
                     ];
                 } elseif (isset($conditions['visit_unique_farms'])) {
                     // 访问农场数
-                    $sql = "SELECT COUNT(DISTINCT target_user_id) as count FROM stardust_interactions 
-                            WHERE user_id = {$userId} AND action = 'visit'";
+                    $sql = "SELECT COUNT(DISTINCT to_user_id) as count FROM stardust_interactions 
+                            WHERE from_user_id = {$userId} AND action = 'visit'";
                     $result = NexusDB::selectOne($sql);
                     return [
                         'current' => (int)($result['count'] ?? 0),
@@ -297,7 +297,7 @@ class StardustAchievementRepository extends BaseRepository
                 } elseif (isset($conditions['steal_times'])) {
                     // 偷取次数
                     $sql = "SELECT COUNT(*) as count FROM stardust_interactions 
-                            WHERE user_id = {$userId} AND action = 'steal'";
+                            WHERE from_user_id = {$userId} AND action = 'steal'";
                     $result = NexusDB::selectOne($sql);
                     return [
                         'current' => (int)($result['count'] ?? 0),
@@ -310,7 +310,7 @@ class StardustAchievementRepository extends BaseRepository
                 if (isset($conditions['first_harvest'])) {
                     // 首次收获
                     $sql = "SELECT COUNT(*) as count FROM stardust_transaction_logs 
-                            WHERE user_id = {$userId} AND action = 'harvest'";
+                            WHERE user_id = {$userId} AND source = 'harvest'";
                     $result = NexusDB::selectOne($sql);
                     return [
                         'current' => (int)($result['count'] ?? 0) > 0 ? 1 : 0,

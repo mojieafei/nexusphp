@@ -2344,7 +2344,7 @@ function menu ($selected = "home") {
             print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"" . $extforumurl."\" target=\"_blank\">".$lang_functions['text_forums']."</a></li>");
         print ("<li" . ($selected == "torrents" ? " class=\"selected\"" : "") . "><a href=\"torrents.php\" rel='sub-menu'>".($normalSectionName[$lang] ?? $lang_functions['text_torrents'])."</a></li>");
         // 官方资源下拉菜单 - 临时隐藏，下个版本优化
-        /* 
+        /*
         print ("<li class=\"dropdown-menu" . ($selected == "official" ? " selected" : "") . "\" id=\"official-dropdown\">");
         print ("<a href=\"javascript:void(0);\" class=\"dropdown-toggle\" onclick=\"return false;\">官方资源 ▼</a>");
         print ("<ul class=\"dropdown-content\">");
@@ -2361,7 +2361,7 @@ function menu ($selected = "home") {
             if (!dropdown) return;
             var timer = null;
             var dropdownContent = dropdown.querySelector('.dropdown-content');
-            
+
             function updateDropdownPosition() {
                 var rect = dropdown.getBoundingClientRect();
                 dropdownContent.style.position = 'fixed';
@@ -2369,51 +2369,51 @@ function menu ($selected = "home") {
                 dropdownContent.style.left = rect.left + 'px';
                 dropdownContent.style.zIndex = '2147483647';
             }
-            
+
             function showDropdown() {
                 updateDropdownPosition();
                 dropdownContent.style.display = 'block';
             }
-            
+
             function hideDropdown() {
                 dropdownContent.style.display = 'none';
             }
-            
+
             dropdown.addEventListener('mouseenter', function() {
                 if (timer) clearTimeout(timer);
                 showDropdown();
             });
-            
+
             dropdown.addEventListener('mouseleave', function() {
                 timer = setTimeout(function() {
                     hideDropdown();
                 }, 150);
             });
-            
+
             // 下拉菜单本身悬停时也保持显示
             dropdownContent.addEventListener('mouseenter', function() {
                 if (timer) clearTimeout(timer);
             });
-            
+
             dropdownContent.addEventListener('mouseleave', function() {
                 timer = setTimeout(function() {
                     hideDropdown();
                 }, 150);
             });
-            
+
             // 窗口滚动/调整大小时更新位置
             window.addEventListener('scroll', function() {
                 if (dropdownContent.style.display === 'block') {
                     updateDropdownPosition();
                 }
             });
-            
+
             window.addEventListener('resize', function() {
                 if (dropdownContent.style.display === 'block') {
                     updateDropdownPosition();
                 }
             });
-            
+
             // 点击下拉菜单链接时关闭
             var links = dropdown.querySelectorAll('.dropdown-content a');
             links.forEach(function(link) {
@@ -2542,19 +2542,52 @@ function get_style_highlight()
 function display_homepage_banner()
 {
 	global $CURUSER;
-	
+
 	// 从数据库获取当前用户可见的banner
 	$userClass = $CURUSER ? (int)$CURUSER['class'] : 0;
 	$banners = \App\Models\Banner::getActiveBanners($userClass);
-	
+
 	if ($banners->isEmpty()) {
 		return;
 	}
-	
+
+	// 当前 UI 模式（default / performance / minimal）
+	$uiMode = 'default';
+	$uiModeLocked = false;
+	if ($CURUSER && isset($CURUSER['performance_mode'])) {
+		$uiMode = $CURUSER['performance_mode'];
+		if (in_array($uiMode, ['performance', 'minimal'], true)) {
+			$uiModeLocked = true;
+		}
+	}
+
+	$cookieMode = $_COOKIE['ui_mode'] ?? null;
+	if (!is_string($cookieMode)) {
+		$cookieMode = null;
+	}
+
+	if ($cookieMode === 'default') {
+		$uiModeLocked = true;
+	}
+
+	if (!$uiModeLocked && in_array($cookieMode, ['performance', 'minimal'], true)) {
+		$uiMode = $cookieMode;
+	}
+
+	if (!in_array($uiMode, ['default', 'performance', 'minimal'], true)) {
+		$uiMode = 'default';
+	}
+
+	$shouldAutoPlayVideo = $uiMode !== 'minimal';
+
 	// 将数据库数据转换为原有格式
 	$bannerFiles = [];
+	$hasVideoBanner = false;
 	foreach ($banners as $banner) {
 		$ext = pathinfo(parse_url($banner->resource_url, PHP_URL_PATH), PATHINFO_EXTENSION);
+		if ($banner->resource_type === 'video') {
+			$hasVideoBanner = true;
+		}
 		$bannerFiles[] = [
 			'file' => $banner->getFullResourceUrl(),
 			'ext' => $ext ?: 'mp4',
@@ -2564,14 +2597,15 @@ function display_homepage_banner()
 			'id' => $banner->id
 		];
 	}
-	
+
 	if (empty($bannerFiles)) {
 		return;
 	}
-	
+
 	// 输出轮播HTML和CSS - 与导航栏等宽（1600px），高度根据内容自适应
-	echo '<div class="homepage-banner-container" style="width: ' . CONTENT_WIDTH . 'px; margin: 0 auto; overflow: hidden; position: relative; box-sizing: border-box;">';
-	
+	$containerClass = 'homepage-banner-container' . ($hasVideoBanner ? ' has-video-banner' : '');
+	echo '<div class="' . $containerClass . '" style="width: ' . CONTENT_WIDTH . 'px; margin: 0 auto; overflow: hidden; position: relative; box-sizing: border-box;">';
+
 	// 宇航员主题Loading效果
 	echo '<div class="banner-loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 360px; background: linear-gradient(135deg, #0a1628 0%, #1a2642 50%, #0f1b33 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; transition: opacity 0.5s ease;">';
 	echo '<div class="astronaut-container" style="position: relative; width: 80px; height: 80px; margin-bottom: 20px;">';
@@ -2586,24 +2620,31 @@ function display_homepage_banner()
 	echo '@keyframes rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
 	echo '</style>';
 	echo '</div>';
-	
+
 	echo '<div class="banner-slider" style="position: relative; width: 100%; min-height: 360px; background: #000; cursor: grab; opacity: 0; transition: opacity 0.5s ease;">';
-	
+	if ($hasVideoBanner && $uiMode === 'minimal') {
+		echo '<button type="button" class="banner-video-toggle" aria-label="切换视频背景播放" aria-pressed="false" style="display:none;">▶ 播放视频背景</button>';
+	}
+
 	// 添加悬浮 logo
 	echo '<div class="banner-logo" style="position: absolute; top: 20px; left: 20px; z-index: 100; opacity: 0.9; transition: opacity 0.3s;">';
 	echo '<img src="img/logo.png" alt="Logo" style="height: 60px; width: auto; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));">';
 	echo '</div>';
-	
+
 	foreach ($bannerFiles as $index => $banner) {
 		$display = $index === 0 ? 'block' : 'none';
 		$path = htmlspecialchars($banner['file']);
 		$jumpUrl = !empty($banner['jump_url']) ? htmlspecialchars($banner['jump_url']) : '';
 		$clickStyle = $jumpUrl ? 'cursor: pointer;' : '';
 		$dataJumpUrl = $jumpUrl ? 'data-jump-url="' . $jumpUrl . '"' : '';
-		
+
 		if ($banner['type'] === 'video') {
+			$videoAttrs = 'class="banner-video" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto; pointer-events: none;" preload="metadata" muted loop playsinline';
+			if ($shouldAutoPlayVideo) {
+				$videoAttrs .= ' autoplay';
+			}
 			echo '<div class="banner-item" ' . $dataJumpUrl . ' style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%; ' . $clickStyle . '">';
-			echo '<video class="banner-video" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto; pointer-events: none;" autoplay muted loop playsinline>';
+			echo '<video ' . $videoAttrs . '>';
 			echo '<source src="' . $path . '" type="video/' . htmlspecialchars($banner['ext']) . '">';
 			echo '</video>';
 			echo '</div>';
@@ -2613,26 +2654,26 @@ function display_homepage_banner()
 			echo '</div>';
 		}
 	}
-	
+
 	// 如果有多个banner，添加指示器和切换功能
 	if (count($bannerFiles) > 1) {
 		// 左箭头
 		echo '<div class="banner-arrow banner-arrow-left" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; opacity: 0; transition: opacity 0.3s;">';
 		echo '<span style="color: #fff; font-size: 24px; line-height: 1; user-select: none;">‹</span>';
 		echo '</div>';
-		
+
 		// 右箭头
 		echo '<div class="banner-arrow banner-arrow-right" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; opacity: 0; transition: opacity 0.3s;">';
 		echo '<span style="color: #fff; font-size: 24px; line-height: 1; user-select: none;">›</span>';
 		echo '</div>';
-		
+
 		echo '<div class="banner-indicators" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10;">';
 		foreach ($bannerFiles as $index => $banner) {
 			$active = $index === 0 ? 'opacity: 1;' : 'opacity: 0.5;';
 			echo '<span class="indicator" data-index="' . $index . '" style="width: 10px; height: 10px; border-radius: 50%; background: #fff; cursor: pointer; ' . $active . '"></span>';
 		}
 		echo '</div>';
-		
+
 		// 添加JS代码
 		echo '<script type="text/javascript">
 		(function() {
@@ -2650,7 +2691,7 @@ function display_homepage_banner()
 			var isDragging = false;
 			var loadedCount = 0;
 			var totalResources = items.length;
-			
+
 			// 隐藏Loading的函数
 			function hideLoading() {
 				if (loadingDiv) {
@@ -2661,7 +2702,7 @@ function display_homepage_banner()
 				}
 				container.style.opacity = "1";
 			}
-			
+
 			// 点击banner跳转
 			items.forEach(function(item) {
 				var jumpUrl = item.getAttribute("data-jump-url");
@@ -2673,20 +2714,20 @@ function display_homepage_banner()
 					});
 				}
 			});
-			
+
 			// 根据当前显示的banner调整容器高度
 			function adjustBannerHeight() {
 				var activeItem = items[currentIndex];
 				if (!activeItem || !container || !bannerContainer) return;
-				
+
 				// 移动端跳过高度调整，使用CSS固定高度
 				if (window.innerWidth <= 768) {
 					return;
 				}
-				
+
 				var video = activeItem.querySelector(".banner-video");
 				var image = activeItem.querySelector(".banner-image");
-				
+
 				if (video) {
 					// 视频已加载元数据
 					if (video.videoWidth && video.videoHeight) {
@@ -2715,7 +2756,7 @@ function display_homepage_banner()
 					}
 				}
 			}
-			
+
 			function showBanner(index) {
 				items.forEach(function(item, i) {
 					item.style.display = i === index ? "block" : "none";
@@ -2729,12 +2770,12 @@ function display_homepage_banner()
 				// 切换后调整高度
 				setTimeout(adjustBannerHeight, 100);
 			}
-			
+
 			// 监听资源加载完成
 			items.forEach(function(item) {
 				var video = item.querySelector(".banner-video");
 				var image = item.querySelector(".banner-image");
-				
+
 				if (video) {
 					video.addEventListener("loadedmetadata", function() {
 						loadedCount++;
@@ -2754,7 +2795,7 @@ function display_homepage_banner()
 						}
 					}
 				}
-				
+
 				if (image) {
 					if (image.complete) {
 						loadedCount++;
@@ -2775,19 +2816,19 @@ function display_homepage_banner()
 					}
 				}
 			});
-			
+
 			// 设置超时，5秒后强制隐藏Loading
 			setTimeout(function() {
 				if (loadingDiv && loadingDiv.style.opacity !== "0") {
 					hideLoading();
 				}
 			}, 5000);
-			
+
 		// 移动端禁用高度自动调整，避免闪屏
 		if (window.innerWidth > 1200) {
 			// 初始调整高度（仅PC端）
 			setTimeout(adjustBannerHeight, 100);
-			
+
 			// 窗口大小改变时重新调整（优化防抖，避免闪烁）
 			var resizeTimer2;
 			var lastWidth2 = window.innerWidth;
@@ -2802,7 +2843,7 @@ function display_homepage_banner()
 				}, 500);
 			});
 		}
-			
+
 			// 点击指示器切换
 			indicators.forEach(function(indicator) {
 				indicator.addEventListener("click", function() {
@@ -2810,47 +2851,47 @@ function display_homepage_banner()
 					showBanner(index);
 				});
 			});
-			
+
 			// 左右箭头点击事件
 			leftArrow.addEventListener("click", function(e) {
 				e.stopPropagation();
 				var prevIndex = (currentIndex - 1 + totalItems) % totalItems;
 				showBanner(prevIndex);
 			});
-			
+
 			rightArrow.addEventListener("click", function(e) {
 				e.stopPropagation();
 				var nextIndex = (currentIndex + 1) % totalItems;
 				showBanner(nextIndex);
 			});
-			
+
 			// 鼠标悬停显示箭头
 			bannerContainer.addEventListener("mouseenter", function() {
 				leftArrow.style.opacity = "0.7";
 				rightArrow.style.opacity = "0.7";
 			});
-			
+
 			bannerContainer.addEventListener("mouseleave", function() {
 				leftArrow.style.opacity = "0";
 				rightArrow.style.opacity = "0";
 			});
-			
+
 			leftArrow.addEventListener("mouseenter", function() {
 				this.style.opacity = "1";
 			});
-			
+
 			rightArrow.addEventListener("mouseenter", function() {
 				this.style.opacity = "1";
 			});
-			
+
 			leftArrow.addEventListener("mouseleave", function() {
 				this.style.opacity = "0.7";
 			});
-			
+
 			rightArrow.addEventListener("mouseleave", function() {
 				this.style.opacity = "0.7";
 			});
-			
+
 			// 触摸/鼠标滑动支持
 			container.addEventListener("touchstart", function(e) {
 				startX = e.touches[0].clientX;
@@ -2858,7 +2899,7 @@ function display_homepage_banner()
 				isDragging = true;
 				items[currentIndex].style.transition = "none";
 			});
-			
+
 			container.addEventListener("mousedown", function(e) {
 				// 避免点击箭头时触发拖动
 				if (e.target.closest(".banner-arrow")) return;
@@ -2869,28 +2910,28 @@ function display_homepage_banner()
 				items[currentIndex].style.transition = "none";
 				e.preventDefault();
 			});
-			
+
 			container.addEventListener("touchmove", function(e) {
 				if (!isDragging) return;
 				currentX = e.touches[0].clientX;
 				var diff = currentX - startX;
 				items[currentIndex].style.transform = "translateX(" + diff + "px)";
 			});
-			
+
 			container.addEventListener("mousemove", function(e) {
 				if (!isDragging) return;
 				currentX = e.clientX;
 				var diff = currentX - startX;
 				items[currentIndex].style.transform = "translateX(" + diff + "px)";
 			});
-			
+
 			container.addEventListener("touchend", function(e) {
 				if (!isDragging) return;
 				var diff = startX - currentX;
-				
+
 				items[currentIndex].style.transition = "transform 0.3s ease";
 				items[currentIndex].style.transform = "translateX(0)";
-				
+
 				if (Math.abs(diff) > 50) {
 					if (diff > 0) {
 						// 向左滑动，显示下一个
@@ -2904,14 +2945,14 @@ function display_homepage_banner()
 				}
 				isDragging = false;
 			});
-			
+
 			container.addEventListener("mouseup", function(e) {
 				if (!isDragging) return;
 				var diff = startX - currentX;
-				
+
 				items[currentIndex].style.transition = "transform 0.3s ease";
 				items[currentIndex].style.transform = "translateX(0)";
-				
+
 				if (Math.abs(diff) > 50) {
 					if (diff > 0) {
 						// 向左拖动，显示下一个
@@ -2926,7 +2967,7 @@ function display_homepage_banner()
 				container.style.cursor = "grab";
 				isDragging = false;
 			});
-			
+
 			container.addEventListener("mouseleave", function() {
 				if (isDragging) {
 					items[currentIndex].style.transition = "transform 0.3s ease";
@@ -2938,7 +2979,7 @@ function display_homepage_banner()
 		})();
 		</script>';
 	}
-	
+
 	// 高度调整代码（无论有几个banner都需要，确保单个banner时也能工作）
 	echo '<script type="text/javascript">
 	(function() {
@@ -2946,18 +2987,18 @@ function display_homepage_banner()
 		var bannerContainer = document.querySelector(".homepage-banner-container");
 		var items = document.querySelectorAll(".homepage-banner-container .banner-item");
 		var loadingDiv = document.querySelector(".banner-loading");
-		
+
 		if (!container || !bannerContainer || items.length === 0) return;
-		
+
 		var currentIndex = 0;
 		var loadedCount = 0;
-		
+
 		items.forEach(function(item, i) {
 			if (item.style.display !== "none") {
 				currentIndex = i;
 			}
 		});
-		
+
 		// 隐藏Loading的函数
 		function hideLoading() {
 			if (loadingDiv) {
@@ -2968,7 +3009,7 @@ function display_homepage_banner()
 			}
 			container.style.opacity = "1";
 		}
-		
+
 		// 点击banner跳转
 		items.forEach(function(item) {
 			var jumpUrl = item.getAttribute("data-jump-url");
@@ -2978,20 +3019,20 @@ function display_homepage_banner()
 				});
 			}
 		});
-		
+
 		// 根据当前显示的banner调整容器高度
 		function adjustBannerHeight() {
 			var activeItem = items[currentIndex];
 			if (!activeItem || !container || !bannerContainer) return;
-			
+
 			// 移动端跳过高度调整，使用CSS固定高度
 			if (window.innerWidth <= 768) {
 				return;
 			}
-			
+
 			var video = activeItem.querySelector(".banner-video");
 			var image = activeItem.querySelector(".banner-image");
-			
+
 			if (video) {
 				if (video.videoWidth && video.videoHeight) {
 					var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
@@ -3016,12 +3057,12 @@ function display_homepage_banner()
 				}
 			}
 		}
-		
+
 		// 监听视频/图片加载完成
 		items.forEach(function(item) {
 			var video = item.querySelector(".banner-video");
 			var image = item.querySelector(".banner-image");
-			
+
 			if (video) {
 				video.addEventListener("loadedmetadata", function() {
 					loadedCount++;
@@ -3039,7 +3080,7 @@ function display_homepage_banner()
 					}
 				}
 			}
-			
+
 			if (image) {
 				if (image.complete) {
 					loadedCount++;
@@ -3060,19 +3101,19 @@ function display_homepage_banner()
 				}
 			}
 		});
-		
+
 		// 设置超时，5秒后强制隐藏Loading
 		setTimeout(function() {
 			if (loadingDiv && loadingDiv.style.opacity !== "0") {
 				hideLoading();
 			}
 		}, 5000);
-		
+
 		// 移动端禁用高度自动调整，避免闪屏
 		if (window.innerWidth > 1200) {
 			// 初始调整高度（仅PC端）
 			setTimeout(adjustBannerHeight, 100);
-			
+
 			// 窗口大小改变时重新调整（优化防抖，避免闪烁）
 			var resizeTimer;
 			var lastWidth = window.innerWidth;
@@ -3089,7 +3130,101 @@ function display_homepage_banner()
 		}
 	})();
 	</script>';
-	
+
+	if ($hasVideoBanner && $uiMode === 'minimal') {
+		echo '<script type="text/javascript">
+(function() {
+	var root = document.querySelector(".homepage-banner-container");
+	if (!root) return;
+	var slider = root.querySelector(".banner-slider");
+	var toggleBtn = root.querySelector(".banner-video-toggle");
+	if (!slider || !toggleBtn) return;
+	var videos = slider.querySelectorAll(".banner-video");
+	if (!videos.length) {
+		toggleBtn.style.display = "none";
+		return;
+	}
+
+	var items = slider.querySelectorAll(".banner-item");
+	var forEachNode = function(nodeList, callback) {
+		Array.prototype.forEach.call(nodeList, callback);
+	};
+
+	toggleBtn.style.display = "inline-flex";
+
+	var getActiveVideo = function() {
+		for (var i = 0; i < items.length; i++) {
+			var item = items[i];
+			if (window.getComputedStyle(item).display !== "none") {
+				return item.querySelector(".banner-video");
+			}
+		}
+		return null;
+	};
+
+	var syncState = function() {
+		var activeVideo = getActiveVideo();
+		var isPlaying = !!(activeVideo && !activeVideo.paused && !activeVideo.ended);
+		toggleBtn.textContent = isPlaying ? "⏸ 暂停视频背景" : "▶ 播放视频背景";
+		toggleBtn.setAttribute("aria-pressed", isPlaying ? "true" : "false");
+		toggleBtn.disabled = !activeVideo;
+		toggleBtn.setAttribute("aria-disabled", activeVideo ? "false" : "true");
+	};
+
+	var pauseHiddenVideos = function() {
+		forEachNode(videos, function(video) {
+			var item = video.closest(".banner-item");
+			if (!item) return;
+			if (window.getComputedStyle(item).display === "none") {
+				video.pause();
+			}
+		});
+		syncState();
+	};
+
+	forEachNode(videos, function(video) {
+		video.removeAttribute("autoplay");
+		video.setAttribute("preload", "metadata");
+		video.muted = true;
+		video.addEventListener("play", syncState);
+		video.addEventListener("pause", syncState);
+	});
+
+	toggleBtn.addEventListener("click", function() {
+		var activeVideo = getActiveVideo();
+		if (!activeVideo) {
+			syncState();
+			return;
+		}
+		if (activeVideo.paused) {
+			var playPromise = activeVideo.play();
+			if (playPromise && typeof playPromise.then === "function") {
+				playPromise.catch(function(err) {
+					if (typeof console !== "undefined" && console.warn) {
+						console.warn("[banner-video]", err);
+					}
+				});
+			}
+		} else {
+			activeVideo.pause();
+		}
+		syncState();
+	});
+
+	if (window.MutationObserver) {
+		var observer = new MutationObserver(function() {
+			pauseHiddenVideos();
+		});
+		forEachNode(items, function(item) {
+			observer.observe(item, { attributes: true, attributeFilter: ["style", "class"] });
+		});
+	}
+
+	pauseHiddenVideos();
+})();
+</script>';
+	}
+
 	echo '</div>';
 	echo '</div>';
 }
@@ -3157,7 +3292,42 @@ if ($metadescription_tweak){
 <?php
 print(get_style_addicode());
 $css_uri = get_css_uri();
-$cssupdatedate=($cssupdatedate ? "?".htmlspecialchars($cssupdatedate) : "");
+$cssupdatedate = ($cssupdatedate ? "?".htmlspecialchars($cssupdatedate) : "");
+
+$uiMode = 'default';
+$uiModeLocked = false;
+if ($CURUSER && isset($CURUSER['performance_mode'])) {
+    $uiMode = $CURUSER['performance_mode'];
+    if (in_array($uiMode, ['performance', 'minimal'], true)) {
+        $uiModeLocked = true;
+    }
+}
+
+$cookieMode = $_COOKIE['ui_mode'] ?? null;
+if (!is_string($cookieMode)) {
+    $cookieMode = null;
+}
+
+if ($cookieMode === 'default') {
+    $uiModeLocked = true;
+}
+
+if (!$uiModeLocked && in_array($cookieMode, ['performance', 'minimal'], true)) {
+    $uiMode = $cookieMode;
+}
+
+if (!in_array($uiMode, ['default', 'performance', 'minimal'], true)) {
+    $uiMode = 'default';
+}
+
+$accentColor = 'electric';
+if ($CURUSER && isset($CURUSER['astronaut_accent_color'])) {
+    $accentColor = $CURUSER['astronaut_accent_color'];
+}
+$accentAllowed = ['electric', 'plasma', 'gold', 'neon'];
+if (!in_array($accentColor, $accentAllowed, true)) {
+    $accentColor = 'electric';
+}
 ?>
 <title><?php echo $title?></title>
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
@@ -3185,10 +3355,14 @@ if ($CURUSER){
 }
 ?>
 <?php
-// 性能模式CSS - 针对低配置设备
-if ($CURUSER && isset($CURUSER['performance_mode']) && $CURUSER['performance_mode'] == 'performance') {
-?>
+// 性能 / 极简模式CSS - 针对低配置设备
+if ($uiMode === 'performance') {
+    ?>
 <link rel="stylesheet" href="<?php echo $css_uri?>performance.css<?php echo $cssupdatedate?>" type="text/css" />
+<?php
+} elseif ($uiMode === 'minimal') {
+    ?>
+<link rel="stylesheet" href="<?php echo $css_uri?>minimal.css<?php echo $cssupdatedate?>" type="text/css" />
 <?php
 }
 ?>
@@ -3200,6 +3374,13 @@ if ($CURUSER && isset($CURUSER['performance_mode']) && $CURUSER['performance_mod
 <script type="text/javascript" src="js/domTT.js<?php echo $cssupdatedate?>"></script>
 <script type="text/javascript" src="js/domTT_drag.js<?php echo $cssupdatedate?>"></script>
 <script type="text/javascript" src="js/fadomatic.js<?php echo $cssupdatedate?>"></script>
+<script type="text/javascript">
+    window.nexusPerformanceConfig = <?php echo json_encode([
+        'mode' => $uiMode,
+        'cookieMode' => $cookieMode,
+        'locked' => $uiModeLocked,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);?>;
+</script>
 <?php
 do_action('nexus_header');
 foreach (\Nexus\Nexus::getAppendHeaders() as $value) {
@@ -3215,8 +3396,17 @@ foreach (\Nexus\Nexus::getAppendHeaders() as $value) {
     }
 </script>
 <script type="text/javascript" src="vendor/layer-v3.5.1/layer/layer.js<?php echo $cssupdatedate?>"></script>
+<script type="text/javascript" src="js/performance-mode.js<?php echo $cssupdatedate?>"></script>
 </head>
-<body>
+<?php
+$bodyAttrs = sprintf(
+    ' data-ui-mode="%s" data-ui-lock="%s" data-accent="%s"',
+    htmlspecialchars($uiMode, ENT_QUOTES, 'UTF-8'),
+    $uiModeLocked ? 'true' : 'false',
+    htmlspecialchars($accentColor, ENT_QUOTES, 'UTF-8')
+);
+?>
+<body<?php echo $bodyAttrs; ?>>
 
 <?php
 // 星际捐赠按钮
@@ -3240,17 +3430,17 @@ if ($enabledonation == 'yes' && $CURUSER) {
     var toggle = document.getElementById('donateToggle');
     var panel = document.getElementById('donatePanel');
     var close = document.getElementById('donateClose');
-    
+
     if (toggle && panel && close) {
         toggle.addEventListener('click', function(e) {
             e.preventDefault();
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
         });
-        
+
         close.addEventListener('click', function() {
             panel.style.display = 'none';
         });
-        
+
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.donate-btn-stellar')) {
                 panel.style.display = 'none';
@@ -3307,26 +3497,6 @@ if ($CURUSER) {
 </div>
 
 <!-- 农场排行榜按钮 -->
-<div class="stardust-leaderboard-btn">
-    <a href="stardust_leaderboard.php" target="_blank" title="农场排行榜 - 谁是最强农夫 🏆">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- 奖杯底座 -->
-            <rect x="9" y="18" width="6" height="3" rx="1" fill="#FFD700"/>
-            <rect x="7" y="21" width="10" height="2" rx="1" fill="#FFD700"/>
-            <!-- 奖杯杯身 -->
-            <path d="M8 8 L8 15 Q8 17, 12 18 Q16 17, 16 15 L16 8 Z" fill="#FFD700" stroke="#FFA500" stroke-width="1.5"/>
-            <!-- 奖杯手柄 -->
-            <path d="M7 9 Q5 9, 5 11 Q5 13, 7 13" stroke="#FFD700" stroke-width="1.5" fill="none"/>
-            <path d="M17 9 Q19 9, 19 11 Q19 13, 17 13" stroke="#FFD700" stroke-width="1.5" fill="none"/>
-            <!-- 奖杯顶部 -->
-            <ellipse cx="12" cy="8" rx="4" ry="1.5" fill="#FFA500"/>
-            <!-- 星星装饰 -->
-            <circle cx="12" cy="12" r="1.5" fill="#FFF"/>
-            <path d="M12 10.5 L12.5 11.5 L11.5 11.5 Z" fill="#FFA500"/>
-            <path d="M12 13.5 L12.5 12.5 L11.5 12.5 Z" fill="#FFA500"/>
-        </svg>
-    </a>
-</div>
 <script>
 (function() {
     const btn = document.getElementById('meteorShowerToggle');
@@ -3341,7 +3511,7 @@ if ($CURUSER) {
     } else {
         console.error('未找到流星雨按钮元素');
     }
-    
+
     function triggerMeteorShower() {
         console.log('开始创建流星雨');
         const container = document.createElement('div');
@@ -3358,29 +3528,29 @@ if ($CURUSER) {
         `;
         document.body.appendChild(container);
         console.log('流星雨容器已创建', container);
-        
+
         // 随机生成1-3颗流星
         const meteorCount = Math.floor(Math.random() * 3) + 1;
         console.log('将创建 ' + meteorCount + ' 颗流星');
-        
+
         for (let i = 0; i < meteorCount; i++) {
             setTimeout(() => {
                 createMeteor(container);
             }, i * 300); // 每颗流星间隔300ms
         }
-        
+
         // 3秒后移除容器
         setTimeout(() => {
             container.remove();
             console.log('流星雨容器已移除');
         }, 3000);
     }
-    
+
     function createMeteor(container) {
         console.log('创建一颗流星');
         const meteor = document.createElement('div');
         meteor.className = 'meteor-trail';
-        
+
         // 随机选择边缘和方向
         const edge = Math.floor(Math.random() * 4); // 0=顶部, 1=右侧, 2=底部, 3=左侧
         const colors = [
@@ -3390,9 +3560,9 @@ if ($CURUSER) {
             'rgba(147, 112, 219, 0.9)'
         ];
         const color = colors[Math.floor(Math.random() * colors.length)];
-        
+
         let startX, startY, endX, endY;
-        
+
         switch(edge) {
             case 0: // 从顶部右侧划向左下
                 startX = Math.random() * 30 + 70; // 70-100%
@@ -3419,18 +3589,18 @@ if ($CURUSER) {
                 endY = Math.random() * 30 + 70; // 70-100%
                 break;
         }
-        
+
         // 流星长度（更长更明显）
         const meteorLength = Math.random() * 150 + 200; // 200-350px
-        
+
         // 计算实际移动距离
         const deltaX = endX - startX;
         const deltaY = endY - startY;
-        
+
         // 根据飞行方向自动计算旋转角度（让流星头部指向飞行方向）
         // 渐变是从左到右（左亮右透明），所以旋转+180°让亮的一端朝前
         const rotate = Math.atan2(deltaY, deltaX) * 180 / Math.PI + 180;
-        
+
         meteor.style.cssText = `
             position: absolute;
             left: ${startX}vw;
@@ -3444,7 +3614,7 @@ if ($CURUSER) {
             border-radius: 50%;
             opacity: 0;
         `;
-        
+
         // 动态创建关键帧动画
         const animationName = 'meteor-fly-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         const keyframes = `
@@ -3465,17 +3635,17 @@ if ($CURUSER) {
                 }
             }
         `;
-        
+
         // 插入样式
         const style = document.createElement('style');
         style.textContent = keyframes;
         document.head.appendChild(style);
-        
+
         // 强制浏览器重排，确保样式已应用
         void meteor.offsetWidth;
-        
+
         meteor.style.animation = `${animationName} 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
-        
+
         // 添加流星头部的五角星
         const star = document.createElement('div');
         star.style.cssText = `
@@ -3490,7 +3660,7 @@ if ($CURUSER) {
             transform: translate(-50%, -50%);
         `;
         meteor.appendChild(star);
-        
+
         // 添加流星尾迹粒子效果
         for (let i = 0; i < 5; i++) {
             const particle = document.createElement('div');
@@ -3508,17 +3678,17 @@ if ($CURUSER) {
             `;
             meteor.appendChild(particle);
         }
-        
+
         container.appendChild(meteor);
         console.log('流星已添加到容器', {edge, color, startX, startY, endX, endY, rotate});
-        
+
         // 清理样式（2秒动画+100ms缓冲）
         setTimeout(() => {
             style.remove();
             meteor.remove();
         }, 2100);
     }
-    
+
     // 确保在DOM加载完成后执行
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
@@ -3869,12 +4039,12 @@ if ($msgalert)
 function stdfoot() {
 	global $SITENAME,$BASEURL,$Cache,$datefounded,$tstart,$icplicense_main,$add_key_shortcut,$query_name, $USERUPDATESET, $CURUSER, $enablesqldebug_tweak, $sqldebug_tweak, $Advertisement, $analyticscode_tweak;
 	global $hook;
-	
+
 	// 星尘农场全站广播组件
 	if ($CURUSER) {
 		include(__DIR__."/../public/stardust_broadcast_widget.php");
 	}
-	
+
 	print("</td></tr></table>");
 	print("<div id=\"footer\">");
 	if ($Advertisement && $Advertisement->enable_ad()){
@@ -3928,10 +4098,10 @@ function stdfoot() {
 	if ($add_key_shortcut != "")
 	print($add_key_shortcut);
 	print("</div>");
-	
+
 	// PJAX容器结束标签 - 在页脚之前关闭，确保页脚在容器外
     print("\n</div><!-- PJAX容器结束 -->\n");
-	
+
 	if ($analyticscode_tweak)
 		print("\n".$analyticscode_tweak."\n");
 //	$hook->dump();
@@ -3950,7 +4120,7 @@ jQuery(document).ready(function(){
 JS;
     print($js);
     print('<img id="nexus-preview" style="display: none; position: absolute" src="" />');
-    
+
     // PJAX初始化
     print('<script type="application/javascript" src="js/jquery.pjax.js"></script>');
     print('<script type="application/javascript">');
@@ -3962,7 +4132,7 @@ JS;
     print('  console.log("PJAX已启用：全站局部刷新");');
     print('});');
     print('</script>');
-    
+
 	print("</body></html>");
 
 	//echo replacePngTags(ob_get_clean());
@@ -7097,11 +7267,11 @@ function calculate_seed_bonus($uid, $torrentIdArr = null): array
     $result['donor_times'] = $donortimes_bonus;
     $result['official_additional_factor'] = $officialAdditionalFactor;
     $result['medal_additional_factor'] = $medalAdditionalFactor;
-    
+
     // 星尘农场加成：每合成1个行星 +2% 魔力值，最多20%
     $stardustFarmAdditionFactor = calculate_stardust_farm_addition($uid);
     $result['stardust_farm_additional_factor'] = $stardustFarmAdditionFactor;
-    
+
     do_log("$logPrefix, result: " . json_encode($result));
     return $result;
 }
@@ -7109,7 +7279,7 @@ function calculate_seed_bonus($uid, $torrentIdArr = null): array
 /**
  * 计算星尘农场魔力值加成
  * 每合成1个完整行星 = +2% 魔力值加成，最多+20%（10个行星）
- * 
+ *
  * @param int $uid 用户ID
  * @return float 加成系数（如0.02 = 2%加成）
  */
@@ -7120,25 +7290,25 @@ function calculate_stardust_farm_addition($uid)
         $tableExists = \Nexus\Database\NexusDB::selectOne(
             "SHOW TABLES LIKE 'stardust_inventories'"
         );
-        
+
         if (!$tableExists) {
             do_log("[STARDUST_FARM_ADDITION], uid: $uid, table not exists, return 0", "debug");
             return 0;
         }
-        
+
         // 查询用户已合成的行星数量
         $planetsCount = \Nexus\Database\NexusDB::selectOne(
             "SELECT COUNT(*) as count FROM stardust_inventories WHERE user_id = ? AND item_type = 'planet'",
             [$uid]
         );
-        
+
         $count = intval($planetsCount['count'] ?? 0);
-        
+
         // 每个行星+2%，最多10个行星=20%加成
         $factor = min($count * 0.02, 0.20);
-        
+
         do_log("[STARDUST_FARM_ADDITION], uid: $uid, planets: $count, factor: $factor", "debug");
-        
+
         return $factor;
     } catch (\Exception $e) {
         do_log("[STARDUST_FARM_ADDITION], uid: $uid, error: " . $e->getMessage());
@@ -7174,7 +7344,16 @@ function calculate_harem_addition($uid)
 
 function build_search_box_category_table($mode, $checkboxValue, $categoryHrefPrefix, $taxonomyHrefPrefix, $taxonomyNameLength, $checkedValues = '', array $options = [])
 {
-    parse_str($checkedValues, $checkedValuesArr);
+    $checkedValuesArr = [];
+    if (is_array($checkedValues)) {
+        $checkedValuesArr = $checkedValues;
+        $checkedValues = http_build_query($checkedValues);
+    } else {
+        $checkedValues = (string)($checkedValues ?? '');
+        if ($checkedValues !== '') {
+            parse_str($checkedValues, $checkedValuesArr);
+        }
+    }
     $searchBox = \App\Models\SearchBox::query()->with(['categories', 'categories.icon'])->findOrFail($mode);
     $lang = get_langfolder_cookie();
     $withTaxonomies = [];

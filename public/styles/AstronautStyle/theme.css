@@ -29,6 +29,23 @@
     --text-dim: #6b7280;
 }
 
+body[data-accent="plasma"] {
+    --electric-blue: #a855f7;
+    --plasma-purple: #c084fc;
+}
+
+body[data-accent="gold"] {
+    --electric-blue: #fbbf24;
+    --plasma-purple: #f59e0b;
+    --star-gold: #facc15;
+}
+
+body[data-accent="neon"] {
+    --electric-blue: #10b981;
+    --plasma-purple: #34d399;
+    --neon-green: #22d3ee;
+}
+
 /* ============================================
    2. 星空背景 (Starfield Background) - 宇航员主题恢复
    ============================================ */
@@ -265,6 +282,46 @@ table::before {
     50% { background-position: 100% 50%; }
 }
 
+/* ===== 签到日历兼容处理 ===== */
+#calendar .fc {
+    background: transparent !important;
+    color: var(--text-primary);
+}
+
+#calendar table {
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+
+#calendar table::before {
+    display: none !important;
+}
+
+#calendar .fc-scrollgrid,
+#calendar .fc-daygrid,
+#calendar .fc-daygrid-day,
+#calendar .fc-daygrid-day-frame {
+    background: transparent !important;
+    backdrop-filter: none !important;
+}
+
+#calendar .fc-daygrid-day-number,
+#calendar .fc-daygrid-day-top,
+#calendar .fc-daygrid-day-events {
+    color: var(--text-primary) !important;
+}
+
+#calendar .fc-day-today {
+    background: rgba(0, 212, 255, 0.12) !important;
+}
+
+#calendar .fc-highlight {
+    background: rgba(0, 212, 255, 0.18) !important;
+}
+
 table.main {
     background: rgba(10, 22, 40, 0.8);
     backdrop-filter: blur(10px);
@@ -288,6 +345,39 @@ table.mainouter {
 
 .homepage-banner-container {
     box-sizing: border-box !important;
+}
+
+.homepage-banner-container .banner-video-toggle {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    z-index: 180;
+    padding: 10px 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 212, 255, 0.6);
+    background: rgba(0, 212, 255, 0.25);
+    color: var(--text-primary);
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0, 212, 255, 0.25);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+}
+
+.homepage-banner-container .banner-video-toggle:hover:not(:disabled) {
+    background: rgba(168, 85, 247, 0.35);
+    border-color: rgba(168, 85, 247, 0.8);
+    color: #ffffff;
+}
+
+.homepage-banner-container .banner-video-toggle:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 /* td {

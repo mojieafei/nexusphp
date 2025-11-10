@@ -133,8 +133,19 @@ if ($action){
 				
 				// 性能模式
 				$performanceMode = $_POST["performance_mode"] ?? 'default';
-				if (in_array($performanceMode, ['default', 'performance'])) {
+				if (in_array($performanceMode, ['default', 'performance', 'minimal'])) {
 					$updateset[] = "performance_mode = " . sqlesc($performanceMode);
+					$cookieTtl = time() + 86400 * 30;
+					if ($performanceMode === 'default') {
+						setcookie('ui_mode', 'default', $cookieTtl, '/', '', isHttps(), true);
+					} else {
+						setcookie('ui_mode', $performanceMode, $cookieTtl, '/', '', isHttps(), true);
+					}
+				}
+
+				$accentColor = $_POST["astronaut_accent_color"] ?? 'electric';
+				if (in_array($accentColor, ['electric', 'plasma', 'gold', 'neon'])) {
+					$updateset[] = "astronaut_accent_color = " . sqlesc($accentColor);
 				}
 
 				//notifs
@@ -237,9 +248,32 @@ tr($lang_usercp['row_school'], "<select name=school>$schools</select>", 1);
   
   // 性能模式选项
   $performanceMode = isset($CURUSER['performance_mode']) ? $CURUSER['performance_mode'] : 'default';
-  $performanceOptions = '<input type="radio" name="performance_mode" value="default"' . ($performanceMode == 'default' ? ' checked' : '') . '> 默认模式（完整特效）';
-  $performanceOptions .= '<br /><input type="radio" name="performance_mode" value="performance"' . ($performanceMode == 'performance' ? ' checked' : '') . '> ⚡ 性能模式（禁用动画和特效，适合低配置设备）';
-  tr_small('性能模式', $performanceOptions . '<br /><font class="small">性能模式会禁用所有动画、毛玻璃效果、阴影等高性能消耗特效，让页面更流畅</font>', 1);
+  $performanceOptions = '<input type="radio" name="performance_mode" value="default"' . ($performanceMode == 'default' ? ' checked' : '') . '> 默认模式（完整特效体验）';
+  $performanceOptions .= '<br /><input type="radio" name="performance_mode" value="performance"' . ($performanceMode == 'performance' ? ' checked' : '') . '> ⚡ 性能模式（禁用动画和特效，推荐配置一般的设备）';
+  $performanceOptions .= '<br /><input type="radio" name="performance_mode" value="minimal"' . ($performanceMode == 'minimal' ? ' checked' : '') . '> 🛸 极简模式（关闭渐变、浮层、视频背景，仅保留必要样式）';
+  tr_small('性能模式', $performanceOptions . '<br /><font class="small">提示：系统会根据设备性能自动推荐模式，任何时候都可以在这里手动切换。</font>', 1);
+
+  $accentColor = isset($CURUSER['astronaut_accent_color']) ? $CURUSER['astronaut_accent_color'] : 'electric';
+  $accentItems = [
+      'electric' => '电光蓝（默认）',
+      'plasma'   => '等离子紫',
+      'gold'     => '星辉金',
+      'neon'     => '能量绿',
+  ];
+  $accentOptions = '';
+  foreach ($accentItems as $value => $label) {
+      $accentOptions .= sprintf(
+          '<label style="display:block;margin-bottom:4px;"><input type="radio" name="astronaut_accent_color" value="%s"%s> %s</label>',
+          $value,
+          $accentColor === $value ? ' checked' : '',
+          $label
+      );
+  }
+  tr_small(
+      '宇航员主题强调色',
+      $accentOptions . '<br /><font class="small">仅在使用 Astronaut Style 主题时生效，可自定义界面高亮主色。</font>',
+      1
+  );
   
   submit();
   print("</table></form>");
