@@ -130,8 +130,8 @@ body::before {
     
     /* Banner容器固定高度，避免视频加载时跳动 */
     .homepage-banner-container .banner-slider {
-        height: 300px !important;
-        min-height: 300px !important;
+        height: 360px !important;
+        min-height: 360px !important;
     }
     
     /* Banner视频使用cover模式 */

@@ -190,10 +190,10 @@ stdhead("星尘农场 - 排行榜");
     </div>
 
     <div class="leaderboard-tabs">
-        <button class="tab-btn active" onclick="switchTab('wealth')">💰 财富榜</button>
-        <button class="tab-btn" onclick="switchTab('level')">⭐ 等级榜</button>
-        <button class="tab-btn" onclick="switchTab('fragments')">💎 碎片榜</button>
-        <button class="tab-btn" onclick="switchTab('planets')">🌍 行星榜</button>
+        <button class="tab-btn active" data-type="wealth" onclick="switchTab('wealth', event)">💰 财富榜</button>
+        <button class="tab-btn" data-type="level" onclick="switchTab('level', event)">⭐ 等级榜</button>
+        <button class="tab-btn" data-type="fragments" onclick="switchTab('fragments', event)">💎 碎片榜</button>
+        <button class="tab-btn" data-type="planets" onclick="switchTab('planets', event)">🌍 行星榜</button>
     </div>
 
     <div class="leaderboard-board active" id="board-wealth">
@@ -222,17 +222,43 @@ stdhead("星尘农场 - 排行榜");
 let currentTab = 'wealth';
 let leaderboardData = {};
 
+// 初始化页面
+function initLeaderboardPage() {
+    currentTab = 'wealth';
+    leaderboardData = {};
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    const defaultBtn = document.querySelector('.tab-btn[data-type="wealth"]');
+    if (defaultBtn) {
+        defaultBtn.classList.add('active');
+    }
+    document.querySelectorAll('.leaderboard-board').forEach(board => board.classList.remove('active'));
+    const defaultBoard = document.getElementById('board-wealth');
+    if (defaultBoard) {
+        defaultBoard.classList.add('active');
+    }
+    loadLeaderboard('wealth');
+}
+
 // 切换标签
-function switchTab(type) {
+function switchTab(type, evt) {
+    if (evt && typeof evt.preventDefault === 'function') {
+        evt.preventDefault();
+    }
     currentTab = type;
     
     // 更新按钮状态
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+    const activeBtn = (evt && evt.currentTarget) || document.querySelector('.tab-btn[data-type="' + type + '"]');
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
     
     // 更新榜单显示
     document.querySelectorAll('.leaderboard-board').forEach(board => board.classList.remove('active'));
-    document.getElementById('board-' + type).classList.add('active');
+    const targetBoard = document.getElementById('board-' + type);
+    if (targetBoard) {
+        targetBoard.classList.add('active');
+    }
     
     // 加载数据
     if (!leaderboardData[type]) {
@@ -334,8 +360,16 @@ function callAPI(action, params) {
 }
 
 // 初始化
-document.addEventListener('DOMContentLoaded', function() {
-    loadLeaderboard('wealth');
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLeaderboardPage);
+} else {
+    initLeaderboardPage();
+}
+
+document.addEventListener('pjax:end', function() {
+    if (document.getElementById('board-wealth')) {
+        initLeaderboardPage();
+    }
 });
 </script>
 

@@ -2431,7 +2431,7 @@ function menu ($selected = "home") {
             print ("<li" . ($selected == "topten" ? " class=\"selected\"" : "") . "><a href=\"topten.php\">".$lang_functions['text_top_ten']."</a></li>");
         }
         // 农场排行榜
-        print ("<li" . ($selected == "stardust_leaderboard" ? " class=\"selected\"" : "") . "><a href=\"stardust_leaderboard.php\" data-pjax-ignore=\"1\">🏆 农场排行榜</a></li>");
+        print ("<li" . ($selected == "stardust_leaderboard" ? " class=\"selected\"" : "") . "><a href=\"stardust_leaderboard.php\">🏆 农场排行榜</a></li>");
         if (user_can('log')) {
             print ("<li" . ($selected == "log" ? " class=\"selected\"" : "") . "><a href=\"log.php\">".$lang_functions['text_log']."</a></li>");
         }
@@ -2597,7 +2597,7 @@ function display_homepage_banner()
 	
 	// 输出轮播HTML和CSS - 与导航栏等宽（1600px），高度根据内容自适应
 	$containerClass = 'homepage-banner-container' . ($hasVideoBanner ? ' has-video-banner' : '');
-	echo '<div class="' . $containerClass . '" style="width: ' . CONTENT_WIDTH . 'px; margin: 0 auto; overflow: hidden; position: relative; box-sizing: border-box;">';
+	echo '<div class="' . $containerClass . '" style="width: ' . CONTENT_WIDTH . 'px; height: 360px; min-height: 360px; margin: 0 auto; overflow: hidden; position: relative; box-sizing: border-box;">';
 	
 	// 宇航员主题Loading效果
 	echo '<div class="banner-loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 360px; background: linear-gradient(135deg, #0a1628 0%, #1a2642 50%, #0f1b33 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; transition: opacity 0.5s ease;">';
@@ -2614,7 +2614,7 @@ function display_homepage_banner()
 	echo '</style>';
 	echo '</div>';
 	
-	echo '<div class="banner-slider" style="position: relative; width: 100%; min-height: 360px; background: #000; cursor: grab; opacity: 0; transition: opacity 0.5s ease;">';
+	echo '<div class="banner-slider" style="position: relative; width: 100%; height: 360px; min-height: 360px; background: #000; cursor: grab; opacity: 0; transition: opacity 0.5s ease;">';
 	if ($hasVideoBanner && $uiMode === 'minimal') {
 		echo '<button type="button" class="banner-video-toggle" aria-label="切换视频背景播放" aria-pressed="false" style="display:none;">▶ 播放视频背景</button>';
 	}
@@ -2632,7 +2632,7 @@ function display_homepage_banner()
 		$dataJumpUrl = $jumpUrl ? 'data-jump-url="' . $jumpUrl . '"' : '';
 		
 		if ($banner['type'] === 'video') {
-			$videoAttrs = 'class="banner-video" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto; pointer-events: none;" preload="metadata" muted loop playsinline';
+			$videoAttrs = 'class="banner-video" style="width: 100%; height: 100%; object-fit: cover; display: block; margin: 0 auto; pointer-events: none;" preload="metadata" muted loop playsinline';
 			if ($shouldAutoPlayVideo) {
 				$videoAttrs .= ' autoplay';
 			}
@@ -2643,7 +2643,7 @@ function display_homepage_banner()
 			echo '</div>';
 		} else {
 			echo '<div class="banner-item" ' . $dataJumpUrl . ' style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%; ' . $clickStyle . '">';
-			echo '<img class="banner-image" src="' . $path . '" style="width: 100%; height: auto; max-height: 100%; display: block; margin: 0 auto; pointer-events: none;" alt="' . htmlspecialchars($banner['title']) . '">';
+			echo '<img class="banner-image" src="' . $path . '" style="width: 100%; height: 100%; object-fit: cover; display: block; margin: 0 auto; pointer-events: none;" alt="' . htmlspecialchars($banner['title']) . '">';
 			echo '</div>';
 		}
 	}
@@ -2710,43 +2710,16 @@ function display_homepage_banner()
 			
 			// 根据当前显示的banner调整容器高度
 			function adjustBannerHeight() {
-				var activeItem = items[currentIndex];
-				if (!activeItem || !container || !bannerContainer) return;
-				
-				// 移动端跳过高度调整，使用CSS固定高度
-				if (window.innerWidth <= 768) {
+				if (!container || !bannerContainer) {
 					return;
 				}
-				
-				var video = activeItem.querySelector(".banner-video");
-				var image = activeItem.querySelector(".banner-image");
-				
-				if (video) {
-					// 视频已加载元数据
-					if (video.videoWidth && video.videoHeight) {
-						var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
-						var aspectRatio = video.videoHeight / video.videoWidth;
-						var height = Math.round(containerWidth * aspectRatio);
-						var currentHeight = parseInt(container.style.height) || 0;
-						// 只有高度变化超过1px时才更新（避免不必要的DOM操作）
-						if (Math.abs(height - currentHeight) > 1) {
-							container.style.height = height + "px";
-							console.log("Banner高度已调整为: " + height + "px (视频尺寸: " + video.videoWidth + "x" + video.videoHeight + ")");
-						}
-					}
-				} else if (image) {
-					// 图片已加载
-					if (image.complete && image.naturalWidth && image.naturalHeight) {
-						var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
-						var aspectRatio = image.naturalHeight / image.naturalWidth;
-						var height = Math.round(containerWidth * aspectRatio);
-						var currentHeight = parseInt(container.style.height) || 0;
-						// 只有高度变化超过1px时才更新（避免不必要的DOM操作）
-						if (Math.abs(height - currentHeight) > 1) {
-							container.style.height = height + "px";
-							console.log("Banner高度已调整为: " + height + "px (图片尺寸: " + image.naturalWidth + "x" + image.naturalHeight + ")");
-						}
-					}
+				var targetHeight = 360;
+				var targetValue = targetHeight + "px";
+				if (bannerContainer.style.height !== targetValue) {
+					bannerContainer.style.height = targetValue;
+				}
+				if (container.style.height !== targetValue) {
+					container.style.height = targetValue;
 				}
 			}
 			
@@ -3015,39 +2988,16 @@ function display_homepage_banner()
 		
 		// 根据当前显示的banner调整容器高度
 		function adjustBannerHeight() {
-			var activeItem = items[currentIndex];
-			if (!activeItem || !container || !bannerContainer) return;
-			
-			// 移动端跳过高度调整，使用CSS固定高度
-			if (window.innerWidth <= 768) {
+			if (!container || !bannerContainer) {
 				return;
 			}
-			
-			var video = activeItem.querySelector(".banner-video");
-			var image = activeItem.querySelector(".banner-image");
-			
-			if (video) {
-				if (video.videoWidth && video.videoHeight) {
-					var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
-					var aspectRatio = video.videoHeight / video.videoWidth;
-					var height = Math.round(containerWidth * aspectRatio);
-					var currentHeight = parseInt(container.style.height) || 0;
-					// 只有高度变化超过1px时才更新（避免不必要的DOM操作）
-					if (Math.abs(height - currentHeight) > 1) {
-						container.style.height = height + "px";
-					}
-				}
-			} else if (image) {
-				if (image.complete && image.naturalWidth && image.naturalHeight) {
-					var containerWidth = bannerContainer.offsetWidth || ' . CONTENT_WIDTH . ';
-					var aspectRatio = image.naturalHeight / image.naturalWidth;
-					var height = Math.round(containerWidth * aspectRatio);
-					var currentHeight = parseInt(container.style.height) || 0;
-					// 只有高度变化超过1px时才更新（避免不必要的DOM操作）
-					if (Math.abs(height - currentHeight) > 1) {
-						container.style.height = height + "px";
-					}
-				}
+			var targetHeight = 360;
+			var targetValue = targetHeight + "px";
+			if (bannerContainer.style.height !== targetValue) {
+				bannerContainer.style.height = targetValue;
+			}
+			if (container.style.height !== targetValue) {
+				container.style.height = targetValue;
 			}
 		}
 		
