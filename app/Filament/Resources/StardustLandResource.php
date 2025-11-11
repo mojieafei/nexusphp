@@ -12,6 +12,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Forms\Get;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Collection;
 
 class StardustLandResource extends Resource
 {
@@ -136,6 +138,12 @@ class StardustLandResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->modifyQueryUsing(function ($query) {
+                $farmId = request()->query('farm_id');
+                if ($farmId) {
+                    $query->where('farm_id', $farmId);
+                }
+            })
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->label('状态')
@@ -162,17 +170,51 @@ class StardustLandResource extends Resource
                     ->action(function (StardustLand $record) {
                         $result = $record->harvest();
                         if ($result) {
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('收获成功')
                                 ->body("收获了 {$result['fragments']} 个 {$result['crop_name']} 碎片")
                                 ->success()
                                 ->send();
                         }
                     }),
+                Tables\Actions\Action::make('forceMature')
+                    ->label('一键成熟')
+                    ->icon('heroicon-o-bolt')
+                    ->color('warning')
+                    ->visible(fn (StardustLand $record) => $record->status === 'growing')
+                    ->requiresConfirmation()
+                    ->action(function (StardustLand $record) {
+                        $record->forceMature();
+                        Notification::make()
+                            ->title('成熟处理完成')
+                            ->body("土地 #{$record->slot_index} 已设置为成熟状态")
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\BulkAction::make('bulkForceMature')
+                        ->label('批量一键成熟')
+                        ->icon('heroicon-o-bolt')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function (Collection $records) {
+                            $count = 0;
+                            foreach ($records as $record) {
+                                if ($record->status === 'growing') {
+                                    $record->forceMature();
+                                    $count++;
+                                }
+                            }
+                            Notification::make()
+                                ->title('批量成熟完成')
+                                ->body($count > 0 ? "已处理 {$count} 块土地。" : '所选土地均无需处理。')
+                                ->success()
+                                ->send();
+                        }),
                 ]),
             ])
             ->defaultSort('id', 'desc');

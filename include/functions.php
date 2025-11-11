@@ -7078,38 +7078,264 @@ function msgalert($url, $text, $bgcolor = "red")
 
 function build_medal_image(\Illuminate\Support\Collection $medals, $maxHeight = 200, $withActions = false): string
 {
+    if ($medals->isEmpty()) {
+        return '';
+    }
+
+    static $styleInjected = false;
+    if (!$styleInjected) {
+        $styleInjected = true;
+        \Nexus\Nexus::css(
+            '
+                .user-medal-wrapper {
+                    max-width: 1080px;
+                    margin: 16px auto 10px;
+                    padding: 0 12px;
+                }
+                .user-medal-wrapper form,
+                .user-medal-wrapper > div {
+                    width: 100%;
+                }
+                .user-medal-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                    gap: 18px;
+                }
+                .user-medal-grid.manage {
+                    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                    align-items: stretch;
+                }
+                .user-medal-card {
+                    position: relative;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                    background: radial-gradient(circle at top, rgba(148, 163, 184, 0.12), rgba(71, 85, 105, 0.18));
+                    border: 1px solid rgba(148, 163, 184, 0.25);
+                    border-radius: 16px;
+                    padding: 18px 16px 16px;
+                    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2);
+                    backdrop-filter: blur(12px);
+                    transition: transform 0.25s ease, box-shadow 0.25s ease;
+                }
+                .user-medal-card::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(34, 211, 238, 0.1));
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+                .user-medal-card:hover {
+                    transform: translateY(-6px);
+                    box-shadow: 0 18px 35px rgba(59, 130, 246, 0.25);
+                }
+                .user-medal-card:hover::before {
+                    opacity: 1;
+                }
+                .user-medal-card.manage {
+                    align-items: stretch;
+                    text-align: left;
+                }
+                .user-medal-image {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    width: 120px;
+                    height: 120px;
+                    border-radius: 14px;
+                    background: rgba(255, 255, 255, 0.06);
+                    box-shadow: inset 0 0 20px rgba(148, 163, 184, 0.2);
+                    margin-bottom: 12px;
+                }
+                .user-medal-image img {
+                    max-height: 100px;
+                    max-width: 100px;
+                    border-radius: 10px;
+                }
+                .user-medal-name {
+                    font-weight: 600;
+                    font-size: 16px;
+                    color: #f8fafc;
+                }
+                .user-medal-desc {
+                    font-size: 12px;
+                    color: #94a3b8;
+                    margin-top: 6px;
+                    line-height: 1.5;
+                }
+                .user-medal-badges {
+                    display: flex;
+                    gap: 6px;
+                    margin-top: 10px;
+                }
+                .user-medal-badge {
+                    padding: 4px 8px;
+                    border-radius: 999px;
+                    font-size: 11px;
+                    background: rgba(59, 130, 246, 0.18);
+                    color: #bfdbfe;
+                }
+                .user-medal-value {
+                    font-size: 12px;
+                    color: #CBD5F5;
+                    margin-top: 8px;
+                }
+                .user-medal-meta {
+                    margin-top: 10px;
+                    font-size: 12px;
+                    color: #a5b4fc;
+                    width: 100%;
+                }
+                .user-medal-meta span {
+                    display: block;
+                    margin-top: 4px;
+                }
+                .user-medal-controls {
+                    margin-top: 12px;
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 10px;
+                    font-size: 12px;
+                }
+                .user-medal-controls label {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    color: #E2E8F0;
+                    font-weight: 500;
+                }
+                .user-medal-controls input[type="number"] {
+                    border: 1px solid rgba(148, 163, 184, 0.35);
+                    background: rgba(15, 23, 42, 0.45);
+                    color: #E2E8F0;
+                    padding: 6px 8px;
+                    border-radius: 8px;
+                }
+                .user-medal-controls input[type="checkbox"] {
+                    margin-right: 6px;
+                }
+                .user-medal-actions {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                }
+                .user-medal-actions input[type="button"] {
+                    padding: 10px 18px;
+                    border-radius: 999px;
+                    border: none;
+                    background: linear-gradient(135deg, #60a5fa, #a855f7);
+                    color: #fff;
+                    font-weight: 600;
+                    cursor: pointer;
+                    box-shadow: 0 8px 20px rgba(96, 165, 250, 0.25);
+                    transition: transform 0.2s ease;
+                }
+                .user-medal-actions input[type="button"]:hover {
+                    transform: translateY(-2px);
+                }
+                @media (max-width: 640px) {
+                    .user-medal-wrapper {
+                        padding: 0 6px;
+                    }
+                    .user-medal-grid {
+                        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    }
+                }
+            ',
+            'header',
+            false
+        );
+    }
+
+    if ($withActions) {
+        $wrapBefore = '<div class="user-medal-wrapper"><form><div class="user-medal-grid manage">';
+        $wrapAfter = '</div></form></div>';
+    } else {
+        $wrapBefore = '<div class="user-medal-wrapper"><div class="user-medal-grid">';
+        $wrapAfter = '</div></div>';
+    }
     $medalImages = [];
-    $wrapBefore = '<form><div style="display: flex;flex-wrap: wrap;justify-content: center;margin-top: 10px;">';
-    $wrapAfter = '</div></form>';
+
     foreach ($medals as $medal) {
-        $html = sprintf('<div style="display: flex;flex-direction: column;justify-content: space-between;margin-right: 10px"><div><img src="%s" title="%s" class="preview" style="max-height: %spx;max-width: %spx"/></div>', $medal->image_large, $medal->name, $maxHeight, $maxHeight);
+        $cardClass = $withActions ? 'user-medal-card manage' : 'user-medal-card';
+        $html = '<div class="' . $cardClass . '">';
+        $html .= '<div class="user-medal-image">';
+        $html .= sprintf(
+            '<img src="%s" alt="%s" title="%s" class="preview" style="max-height:%spx;max-width:%spx;">',
+            htmlspecialchars($medal->image_large),
+            htmlspecialchars($medal->name),
+            htmlspecialchars($medal->name),
+            (int)$maxHeight,
+            (int)$maxHeight
+        );
+        $html .= '</div>';
+
+        $html .= sprintf('<div class="user-medal-name">%s</div>', htmlspecialchars($medal->name));
+
+        if (!empty($medal->description)) {
+            $html .= sprintf('<div class="user-medal-desc">%s</div>', nl2br(htmlspecialchars($medal->description)));
+        }
+
         if ($withActions) {
+            $expireAt = $medal->pivot->expire_at ? format_datetime($medal->pivot->expire_at) : nexus_trans('label.permanent');
+            $additionFactor = $medal->bonus_addition_factor ?? 0;
+            $additionExpireAt = $medal->pivot->bonus_addition_expire_at ? format_datetime($medal->pivot->bonus_addition_expire_at) : nexus_trans('label.permanent');
+
+            $html .= '<div class="user-medal-meta">';
+            $html .= sprintf('<span>%s: %s</span>', nexus_trans('label.expire_at'), $expireAt);
+            $html .= sprintf('<span>%s: %s</span>', nexus_trans('medal.fields.bonus_addition_factor'), $additionFactor);
+            $html .= sprintf('<span>%s: %s</span>', nexus_trans('medal.bonus_addition_expire_at'), $additionExpireAt);
+            $html .= '</div>';
+
+            $html .= '<div class="user-medal-controls">';
             $html .= sprintf(
-                '<div style="display: flex;flex-direction: column;align-items:flex-start"><span>%s: %s</span><span>%s: %s</span><span>%s: %s</span><label>%s: <input type="number" name="priority_%s" value="%s" style="width: 50px" placeholder="%s"></label>',
-                nexus_trans('label.expire_at'),
-                $medal->pivot->expire_at ? format_datetime($medal->pivot->expire_at) : nexus_trans('label.permanent'),
-                nexus_trans('medal.fields.bonus_addition_factor'),
-                $medal->bonus_addition_factor ?? 0,
-                nexus_trans('medal.bonus_addition_expire_at'),
-                $medal->pivot->bonus_addition_expire_at ? format_datetime($medal->pivot->bonus_addition_expire_at) : nexus_trans('label.permanent'),
+                '<label>%s<input type="number" name="priority_%s" value="%s" placeholder="%s"></label>',
                 nexus_trans('label.priority'),
                 $medal->pivot->id,
                 $medal->pivot->priority ?? 0,
                 nexus_trans('label.priority_help')
             );
-            $checked = '';
-            if ($medal->pivot->status == \App\Models\UserMedal::STATUS_WEARING) {
-                $checked = ' checked';
-            }
-            $html .= sprintf('<label>%s<input type="checkbox" name="status_%s" value="1"%s></label>', nexus_trans('medal.action_wearing'), $medal->pivot->id, $checked);
+
+            $checked = $medal->pivot->status == \App\Models\UserMedal::STATUS_WEARING ? ' checked' : '';
+            $html .= sprintf(
+                '<label><span>%s</span><input type="checkbox" name="status_%s" value="1"%s></label>',
+                nexus_trans('medal.action_wearing'),
+                $medal->pivot->id,
+                $checked
+            );
             $html .= '</div>';
+        } else {
+            $badges = [];
+            if (!empty($medal->bonus_addition_factor)) {
+                $badges[] = sprintf('%s +%s%%', nexus_trans('medal.fields.bonus_addition_factor'), $medal->bonus_addition_factor * 100);
+            }
+            if (!empty($medal->pivot?->expire_at)) {
+                $badges[] = sprintf('%s %s', nexus_trans('label.expire_at'), format_datetime($medal->pivot->expire_at));
+            }
+            if (!empty($badges)) {
+                $html .= '<div class="user-medal-badges">';
+                foreach ($badges as $badgeText) {
+                    $html .= '<span class="user-medal-badge">' . htmlspecialchars($badgeText) . '</span>';
+                }
+                $html .= '</div>';
+            }
         }
+
         $html .= '</div>';
         $medalImages[] = $html;
     }
+
     if ($withActions) {
-        $medalImages[] = sprintf('<div style="display: flex;flex-direction: column;justify-content: space-between;margin-right: 10px"><div></div><div><input type="button" id="save-user-medal-btn" value="%s"/></div></div>', nexus_trans('label.save'));
+        $medalImages[] = sprintf(
+            '<div class="user-medal-card manage user-medal-actions"><input type="button" id="save-user-medal-btn" value="%s" /></div>',
+            nexus_trans('label.save')
+        );
     }
+
     return $wrapBefore . implode('', $medalImages) . $wrapAfter;
 }
 
@@ -7305,9 +7531,19 @@ function calculate_stardust_farm_addition($uid)
         $count = intval($planetsCount['count'] ?? 0);
 
         // 每个行星+2%，最多10个行星=20%加成
-        $factor = min($count * 0.02, 0.20);
+        $planetFactor = min($count * 0.02, 0.20);
 
-        do_log("[STARDUST_FARM_ADDITION], uid: $uid, planets: $count, factor: $factor", "debug");
+        // 查询已完成成就数量（每个成就 +1%）
+        $achievementCountRow = \Nexus\Database\NexusDB::selectOne(
+            "SELECT COUNT(DISTINCT achievement_id) AS count FROM stardust_user_achievements WHERE user_id = ?",
+            [$uid]
+        );
+        $achievementCount = intval($achievementCountRow['count'] ?? 0);
+        $achievementFactor = $achievementCount * 0.01;
+
+        $factor = $planetFactor + $achievementFactor;
+
+        do_log("[STARDUST_FARM_ADDITION], uid: $uid, planets: $count ({$planetFactor}), achievements: $achievementCount ({$achievementFactor}), total: $factor", "debug");
 
         return $factor;
     } catch (\Exception $e) {

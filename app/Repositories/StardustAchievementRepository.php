@@ -17,21 +17,21 @@ class StardustAchievementRepository extends BaseRepository
         $unlockedAchievements = [];
         
         // 获取所有成就
-        $achievements = DB::table('stardust_achievements')->orderBy('sort_order')->get();
+        $achievements = NexusDB::table('stardust_achievements')->orderBy('sort_order')->get();
         
         foreach ($achievements as $achievement) {
             $conditions = json_decode($achievement->conditions, true);
             
             if ($this->checkConditions($userId, $achievement->type, $conditions)) {
                 // 检查是否已完成
-                $userAchievement = DB::table('stardust_user_achievements')
+                $userAchievement = NexusDB::table('stardust_user_achievements')
                     ->where('user_id', $userId)
                     ->where('achievement_id', $achievement->id)
                     ->first();
                 
                 if (!$userAchievement) {
                     // 首次完成
-                    DB::table('stardust_user_achievements')->insert([
+                    NexusDB::table('stardust_user_achievements')->insert([
                         'user_id' => $userId,
                         'achievement_id' => $achievement->id,
                         'completed_times' => 1,
@@ -51,7 +51,7 @@ class StardustAchievementRepository extends BaseRepository
                     ];
                 } elseif ($achievement->is_repeatable && $userAchievement) {
                     // 可重复成就
-                    DB::table('stardust_user_achievements')
+                    NexusDB::table('stardust_user_achievements')
                         ->where('id', $userAchievement->id)
                         ->update([
                             'completed_times' => $userAchievement->completed_times + 1,
@@ -110,7 +110,7 @@ class StardustAchievementRepository extends BaseRepository
         
         if (isset($conditions['total_fragments'])) {
             // 累计收获碎片数（通过交互记录统计）
-            $totalFragments = DB::table('stardust_inventories')
+            $totalFragments = NexusDB::table('stardust_inventories')
                 ->where('user_id', $userId)
                 ->where('item_type', 'fragment')
                 ->sum('quantity');
@@ -152,6 +152,11 @@ class StardustAchievementRepository extends BaseRepository
                 ->count();
             return $count >= $conditions['steal_times'];
         }
+
+        if (isset($conditions['interaction_total'])) {
+            $count = StardustInteraction::where('from_user_id', $userId)->count();
+            return $count >= $conditions['interaction_total'];
+        }
         
         return false;
     }
@@ -168,7 +173,7 @@ class StardustAchievementRepository extends BaseRepository
         
         if (isset($conditions['first_harvest'])) {
             // 检查是否有过收获记录
-            return DB::table('stardust_transaction_logs')
+            return NexusDB::table('stardust_transaction_logs')
                 ->where('user_id', $userId)
                 ->where('source', 'harvest')
                 ->exists();
@@ -303,6 +308,13 @@ class StardustAchievementRepository extends BaseRepository
                         'current' => (int)($result['count'] ?? 0),
                         'target' => $conditions['steal_times'],
                     ];
+                } elseif (isset($conditions['interaction_total'])) {
+                    $sql = "SELECT COUNT(*) as count FROM stardust_interactions WHERE from_user_id = {$userId}";
+                    $result = NexusDB::selectOne($sql);
+                    return [
+                        'current' => (int)($result['count'] ?? 0),
+                        'target' => $conditions['interaction_total'],
+                    ];
                 }
                 break;
                 
@@ -343,13 +355,13 @@ class StardustAchievementRepository extends BaseRepository
         $today = today();
         
         // 财富榜
-        $wealthData = DB::table('stardust_farms')
+        $wealthData = NexusDB::table('stardust_farms')
             ->orderBy('stardust', 'desc')
             ->limit(100)
             ->get();
         
         foreach ($wealthData as $index => $farm) {
-            DB::table('stardust_leaderboards')->updateOrInsert(
+            NexusDB::table('stardust_leaderboards')->updateOrInsert(
                 [
                     'type' => 'wealth',
                     'user_id' => $farm->user_id,
@@ -364,14 +376,14 @@ class StardustAchievementRepository extends BaseRepository
         }
         
         // 等级榜
-        $levelData = DB::table('stardust_farms')
+        $levelData = NexusDB::table('stardust_farms')
             ->orderBy('level', 'desc')
             ->orderBy('experience', 'desc')
             ->limit(100)
             ->get();
         
         foreach ($levelData as $index => $farm) {
-            DB::table('stardust_leaderboards')->updateOrInsert(
+            NexusDB::table('stardust_leaderboards')->updateOrInsert(
                 [
                     'type' => 'level',
                     'user_id' => $farm->user_id,
@@ -386,8 +398,8 @@ class StardustAchievementRepository extends BaseRepository
         }
         
         // 行星收藏榜
-        $planetsData = DB::table('stardust_inventories')
-            ->select('user_id', DB::raw('SUM(quantity) as total'))
+        $planetsData = NexusDB::table('stardust_inventories')
+            ->select('user_id', NexusDB::raw('SUM(quantity) as total'))
             ->where('item_type', 'planet')
             ->groupBy('user_id')
             ->orderBy('total', 'desc')
@@ -395,7 +407,7 @@ class StardustAchievementRepository extends BaseRepository
             ->get();
         
         foreach ($planetsData as $index => $data) {
-            DB::table('stardust_leaderboards')->updateOrInsert(
+            NexusDB::table('stardust_leaderboards')->updateOrInsert(
                 [
                     'type' => 'planets',
                     'user_id' => $data->user_id,

@@ -7,6 +7,7 @@ use App\Models\StardustLand;
 use App\Models\StardustCrop;
 use App\Models\StardustInventory;
 use App\Models\StardustInteraction;
+use App\Models\StardustTransactionLog;
 use App\Models\User;
 
 class StardustFarmRepository extends BaseRepository
@@ -123,6 +124,21 @@ class StardustFarmRepository extends BaseRepository
 
         // 增加经验
         $farm->addExperience($result['experience']);
+
+        // 记录交易日志
+        StardustTransactionLog::create([
+            'user_id' => $userId,
+            'type' => 'earn',
+            'source' => 'harvest',
+            'amount' => $result['fragments'],
+            'balance_after' => $farm->stardust,
+            'description' => "收获 {$result['crop_name']} 获得 {$result['fragments']} 碎片",
+            'metadata' => [
+                'crop_id' => $result['crop_id'],
+                'crop_name' => $result['crop_name'],
+                'land_id' => $landId,
+            ],
+        ]);
 
         // 广播：收获大量碎片（≥3个）
         if ($result['fragments'] >= 3) {
@@ -276,6 +292,10 @@ class StardustFarmRepository extends BaseRepository
             throw new \InvalidArgumentException('不能偷自己的');
         }
 
+        if (StardustInteraction::getTodayStealCount($userId) >= 10) {
+            throw new \InvalidArgumentException('今天的偷取次数已达上限（最多10次）');
+        }
+
         $targetFarm = StardustFarm::where('user_id', $targetUserId)->first();
         if (!$targetFarm) {
             throw new \InvalidArgumentException('目标农场不存在');
@@ -287,6 +307,10 @@ class StardustFarmRepository extends BaseRepository
 
         if (!$land) {
             throw new \InvalidArgumentException('土地不存在');
+        }
+
+        if (StardustInteraction::hasLandBeenStolenToday($landId)) {
+            throw new \InvalidArgumentException('该土地今天已经被偷取过了');
         }
 
         // 检查今天是否已经偷过
@@ -344,6 +368,13 @@ class StardustFarmRepository extends BaseRepository
 
         // 记录访问并奖励
         $reward = 10;
+        $alreadyRewarded = StardustTransactionLog::where('user_id', $userId)
+            ->where('source', 'visit')
+            ->whereDate('created_at', today())
+            ->exists();
+        if ($alreadyRewarded) {
+            $reward = 0;
+        }
         StardustInteraction::record(
             $userId,
             $targetUserId,
@@ -353,12 +384,14 @@ class StardustFarmRepository extends BaseRepository
             '访问好友农场'
         );
 
-        $myFarm = StardustFarm::getOrCreateForUser($userId);
-        $myFarm->addStardust($reward, 'visit', '访问好友农场');
+        if ($reward > 0) {
+            $myFarm = StardustFarm::getOrCreateForUser($userId);
+            $myFarm->addStardust($reward, 'visit', '访问好友农场');
+        }
 
         return [
             'success' => true,
-            'message' => "访问成功！获得{$reward}星尘",
+            'message' => $reward > 0 ? "访问成功！获得{$reward}星尘" : '访问成功！今日奖励已领取',
             'reward' => $reward,
             'target_farm' => $targetFarmData,
             'remaining_visits' => 5 - $todayVisits - 1,

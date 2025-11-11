@@ -875,18 +875,51 @@ function renderFarm() {
     
     // 加载成就列表
     loadAchievements();
+
+    if (!isOwnFarm) {
+        recordVisit();
+    }
 }
 
 // 加载成就列表
 function loadAchievements() {
     if (!isOwnFarm) return; // 只在自己的农场显示成就
     
-    callAPI('getStardustAchievements', { user_id: targetUserId })
-        .then(data => {
-            renderAchievements(data);
+    callAPI('checkStardustAchievements', {})
+        .then(unlocked => {
+            if (Array.isArray(unlocked) && unlocked.length > 0) {
+                unlocked.forEach(item => {
+                    const rewardText = item.reward ? `，奖励 ${item.reward}⭐` : '';
+                    showNotification(`🎉 成就达成：${item.name}${rewardText}`, 'success');
+                });
+            }
         })
         .catch(error => {
-            console.error('加载成就失败:', error);
+            console.warn('检查成就失败:', error);
+        })
+        .finally(() => {
+            callAPI('getStardustAchievements', { user_id: targetUserId })
+                .then(data => {
+                    renderAchievements(data);
+                })
+                .catch(error => {
+                    console.error('加载成就失败:', error);
+                });
+        });
+}
+
+// 记录访问
+function recordVisit() {
+    callAPI('visitStardustFarm', { target_user_id: targetUserId })
+        .then(data => {
+            if (data && data.message) {
+                console.log('访问好友成功:', data.message);
+            }
+        })
+        .catch(error => {
+            if (error && error.indexOf && error.indexOf('访问次数已用完') === -1) {
+                console.warn('记录访问失败:', error);
+            }
         });
 }
 
@@ -901,10 +934,20 @@ function renderAchievements(achievements) {
     
     list.innerHTML = achievements.map(ach => {
         const isCompleted = ach.is_completed;
-        const progress = ach.progress || 0;
         const target = ach.target || 100;
-        const progressPercent = Math.min((progress / target) * 100, 100);
+        const rawProgress = ach.progress ?? 0;
+        const progressValue = isCompleted ? target : rawProgress;
+        const progressPercent = target > 0 ? Math.min((progressValue / target) * 100, 100) : 100;
         
+        const progressSection = (`
+                    <div style="margin: 10px 0;">
+                        <div style="background: rgba(0,0,0,0.3); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: linear-gradient(90deg, #4ECDC4, #44A08D); height: 100%; width: ${progressPercent}%; transition: width 0.3s;"></div>
+                        </div>
+                        <div style="font-size: 11px; color: #999; margin-top: 4px; text-align: right;">${progressValue} / ${target}</div>
+                    </div>
+                `);
+
         return `
             <div class="achievement-item ${isCompleted ? 'completed' : 'locked'}" style="
                 background: ${isCompleted ? 'rgba(78, 205, 196, 0.2)' : 'rgba(100, 100, 100, 0.1)'};
@@ -926,14 +969,7 @@ function renderAchievements(achievements) {
                     </div>
                 </div>
                 
-                ${!isCompleted && progress > 0 ? `
-                    <div style="margin: 10px 0;">
-                        <div style="background: rgba(0,0,0,0.3); height: 8px; border-radius: 4px; overflow: hidden;">
-                            <div style="background: linear-gradient(90deg, #4ECDC4, #44A08D); height: 100%; width: ${progressPercent}%; transition: width 0.3s;"></div>
-                        </div>
-                        <div style="font-size: 11px; color: #999; margin-top: 4px; text-align: right;">${progress} / ${target}</div>
-                    </div>
-                ` : ''}
+                ${(!isCompleted ? progressSection : '')}
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
                     <span style="font-size: 14px; color: ${isCompleted ? '#FFD700' : '#666'};">
@@ -942,6 +978,11 @@ function renderAchievements(achievements) {
                     ${ach.is_repeatable ? '<span style="font-size: 11px; color: #8a2be2; background: rgba(138,43,226,0.2); padding: 2px 8px; border-radius: 10px;">可重复</span>' : ''}
                     ${isCompleted && ach.completed_times > 1 ? `<span style="font-size: 11px; color: #4ECDC4;">已完成 ${ach.completed_times} 次</span>` : ''}
                 </div>
+                ${isCompleted ? `
+                    <div style="margin-top: 8px; font-size: 11px; color: #94a3b8; text-align: right;">
+                        ${progressValue} / ${target}
+                    </div>
+                ` : ''}
             </div>
         `;
     }).join('');

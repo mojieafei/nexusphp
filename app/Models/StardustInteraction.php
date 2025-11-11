@@ -91,5 +91,27 @@ class StardustInteraction extends NexusModel
             ->whereDate('created_at', today())
             ->count();
     }
+
+    /**
+     * 获取今天的偷取次数
+     */
+    public static function getTodayStealCount(int $fromUserId): int
+    {
+        return self::where('from_user_id', $fromUserId)
+            ->where('action', 'steal')
+            ->whereDate('created_at', today())
+            ->count();
+    }
+
+    /**
+     * 检查土地今天是否已被偷取
+     */
+    public static function hasLandBeenStolenToday(int $landId): bool
+    {
+        return self::where('land_id', $landId)
+            ->where('action', 'steal')
+            ->whereDate('created_at', today())
+            ->exists();
+    }
 }
 

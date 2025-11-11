@@ -108,7 +108,7 @@ class StardustStatsPage extends Page
             ->limit(10)
             ->get()
             ->map(fn ($farm) => [
-                'username' => $farm->user->username,
+                'username' => $farm->user->username ?? ('用户 #' . $farm->user_id),
                 'stardust' => number_format($farm->stardust),
                 'level' => $farm->level,
             ])
@@ -122,8 +122,8 @@ class StardustStatsPage extends Page
             ->limit(20)
             ->get()
             ->map(fn ($interaction) => [
-                'from' => $interaction->fromUser->username ?? '未知',
-                'to' => $interaction->toUser->username ?? '未知',
+                'from' => $interaction->fromUser->username ?? ('用户 #' . $interaction->from_user_id),
+                'to' => $interaction->toUser->username ?? ($interaction->to_user_id ? ('用户 #' . $interaction->to_user_id) : '系统'),
                 'action' => match($interaction->action) {
                     'water' => '浇水',
                     'steal' => '偷取',
@@ -131,7 +131,7 @@ class StardustStatsPage extends Page
                     default => $interaction->action,
                 },
                 'result' => $interaction->result,
-                'time' => $interaction->created_at->diffForHumans(),
+                'time' => $interaction->created_at ? $interaction->created_at->diffForHumans() : '',
             ])
             ->toArray();
     }

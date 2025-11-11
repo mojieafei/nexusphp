@@ -166,9 +166,17 @@
 let broadcastWidget = {
     isOpen: false,
     lastBroadcastId: 0,
+    lastReadId: 0,
     broadcasts: [],
     
     init() {
+        const saved = localStorage.getItem('stardustBroadcastLastReadId')
+        if (saved) {
+            const parsed = parseInt(saved, 10)
+            if (!isNaN(parsed)) {
+                this.lastReadId = parsed
+            }
+        }
         this.loadBroadcasts();
         setInterval(() => this.loadBroadcasts(), 30000); // 每30秒刷新
     },
@@ -195,21 +203,50 @@ let broadcastWidget = {
     },
     
     updateBroadcasts(newBroadcasts) {
-        const oldCount = this.broadcasts.length;
         this.broadcasts = newBroadcasts;
+
+        const sorted = [...newBroadcasts].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
+        const newest = sorted.length ? Number(sorted[sorted.length - 1].id) || 0 : 0
+
+        if (this.lastReadId === 0 && newest > 0) {
+            this.lastReadId = newest
+            localStorage.setItem('stardustBroadcastLastReadId', String(newest))
+        }
         
-        // 更新角标
-        if (newBroadcasts.length > 0 && !this.isOpen) {
-            const newCount = Math.min(newBroadcasts.length - oldCount, 99);
-            if (newCount > 0) {
-                const badge = document.getElementById('broadcastBadge');
-                badge.textContent = newCount > 99 ? '99+' : newCount;
-                badge.style.display = 'flex';
-            }
+        const maxId = newBroadcasts.reduce((max, item) => {
+            const id = Number(item.id) || 0
+            return id > max ? id : max
+        }, this.lastReadId)
+
+        if (this.isOpen) {
+            this.markAllRead(maxId)
+        }
+
+        const unreadCount = this.isOpen
+            ? 0
+            : newBroadcasts.filter(item => (Number(item.id) || 0) > this.lastReadId).length
+
+        const badge = document.getElementById('broadcastBadge')
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount
+            badge.style.display = 'flex'
+        } else {
+            badge.style.display = 'none'
         }
         
         // 渲染列表
         this.renderBroadcasts();
+    },
+
+    markAllRead(maxId = null) {
+        const currentMax = maxId !== null ? maxId : this.broadcasts.reduce((max, item) => {
+            const id = Number(item.id) || 0
+            return id > max ? id : max
+        }, this.lastReadId)
+        this.lastReadId = currentMax
+        localStorage.setItem('stardustBroadcastLastReadId', String(currentMax))
+        const badge = document.getElementById('broadcastBadge')
+        badge.style.display = 'none'
     },
     
     renderBroadcasts() {
@@ -228,16 +265,37 @@ let broadcastWidget = {
             const isNew = index < 3 && !this.isOpen; // 最新3条标记为new
             const time = this.formatTime(item.created_at);
             const icon = this.getTypeIcon(item.type);
+            const link = this.getItemLink(item);
+            const content = `
+                ${icon} <span class="broadcast-user">${item.username}</span> ${item.message}
+            `;
             
             return `
                 <div class="broadcast-item ${isNew ? 'new' : ''}">
                     <div class="broadcast-message">
-                        ${icon} <span class="broadcast-user">${item.username}</span> ${item.message}
+                        ${link ? `<a href="${link}" target="_blank" style="color: inherit; text-decoration: underline;">${content}</a>` : content}
                     </div>
                     <div class="broadcast-time">${time}</div>
                 </div>
             `;
         }).join('');
+    },
+
+    getItemLink(item) {
+        const data = (item && typeof item.data === 'object' && item.data !== null) ? item.data : {}
+        const safe = field => Object.prototype.hasOwnProperty.call(data, field) ? data[field] : null
+        switch (item.type) {
+            case 'fragment':
+            case 'planet':
+            case 'farm': {
+                const userId = safe('user_id') || safe('target_user_id') || item.user_id || item.target_user_id
+                return userId ? `stardust_farm.php?uid=${userId}` : null
+            }
+            case 'achievement':
+                return 'stardust_farm.php'
+            default:
+                return null
+        }
     },
     
     getTypeIcon(type) {
@@ -271,6 +329,7 @@ function showStardustBroadcast() {
     btn.style.display = 'none';
     badge.style.display = 'none';
     broadcastWidget.isOpen = true;
+    broadcastWidget.markAllRead();
     
     // 展开内容
     document.getElementById('broadcastContent').style.display = 'block';
@@ -284,6 +343,7 @@ function hideStardustBroadcast() {
     widget.style.display = 'none';
     btn.style.display = 'flex';
     broadcastWidget.isOpen = false;
+    broadcastWidget.markAllRead();
 }
 
 function toggleStardustBroadcast() {

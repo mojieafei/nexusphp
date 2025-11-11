@@ -228,6 +228,23 @@ class StardustLand extends NexusModel
     }
 
     /**
+     * 强制成熟
+     */
+    public function forceMature(): void
+    {
+        if ($this->status === 'empty' || !$this->crop_id) {
+            return;
+        }
+
+        $now = now();
+        $this->status = 'mature';
+        $this->mature_at = $now;
+        $this->wither_at = $now->copy()->addHours(48);
+        $this->can_be_stolen = true;
+        $this->save();
+    }
+
+    /**
      * 获取剩余时间（分钟）
      */
     public function getRemainingMinutes(): int

@@ -101,9 +101,13 @@ end_main_frame();
 $confirmBuyMsg = nexus_trans('medal.confirm_to_buy');
 $confirmGiftMsg = nexus_trans('medal.confirm_to_gift');
 $js = <<<JS
-jQuery('.buy').on('click', function (e) {
+jQuery(document).on('click', '.buy', function (e) {
+    e.preventDefault();
     let medalId = jQuery(this).attr('data-id')
-    layer.confirm("{$confirmBuyMsg}", function (index) {
+    layer.confirm("{$confirmBuyMsg}", {
+        btn: ['OK', 'Cancel']
+    }, function (index) {
+        layer.close(index);
         let params = {
             action: "buyMedal",
             params: {medal_id: medalId}
@@ -117,16 +121,22 @@ jQuery('.buy').on('click', function (e) {
             }
             window.location.reload()
         }, 'json')
+    }, function (index) {
+        layer.close(index);
     })
 })
-jQuery('.gift').on('click', function (e) {
+jQuery(document).on('click', '.gift', function (e) {
+    e.preventDefault();
     let medalId = jQuery(this).attr('data-id')
     let uid = jQuery(this).prev().val()
     if (!uid) {
         layer.alert('Require UID')
         return
     }
-    layer.confirm("{$confirmGiftMsg}" + uid + " ?", function (index) {
+    layer.confirm("{$confirmGiftMsg}" + uid + " ?", {
+        btn: ['OK', 'Cancel']
+    }, function (index) {
+        layer.close(index);
         let params = {
             action: "giftMedal",
             params: {medal_id: medalId, uid: uid}
@@ -140,6 +150,8 @@ jQuery('.gift').on('click', function (e) {
             }
             window.location.reload()
         }, 'json')
+    }, function (index) {
+        layer.close(index);
     })
 })
 JS;

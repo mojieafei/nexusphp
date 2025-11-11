@@ -343,15 +343,15 @@ if (isset($do)) {
 
 	$bonus = number_format($CURUSER['seedbonus'], 1);
 if (!$action) {
+	print("<div id=\"bonus-exchange-wrapper\">");
 	print("<table align=\"center\" width=\"97%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\">\n");
 	print("<tr><td class=\"colhead\" colspan=\"4\" align=\"center\"><font class=\"big\">".$SITENAME.$lang_mybonus['text_karma_system']."</font></td></tr>\n");
 	if ($msg)
-	print("<tr><td align=\"center\" colspan=\"4\"><font class=\"striking\"><b>". $msg ."</b></font></td></tr>");
+	print("<tr id=\"bonus-message\"><td align=\"center\" colspan=\"4\"><font class=\"striking\"><b>". $msg ."</b></font></td></tr>");
 ?>
-<tr><td class="text" align="center" colspan="4"><?php echo $lang_mybonus['text_exchange_your_karma']?><?php echo $bonus?><?php echo $lang_mybonus['text_for_goodies'] ?>
+<tr id="bonus-summary"><td class="text" align="center" colspan="4"><?php echo $lang_mybonus['text_exchange_your_karma']?><span id="current-bonus"><?php echo $bonus?></span><?php echo $lang_mybonus['text_for_goodies'] ?>
 <br /><b><?php echo $lang_mybonus['text_no_buttons_note'] ?></b><br /><small style="color: orangered">(<?php echo $lockText ?>)</small></td></tr>
 <?php
-
 print("<tr><td class=\"colhead\" align=\"center\">".$lang_mybonus['col_option']."</td>".
 "<td class=\"colhead\" align=\"left\">".$lang_mybonus['col_description']."</td>".
 "<td class=\"colhead\" align=\"center\">".$lang_mybonus['col_points']."</td>".
@@ -371,8 +371,8 @@ for ($i=0; $i < count($allBonus); $i++)
     }
     $bonusarrray['points'] = floatval($bonusarray['points']);
 
-	print("<tr>");
 	print("<form action=\"?action=exchange\" method=\"post\">");
+	print("<tr>");
 	print("<td class=\"rowhead_center\"><input type=\"hidden\" name=\"option\" value=\"".$i."\" /><b>".($i + 1)."</b></td>");
 	if ($bonusarray['art'] == 'title'){ //for Custom Title!
 	    $otheroption_title = "<input type=\"text\" name=\"title\" style=\"width: 200px\" maxlength=\"30\" />";
@@ -470,12 +470,108 @@ for ($i=0; $i < count($allBonus); $i++)
 	{
 		print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_more_points_needed']."\" disabled=\"disabled\" /></td>");
 	}
-	print("</form>");
 	print("</tr>");
+	print("</form>");
 
 }
 
 print("</table><br />");
+print("</div>");
+
+$bonusExchangeJs = <<<JS
+jQuery(function (\$) {
+    var \$wrapper = \$('#bonus-exchange-wrapper');
+    if (!\$wrapper.length) {
+        return;
+    }
+
+    var messageSelector = '#bonus-message';
+
+    \$wrapper.on('submit', 'form', function (event) {
+        event.preventDefault();
+        var \$form = \$(this);
+        var \$button = \$form.find('input[type="submit"]');
+        if (\$button.data('loading')) {
+            return;
+        }
+        var originalText = \$button.val();
+        \$button.data('loading', true);
+        \$button.prop('disabled', true).val(originalText + '…');
+
+        \$.ajax({
+            url: \$form.attr('action'),
+            method: (\$form.attr('method') || 'post').toUpperCase(),
+            data: \$form.serialize(),
+            dataType: 'html'
+        }).done(function (html, textStatus, xhr) {
+            var \$doc = parseResponse(html);
+            if (!renderFromDoc(\$doc)) {
+                refreshFromServer(pickRefreshUrl(html, xhr));
+            }
+        }).fail(function (xhr) {
+            var fallback = xhr.responseText ? \$('<div>').html(xhr.responseText).text().trim() : '请求失败，请稍后再试';
+            if (window.layer && typeof window.layer.alert === 'function') {
+                window.layer.alert(fallback, window.nexusLayerOptions ? window.nexusLayerOptions.alert : {});
+            } else {
+                alert(fallback);
+            }
+        }).always(function () {
+            window.setTimeout(function () {
+                \$button.data('loading', false);
+                \$button.prop('disabled', false).val(originalText);
+            }, 400);
+        });
+    });
+
+    function parseResponse(html) {
+        return \$('<div>').append(\$.parseHTML(html));
+    }
+
+    function renderFromDoc(\$doc) {
+        var \$docWrapper = \$doc.find('#bonus-exchange-wrapper').first();
+        if (!\$docWrapper.length) {
+            return false;
+        }
+        \$wrapper.html(\$docWrapper.html());
+        notifyMessage(\$wrapper.find(messageSelector).first());
+        return true;
+    }
+
+    function notifyMessage(\$row) {
+        if (!\$row || !\$row.length) {
+            return;
+        }
+        var messageText = \$row.text().trim();
+        if (!messageText) {
+            return;
+        }
+        if (window.layer && typeof window.layer.msg === 'function') {
+            window.layer.msg(messageText);
+        } else {
+            alert(messageText);
+        }
+    }
+
+    function pickRefreshUrl(html, xhr) {
+        var redirectMatch = /window\.location\.href\s*=\s*'([^']+)'/i.exec(html);
+        if (redirectMatch && redirectMatch[1]) {
+            return redirectMatch[1];
+        }
+        if (xhr && xhr.responseURL && xhr.responseURL.indexOf('mybonus.php') !== -1) {
+            return xhr.responseURL;
+        }
+        return 'mybonus.php';
+    }
+
+    function refreshFromServer(url) {
+        \$.get(url || 'mybonus.php', function (html) {
+            var \$doc = parseResponse(html);
+            renderFromDoc(\$doc);
+        });
+    }
+});
+JS;
+\Nexus\Nexus::js($bonusExchangeJs, 'footer', false);
 ?>
 
 <table width="97%" cellpadding="3">

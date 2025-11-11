@@ -4,6 +4,9 @@ var count = 0;
 function noenter(key) 
 {
 	suggcont = document.getElementById("suggcontainer");
+	if (!suggcont) {
+		return true;
+	}
 	if (suggcont.style.display == "block") 
 	{
 		if (key == 13) 
@@ -83,6 +86,9 @@ function update(result) {
 
 	suggdiv = document.getElementById("suggestions");
 	suggcont = document.getElementById("suggcontainer");
+	if (!suggdiv || !suggcont) {
+		return;
+	}
 	if (arr_keywords[0].length > 0) 
 	{
 		suggcont.style.display = "block";
@@ -190,6 +196,9 @@ function choiceclick(obj)
 function closechoices() 
 {
 	suggcont = document.getElementById("suggcontainer");
+	if (!suggcont) {
+		return;
+	}
 	if (suggcont.style.display == "block") 
 	{
 		count = 0;
