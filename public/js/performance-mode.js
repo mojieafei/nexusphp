@@ -54,6 +54,7 @@
         if (config.mode !== 'minimal') {
             window.location.reload();
         }
+
     } catch (e) {
         // 静默失败，避免阻塞主流程
         if (typeof console !== 'undefined' && console.warn) {

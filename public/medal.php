@@ -101,6 +101,38 @@ end_main_frame();
 $confirmBuyMsg = nexus_trans('medal.confirm_to_buy');
 $confirmGiftMsg = nexus_trans('medal.confirm_to_gift');
 $js = <<<JS
+// 强制重置PJAX状态和页面初始化
+try {
+    if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.href);
+    }
+    
+    // 清除可能存在的PJAX缓存状态
+    if (window.jQuery && jQuery.fn && jQuery.fn.pjax) {
+        jQuery(document).off('.pjax');
+        jQuery('#pjax-container').removeData('pjax');
+    }
+    
+    // 重置所有表单和按钮状态
+    jQuery('form').each(function() {
+        this.dataset.submitting = '';
+    });
+    jQuery('input[type="submit"], button[type="submit"]').each(function() {
+        var originalText = jQuery(this).data('original-text');
+        if (originalText !== undefined) {
+            jQuery(this).val(originalText);
+        }
+        jQuery(this).prop('disabled', false).data('loading', false);
+    });
+    
+    // 关闭可能残留的layer弹窗
+    if (window.layer && typeof window.layer.closeAll === 'function') {
+        window.layer.closeAll();
+    }
+} catch (e) {
+    console.warn('页面状态重置异常:', e);
+}
+
 jQuery(document).on('click', '.buy', function (e) {
     e.preventDefault();
     let medalId = jQuery(this).attr('data-id')

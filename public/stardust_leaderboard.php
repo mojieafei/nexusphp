@@ -7,15 +7,12 @@ stdhead("星尘农场 - 排行榜");
 ?>
 
 <style>
-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-}
-
 .leaderboard-container {
     max-width: 1200px;
     margin: 20px auto;
     padding: 20px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
 }
 
 .leaderboard-header {

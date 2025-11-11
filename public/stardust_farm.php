@@ -799,7 +799,7 @@ body {
                             <li style="padding: 5px 0;">• <a href="meteor_game.php" target="_blank" style="color: #8a2be2; text-decoration: underline;">流星游戏</a> - 获取星尘</li>
                             <li style="padding: 5px 0;">• <a href="stardust_friends.php" style="color: #4ECDC4; text-decoration: underline;">好友农场</a> - 访问好友</li>
                             <li style="padding: 5px 0;">• <a href="stardust_leaderboard.php" target="_blank" style="color: #FFD700; text-decoration: underline;">排行榜</a> - 查看排名</li>
-                            <li style="padding: 5px 0;">• <a href="mybonus.php" style="color: #FF6B6B; text-decoration: underline;">魔力值</a> - 查看加成</li>
+                            <li style="padding: 5px 0;">• <a href="mybonus.php" data-pjax-ignore="1" style="color: #FF6B6B; text-decoration: underline;">魔力值</a> - 查看加成</li>
                         </ul>
                     </div>
                     

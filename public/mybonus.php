@@ -479,98 +479,145 @@ print("</table><br />");
 print("</div>");
 
 $bonusExchangeJs = <<<JS
-jQuery(function (\$) {
-    var \$wrapper = \$('#bonus-exchange-wrapper');
-    if (!\$wrapper.length) {
+// 强制重置PJAX状态和页面初始化
+try {
+    if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.href);
+    }
+    
+    // 清除可能存在的PJAX缓存状态
+    if (window.jQuery && jQuery.fn && jQuery.fn.pjax) {
+        jQuery(document).off('.pjax');
+        jQuery('#pjax-container').removeData('pjax');
+    }
+    
+    // 重置所有表单和按钮状态
+    jQuery('form').each(function() {
+        this.dataset.submitting = '';
+    });
+    jQuery('input[type="submit"], button[type="submit"]').each(function() {
+        var originalText = jQuery(this).data('original-text');
+        if (originalText !== undefined) {
+            jQuery(this).val(originalText);
+        }
+        jQuery(this).prop('disabled', false).data('loading', false);
+    });
+    
+    // 关闭可能残留的layer弹窗
+    if (window.layer && typeof window.layer.closeAll === 'function') {
+        window.layer.closeAll();
+    }
+} catch (e) {
+    console.warn('页面状态重置异常:', e);
+}
+
+jQuery(function ($) {
+    var $wrapper = $('#bonus-exchange-wrapper');
+    if (!$wrapper.length) {
         return;
     }
 
-    var messageSelector = '#bonus-message';
+    var layerLoadIndex = null;
+    var fallbackOverlay = null;
 
-    \$wrapper.on('submit', 'form', function (event) {
-        event.preventDefault();
-        var \$form = \$(this);
-        var \$button = \$form.find('input[type="submit"]');
-        if (\$button.data('loading')) {
+    function scheduleCleanup() {
+        $(window).one('pagehide beforeunload unload', function () {
+            stopLoading();
+        });
+    }
+
+    function resetForms() {
+        $wrapper.find('form').each(function () {
+            this.dataset.submitting = '';
+            var $buttons = $(this).find('input[type="submit"], button[type="submit"]');
+            $buttons.each(function () {
+                var $btn = $(this);
+                var originalText = $btn.data('original-text');
+                if (originalText !== undefined) {
+                    $btn.val(originalText);
+                }
+                $btn.prop('disabled', false).data('loading', false);
+            });
+        });
+    }
+
+    function startLoading() {
+        if (layerLoadIndex !== null || fallbackOverlay) {
             return;
         }
-        var originalText = \$button.val();
-        \$button.data('loading', true);
-        \$button.prop('disabled', true).val(originalText + '…');
+        if (window.layer && typeof window.layer.load === 'function') {
+            layerLoadIndex = window.layer.load(1, {shade: 0.2});
+        } else {
+            fallbackOverlay = $('<div id="bonus-loading-overlay">处理中…</div>').css({
+                position: 'fixed',
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.35)',
+                color: '#fff',
+                fontSize: '18px',
+                lineHeight: '100vh',
+                textAlign: 'center',
+                zIndex: 9999
+            }).appendTo('body');
+        }
+    }
 
-        \$.ajax({
-            url: \$form.attr('action'),
-            method: (\$form.attr('method') || 'post').toUpperCase(),
-            data: \$form.serialize(),
-            dataType: 'html'
-        }).done(function (html, textStatus, xhr) {
-            var \$doc = parseResponse(html);
-            if (!renderFromDoc(\$doc)) {
-                refreshFromServer(pickRefreshUrl(html, xhr));
-            }
-        }).fail(function (xhr) {
-            var fallback = xhr.responseText ? \$('<div>').html(xhr.responseText).text().trim() : '请求失败，请稍后再试';
-            if (window.layer && typeof window.layer.alert === 'function') {
-                window.layer.alert(fallback, window.nexusLayerOptions ? window.nexusLayerOptions.alert : {});
-            } else {
-                alert(fallback);
-            }
-        }).always(function () {
-            window.setTimeout(function () {
-                \$button.data('loading', false);
-                \$button.prop('disabled', false).val(originalText);
-            }, 400);
-        });
+    function stopLoading() {
+        if (layerLoadIndex !== null && window.layer && typeof window.layer.close === 'function') {
+            window.layer.close(layerLoadIndex);
+        }
+        layerLoadIndex = null;
+        if (fallbackOverlay) {
+            fallbackOverlay.remove();
+            fallbackOverlay = null;
+        }
+    }
+
+    $(window).on('pageshow', function () {
+        stopLoading();
+        resetForms();
     });
 
-    function parseResponse(html) {
-        return \$('<div>').append(\$.parseHTML(html));
-    }
+    $wrapper.on('submit', 'form', function () {
+        var form = this;
+        var $form = $(form);
+        if (form.dataset.submitting === '1') {
+            startLoading();
+            scheduleCleanup();
+            return;
+        }
 
-    function renderFromDoc(\$doc) {
-        var \$docWrapper = \$doc.find('#bonus-exchange-wrapper').first();
-        if (!\$docWrapper.length) {
+        var $button = $form.find('input[type="submit"], button[type="submit"]').filter(':enabled').first();
+        if ($button.length) {
+            if ($button.data('loading')) {
+                return false;
+            }
+            var originalText = $button.val();
+            $button.data('original-text', originalText);
+            $button.data('loading', true);
+            if (typeof originalText === 'string' && originalText.indexOf('…') === -1) {
+                $button.val(originalText + '…');
+            }
+            $button.prop('disabled', true);
+        }
+
+        form.dataset.submitting = '1';
+        startLoading();
+        scheduleCleanup();
+    });
+
+    $wrapper.on('click', 'input[type="submit"], button[type="submit"]', function (event) {
+        var form = this.form;
+        if (form && form.dataset.submitting === '1') {
+            event.preventDefault();
             return false;
         }
-        \$wrapper.html(\$docWrapper.html());
-        notifyMessage(\$wrapper.find(messageSelector).first());
-        return true;
-    }
-
-    function notifyMessage(\$row) {
-        if (!\$row || !\$row.length) {
-            return;
-        }
-        var messageText = \$row.text().trim();
-        if (!messageText) {
-            return;
-        }
-        if (window.layer && typeof window.layer.msg === 'function') {
-            window.layer.msg(messageText);
-        } else {
-            alert(messageText);
-        }
-    }
-
-    function pickRefreshUrl(html, xhr) {
-        var redirectMatch = /window\.location\.href\s*=\s*'([^']+)'/i.exec(html);
-        if (redirectMatch && redirectMatch[1]) {
-            return redirectMatch[1];
-        }
-        if (xhr && xhr.responseURL && xhr.responseURL.indexOf('mybonus.php') !== -1) {
-            return xhr.responseURL;
-        }
-        return 'mybonus.php';
-    }
-
-    function refreshFromServer(url) {
-        \$.get(url || 'mybonus.php', function (html) {
-            var \$doc = parseResponse(html);
-            renderFromDoc(\$doc);
-        });
-    }
+    });
 });
 JS;
+
 \Nexus\Nexus::js($bonusExchangeJs, 'footer', false);
 ?>
 

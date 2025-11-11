@@ -346,7 +346,10 @@ function hideStardustBroadcast() {
     broadcastWidget.markAllRead();
 }
 
-function toggleStardustBroadcast() {
+function toggleStardustBroadcast(event = null) {
+    if (event) {
+        event.stopPropagation();
+    }
     const content = document.getElementById('broadcastContent');
     const toggle = document.getElementById('broadcastToggle');
     

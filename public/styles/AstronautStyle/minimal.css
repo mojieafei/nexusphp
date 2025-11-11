@@ -28,6 +28,24 @@ body::after {
     display: none !important;
 }
 
+body::after {
+    content: '🌙 极简模式';
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.9), rgba(37, 99, 235, 0.85));
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    z-index: 9999;
+    opacity: 0.7;
+    pointer-events: none;
+    display: inline-block !important;
+}
+
 /* 主要容器去除玻璃态与渐变 */
 #outer,
 td.outer,

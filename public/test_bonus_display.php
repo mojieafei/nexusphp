@@ -139,7 +139,7 @@ header('Content-Type: text/html; charset=utf-8');
         ?>
         
         <p style="margin-top: 20px;">
-            <a href="mybonus.php" style="color: #4ECDC4;">→ 查看实际的魔力值页面</a><br>
+            <a href="mybonus.php" data-pjax-ignore="1" style="color: #4ECDC4;">→ 查看实际的魔力值页面</a><br>
             <a href="stardust_farm.php" style="color: #4ECDC4;">→ 进入星尘农场</a>
         </p>
     </div>
