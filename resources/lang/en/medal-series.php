@@ -1,0 +1,77 @@
+<?php
+
+return [
+    'navigation' => [
+        'title' => 'Medal Series',
+    ],
+    'sections' => [
+        'basic' => 'Basic Information',
+        'visual' => 'Visual Assets',
+        'reward' => 'Reward Settings',
+        'bonus' => 'Bonus Addition',
+    ],
+    'fields' => [
+        'name' => 'Series Name',
+        'slug' => 'Series Slug',
+        'description' => 'Series Description',
+        'cover_image' => 'Cover Image URL',
+        'banner_image' => 'Banner Image URL',
+        'reward_title' => 'Reward Title',
+        'reward_description' => 'Reward Description',
+        'reward_amount' => 'Reward Amount',
+        'reward_currency' => 'Reward Currency',
+        'reward_interval_unit' => 'Claim Interval',
+        'reward_interval_value' => 'Claims per Interval',
+        'reward_cooldown_hours' => 'Claim Cooldown (hours)',
+        'reward_start_at' => 'Claim Start At',
+        'reward_end_at' => 'Claim End At',
+        'bonus_addition_factor' => 'Completion Bonus Factor',
+        'bonus_addition_description' => 'Bonus Description',
+        'is_active' => 'Active',
+        'series' => 'Series',
+        'series_position' => 'Series Order',
+        'medals_count' => 'Medal Count',
+    ],
+    'reward_interval' => [
+        'none' => 'No Interval',
+        'daily' => 'Daily',
+        'weekly' => 'Weekly',
+        'monthly' => 'Monthly',
+        'yearly' => 'Yearly',
+    ],
+    'reward_currency' => [
+        'seedbonus' => 'Seedbonus',
+    ],
+    'filters' => [
+        'is_active' => 'Active',
+    ],
+    'claim_status' => [
+        'ready' => 'Claimable',
+        'inactive' => 'Inactive',
+        'not_complete' => 'Incomplete',
+        'limit_reached' => 'Limit reached',
+        'cooldown' => 'Cooling down',
+    ],
+    'claim_error' => [
+        'inactive' => 'The reward is currently unavailable.',
+        'not_complete' => 'You have not collected all medals in this series.',
+        'limit_reached' => 'You have reached the claim limit for this period.',
+        'cooldown' => 'Claim is cooling down, please try later.',
+        'unsupported_currency' => 'Unsupported reward currency.',
+        'invalid_reward' => 'Invalid reward configuration.',
+    ],
+    'bonus_log' => 'Medal series reward: :series',
+    'frontend' => [
+        'others_series' => 'Other Medals',
+        'collection_progress' => 'Collected :owned/:total',
+        'reward_status_prefix' => 'Reward status: ',
+        'reward_limit_remaining' => 'Remaining claims this period: :count',
+        'claim_button' => 'Claim Reward',
+        'claimed_button' => 'Claimed',
+        'cooldown_until' => 'Cooling until :time',
+        'reward_default_title' => 'Series Reward',
+        'claim_success' => 'Reward claimed!',
+        'claim_failed' => 'Failed to claim reward',
+    ],
+];
+

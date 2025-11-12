@@ -1,7 +1,234 @@
 <?php
+use Carbon\Carbon;
+use App\Models\MedalSeries;
+
 require "../include/bittorrent.php";
 dbconn();
 loggedinorreturn();
+
+if (!function_exists('meteor_game_config_value')) {
+    function meteor_game_config_value(string $key, $default = null)
+    {
+        return config('meteor_game.' . $key, $default);
+    }
+}
+
+if (!function_exists('meteor_game_validate_telemetry')) {
+    /**
+     * @throws \InvalidArgumentException
+     */
+    function meteor_game_validate_telemetry(array $telemetry, int $submittedScore, int $submittedComboMax, int $submittedDurationSeconds, array &$flagReasons): array
+    {
+        $flagReasons = [];
+
+        if (!isset($telemetry['startedAt'], $telemetry['endedAt'])) {
+            throw new \InvalidArgumentException('缺少游戏时间信息');
+        }
+
+        if (!isset($telemetry['version']) || (int) $telemetry['version'] < 2) {
+            throw new \InvalidArgumentException('客户端版本过旧，请刷新页面');
+        }
+
+        $startedAt = (float) $telemetry['startedAt'];
+        $endedAt = (float) $telemetry['endedAt'];
+
+        if ($endedAt <= $startedAt) {
+            throw new \InvalidArgumentException('游戏时间戳异常');
+        }
+
+        $sessionDurationMs = $endedAt - $startedAt;
+        $durationSecondsFromTelemetry = $sessionDurationMs / 1000;
+
+        $minSeconds = meteor_game_config_value('duration.min_seconds', 55);
+        $maxSeconds = meteor_game_config_value('duration.max_seconds', 70);
+
+        if ($durationSecondsFromTelemetry < $minSeconds || $durationSecondsFromTelemetry > $maxSeconds) {
+            throw new \InvalidArgumentException('游戏时长异常');
+        }
+
+        $allowedDelta = meteor_game_config_value('duration.allowed_delta_seconds', 2.5);
+        if (abs($durationSecondsFromTelemetry - $submittedDurationSeconds) > $allowedDelta) {
+            throw new \InvalidArgumentException('客户端时长与服务器不一致');
+        }
+
+        $events = $telemetry['events'] ?? [];
+        if (!is_array($events) || empty($events)) {
+            throw new \InvalidArgumentException('缺少关键事件数据');
+        }
+
+        $eventLimit = meteor_game_config_value('flag_rules.event_hard_limit', 600);
+        if (count($events) > $eventLimit) {
+            throw new \InvalidArgumentException('事件数据异常，请重试');
+        }
+
+        $inputs = $telemetry['inputs'] ?? [];
+        if (!is_array($inputs)) {
+            $inputs = [];
+        }
+
+        $inputsCount = count($inputs);
+        $inputLimit = meteor_game_config_value('flag_rules.input_hard_limit', 2000);
+        if ($inputsCount > $inputLimit) {
+            throw new \InvalidArgumentException('操作记录异常');
+        }
+        $inputKeys = array_values(array_unique(array_map(static function ($input) {
+            return $input['key'] ?? 'unknown';
+        }, $inputs)));
+
+        $calcScore = 0.0;
+        $combo = 0;
+        $maxCombo = 0;
+        $goodCatch = 0;
+        $badCatch = 0;
+        $missCount = 0;
+        $lastTimestamp = -1;
+        $eventCount = 0;
+
+        foreach ($events as $event) {
+            if (!is_array($event)) {
+                throw new \InvalidArgumentException('事件数据格式错误');
+            }
+
+            $timestamp = isset($event['t']) ? (float) $event['t'] : null;
+            $type = $event['type'] ?? '';
+            $baseScore = $event['base_score'] ?? null;
+            $deltaScore = $event['delta_score'] ?? null;
+            $comboBefore = isset($event['combo_before']) ? (int) $event['combo_before'] : null;
+            $comboAfter = isset($event['combo_after']) ? (int) $event['combo_after'] : null;
+
+            if ($timestamp === null || $timestamp < 0) {
+                throw new \InvalidArgumentException('事件时间戳无效');
+            }
+
+            if ($lastTimestamp !== -1 && $timestamp < $lastTimestamp) {
+                throw new \InvalidArgumentException('事件时间戳顺序错误');
+            }
+
+            $lastTimestamp = $timestamp;
+            $eventCount++;
+
+            if ($comboBefore === null || $comboAfter === null) {
+                throw new \InvalidArgumentException('事件缺少连击数据');
+            }
+
+            if ($comboBefore !== $combo) {
+                throw new \InvalidArgumentException('事件连击数据不匹配');
+            }
+
+            switch ($type) {
+                case 'catch_good':
+                    $baseScore = (float) $baseScore;
+                    $deltaScore = (float) $deltaScore;
+
+                    if ($baseScore <= 0) {
+                        throw new \InvalidArgumentException('正向捕获基础分无效');
+                    }
+
+                    $expectedDelta = round($baseScore * (1 + $combo * 0.1), 2);
+                    if (abs($deltaScore - $expectedDelta) > 0.6) {
+                        throw new \InvalidArgumentException('捕获得分异常');
+                    }
+
+                    if ($comboAfter !== $comboBefore + 1) {
+                        throw new \InvalidArgumentException('连击计数异常');
+                    }
+
+                    $calcScore = round($calcScore + $deltaScore, 2);
+                    $combo = $comboAfter;
+                    $maxCombo = max($maxCombo, $combo);
+                    $goodCatch++;
+                    break;
+
+                case 'catch_bad':
+                    $baseScore = (float) $baseScore;
+                    $deltaScore = (float) $deltaScore;
+
+                    if ($baseScore >= 0 || $deltaScore >= 0) {
+                        throw new \InvalidArgumentException('负向捕获分数异常');
+                    }
+
+                    if ($comboAfter !== 0) {
+                        throw new \InvalidArgumentException('负向捕获未清零连击');
+                    }
+
+                    if (abs($deltaScore - $baseScore) > 0.6) {
+                        throw new \InvalidArgumentException('负向捕获得分异常');
+                    }
+
+                    $calcScore = round($calcScore + $deltaScore, 2);
+                    $combo = 0;
+                    $badCatch++;
+                    break;
+
+                case 'miss_good':
+                    if ($comboAfter !== 0) {
+                        throw new \InvalidArgumentException('漏接事件未清零连击');
+                    }
+
+                    $combo = 0;
+                    $missCount++;
+                    break;
+
+                default:
+                    throw new \InvalidArgumentException('未知的事件类型');
+            }
+        }
+
+        $calcScoreInt = (int) floor($calcScore + 0.0001);
+        if ($calcScoreInt !== $submittedScore) {
+            throw new \InvalidArgumentException('分数与事件数据不匹配');
+        }
+
+        if ($lastTimestamp !== -1 && $lastTimestamp > ($sessionDurationMs + 2000)) {
+            throw new \InvalidArgumentException('事件时间跨度异常');
+        }
+
+        $lenientComboThreshold = meteor_game_config_value('combo.lenient_check_threshold', 1);
+        if (abs($maxCombo - $submittedComboMax) > $lenientComboThreshold) {
+            throw new \InvalidArgumentException('最大连击与事件数据不匹配');
+        }
+
+        $flagRules = meteor_game_config_value('flag_rules', []);
+
+        if ($submittedScore >= ($flagRules['high_score_threshold'] ?? 3000) &&
+            $maxCombo < ($flagRules['min_combo_for_high_score'] ?? 15)) {
+            $flagReasons[] = 'high_score_low_combo';
+        }
+
+        if ($inputsCount < ($flagRules['min_inputs_total'] ?? 10) &&
+            $submittedScore >= ($flagRules['min_inputs_score_threshold'] ?? 800)) {
+            $flagReasons[] = 'input_count_too_low';
+        }
+
+        if ($eventCount < ($flagRules['min_events_for_submission'] ?? 15)) {
+            $flagReasons[] = 'event_count_too_low';
+        }
+
+        $totalCatch = $goodCatch + $badCatch;
+        if ($totalCatch > 0) {
+            $badRatio = $badCatch / $totalCatch;
+            if ($badRatio > ($flagRules['max_bad_ratio_for_reward'] ?? 0.5) && $submittedScore > 0) {
+                $flagReasons[] = 'bad_hit_ratio_high';
+            }
+        }
+
+        $flagReasons = array_values(array_unique($flagReasons));
+
+        return [
+            'metrics' => [
+                'good_catch_count' => $goodCatch,
+                'bad_catch_count' => $badCatch,
+                'miss_count' => $missCount,
+                'inputs_count' => $inputsCount,
+                'input_keys' => $inputKeys,
+                'event_count' => $eventCount,
+                'telemetry_version' => $telemetry['version'] ?? null,
+                'session_duration_ms' => $sessionDurationMs,
+            ],
+            'max_combo' => $maxCombo,
+        ];
+    }
+}
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 $params = $_POST['params'] ?? [];
@@ -95,6 +322,48 @@ if ($action === 'forumtip') {
     }
 }
 
+// 勋章系列 - 领取奖励
+if ($action === 'medal_series_claim') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+        $seriesId = intval($_POST['series_id'] ?? 0);
+        if ($seriesId <= 0) {
+            throw new \InvalidArgumentException('缺少系列 ID');
+        }
+
+        /** @var MedalSeries $series */
+        $series = MedalSeries::query()->with('medals')->findOrFail($seriesId);
+        $user = \App\Models\User::query()->findOrFail($CURUSER['id']);
+
+        if ($series->medals->isEmpty()) {
+            throw new \InvalidArgumentException('该系列暂无配置勋章');
+        }
+
+        $series->claimReward($user);
+
+        $ownedMedalIds = $user->valid_medals()->pluck('medals.id');
+        $claims = $series->userClaims()->where('user_id', $user->id)->get();
+        $state = $series->evaluateClaimState($ownedMedalIds, $claims);
+
+        $freshSeedbonus = \App\Models\User::query()->find($user->id, ['id', 'seedbonus']);
+
+        exit(json_encode([
+            'success' => true,
+            'message' => nexus_trans('medal-series.frontend.claim_success'),
+            'state' => $state,
+            'seedbonus' => (float) ($freshSeedbonus->seedbonus ?? 0),
+        ]));
+    } catch (\Throwable $e) {
+        exit(json_encode([
+            'success' => false,
+            'message' => $e->getMessage(),
+        ]));
+    }
+}
+
 // 流星游戏 - 提交分数
 if ($action === 'meteor_game_submit') {
     header('Content-Type: application/json; charset=utf-8');
@@ -105,6 +374,18 @@ if ($action === 'meteor_game_submit') {
         $duration = intval($_POST['duration'] ?? 60);
         $gameToken = $_POST['game_token'] ?? '';
         $ipAddress = getip();
+        $telemetryRaw = $_POST['telemetry'] ?? '';
+        $telemetry = null;
+        $telemetryFlagReasons = [];
+
+        if (empty($telemetryRaw)) {
+            throw new \InvalidArgumentException('缺少游戏过程数据');
+        }
+
+        $telemetry = json_decode($telemetryRaw, true);
+        if (!is_array($telemetry) || json_last_error() !== JSON_ERROR_NONE) {
+            throw new \InvalidArgumentException('游戏过程数据解析失败');
+        }
         
         // 1. 用户验证
         if (!$CURUSER || $CURUSER['id'] != $userId) {
@@ -125,55 +406,60 @@ if ($action === 'meteor_game_submit') {
             throw new \InvalidArgumentException('游戏数据验证失败');
         }
         
-        // 3. 分数合理性检查（现在有负分怪物，允许负分但有下限）
-        // 最坏情况：全部接到黑洞 = 60秒 * (1000ms/400ms) * (-50) ≈ -7500
-        $minTheoreticalScore = -10000; // 留余量
-        // 最好情况：全部接太阳+满连击 = 60秒 * (1000ms/400ms) * 50 * 1.1 ≈ 8250
-        $maxTheoreticalScore = 10000; // 留余量
-        
+        $minTheoreticalScore = meteor_game_config_value('score.min', -10000);
+        $maxTheoreticalScore = meteor_game_config_value('score.max', 10000);
+
         if ($score < $minTheoreticalScore || $score > $maxTheoreticalScore) {
             write_log("游戏作弊尝试 - 用户ID: {$userId}, 分数异常: {$score}", 'mod');
             throw new \InvalidArgumentException('分数超出合理范围');
         }
-        
-        // 4. 时长检查（游戏固定60秒，允许±3秒误差）
-        if ($duration < 57 || $duration > 63) {
+
+        // 3. 时长检查（游戏固定60秒，允许±3秒误差）
+        $expectedDuration = meteor_game_config_value('duration.expected_seconds', 60);
+        if ($duration < ($expectedDuration - 3) || $duration > ($expectedDuration + 3)) {
             write_log("游戏作弊尝试 - 用户ID: {$userId}, 时长异常: {$duration}秒", 'mod');
             throw new \InvalidArgumentException('游戏时长异常');
         }
-        
-        // 5. 连击数检查（有怪物会清零连击，理论最大连击约50-60）
-        if ($comboMax > 80) {
+
+        // 4. 连击数检查（有怪物会清零连击，理论最大连击约50-60）
+        $comboLimit = meteor_game_config_value('combo.max', 80);
+        if ($comboMax > $comboLimit) {
             write_log("游戏作弊尝试 - 用户ID: {$userId}, 连击数过高: {$comboMax}", 'mod');
             throw new \InvalidArgumentException('连击数异常');
         }
-        
-        // 6. 分数与连击的合理性交叉验证
-        // 如果分数很高但连击很低，可能是作弊
-        if ($score > 5000 && $comboMax < 20) {
-            write_log("游戏作弊尝试 - 用户ID: {$userId}, 高分({$score})但低连击({$comboMax})", 'mod');
-            throw new \InvalidArgumentException('游戏数据异常');
+
+        // 5. 根据轨迹复算确保数据一致
+        $telemetryResult = meteor_game_validate_telemetry($telemetry, $score, $comboMax, $duration, $telemetryFlagReasons);
+        $metrics = $telemetryResult['metrics'];
+        $maxComboFromTelemetry = $telemetryResult['max_combo'];
+
+        if (abs($maxComboFromTelemetry - $comboMax) > meteor_game_config_value('combo.lenient_check_threshold', 1)) {
+            write_log("游戏作弊尝试 - 用户ID: {$userId}, 前端最大连击({$comboMax})与轨迹({$maxComboFromTelemetry})不符", 'mod');
+            throw new \InvalidArgumentException('最大连击校验失败');
         }
-        
-        // 7. 检查提交频率（30秒内只能提交一次）
+
+        // 6. 检查提交频率（30秒内只能提交一次）
+        $minIntervalSeconds = meteor_game_config_value('frequency.min_submit_interval_seconds', 30);
+
         $lastSubmit = \App\Models\MeteorGameScore::where('user_id', $userId)
-            ->where('created_at', '>=', now()->subSeconds(30))
+            ->where('created_at', '>=', now()->subSeconds($minIntervalSeconds))
             ->first();
             
         if ($lastSubmit) {
-            throw new \InvalidArgumentException('提交过于频繁，请等待30秒');
+            throw new \InvalidArgumentException("提交过于频繁，请等待{$minIntervalSeconds}秒");
         }
-        
-        // 8. 检查每日提交次数限制（每个自然日最多5次）
+
+        // 7. 检查每日提交次数限制
+        $maxDailySubmits = meteor_game_config_value('frequency.daily_submit_limit', 5);
         $todaySubmitCount = \App\Models\MeteorGameScore::where('user_id', $userId)
             ->whereDate('created_at', today())
             ->count();
             
-        if ($todaySubmitCount >= 5) {
-            throw new \InvalidArgumentException('今日提交次数已达上限（5次），明天再来吧！');
+        if ($todaySubmitCount >= $maxDailySubmits) {
+            throw new \InvalidArgumentException("今日提交次数已达上限（{$maxDailySubmits}次），明天再来吧！");
         }
-        
-        // 9. 检查短时间内的异常高分（1小时内提交4次以上超高分视为异常）
+
+        // 8. 检查短时间内的异常高分（1小时内提交4次以上超高分视为异常）
         $recentHighScores = \App\Models\MeteorGameScore::where('user_id', $userId)
             ->where('score', '>', 4000)
             ->where('created_at', '>=', now()->subHour())
@@ -183,32 +469,56 @@ if ($action === 'meteor_game_submit') {
             write_log("游戏作弊嫌疑 - 用户ID: {$userId}, 1小时内{$recentHighScores}次超高分", 'mod');
             throw new \InvalidArgumentException('检测到异常游戏行为，请稍后再试');
         }
-        
-        // 10. 检查异常负分（故意只接怪物刷负分的异常行为）
+
+        // 9. 检查异常负分（故意只接怪物刷负分的异常行为）
         if ($score < -2000) {
             write_log("游戏异常行为 - 用户ID: {$userId}, 异常负分: {$score}", 'mod');
             // 负分太低也记录，但不阻止（可能是真的玩得很差）
         }
-        
+
+        $telemetryHash = hash('sha256', $telemetryRaw);
+        $isFlagged = !empty($telemetryFlagReasons);
+
+        if ($isFlagged) {
+            write_log("游戏数据已标记 - 用户ID: {$userId}, 理由: " . implode(',', $telemetryFlagReasons), 'mod');
+        }
+
         // 使用事务，确保星尘发放的原子性
         try {
             $stardustReward = 0;
-            $remainingSubmits = 5 - ($todaySubmitCount + 1);
-            
-            \Nexus\Database\NexusDB::transaction(function() use ($userId, $score, $comboMax, $duration, $ipAddress, &$stardustReward) {
-                // 保存分数记录
-                \App\Models\MeteorGameScore::create([
+            $remainingSubmits = max(0, $maxDailySubmits - ($todaySubmitCount + 1));
+
+            \Nexus\Database\NexusDB::transaction(function() use ($userId, $score, $comboMax, $duration, $ipAddress, $telemetry, $telemetryHash, $isFlagged, $telemetryFlagReasons, &$stardustReward, $metrics) {
+                $payload = [
                     'user_id' => $userId,
                     'score' => $score,
                     'combo_max' => $comboMax,
                     'duration' => $duration,
                     'ip_address' => $ipAddress,
-                ]);
-                
+                    'telemetry' => $telemetry,
+                    'telemetry_hash' => $telemetryHash,
+                    'is_flagged' => $isFlagged,
+                    'flag_reasons' => $telemetryFlagReasons,
+                    'miss_count' => $metrics['miss_count'],
+                    'good_catch_count' => $metrics['good_catch_count'],
+                    'bad_catch_count' => $metrics['bad_catch_count'],
+                    'inputs_count' => $metrics['inputs_count'],
+                ];
+
+                if (isset($telemetry['startedAt'])) {
+                    $payload['session_started_at'] = Carbon::createFromTimestamp((int) floor($telemetry['startedAt'] / 1000));
+                }
+                if (isset($telemetry['endedAt'])) {
+                    $payload['session_ended_at'] = Carbon::createFromTimestamp((int) floor($telemetry['endedAt'] / 1000));
+                }
+
+                // 保存分数记录
+                \App\Models\MeteorGameScore::create($payload);
+
                 // 计算星尘奖励（100积分 = 10星尘，只有正分才发放）
-                if ($score > 0) {
+                if ($score > 0 && !$isFlagged) {
                     $stardustReward = intval(floor($score / 10)); // 100分 = 10星尘
-                    
+
                     // 使用星尘农场系统添加星尘
                     $farm = \App\Models\StardustFarm::getOrCreateForUser($userId);
                     $farm->addStardust($stardustReward, 'game', "流星游戏得分：{$score}");
@@ -220,7 +530,9 @@ if ($action === 'meteor_game_submit') {
                 'message' => '分数提交成功！',
                 'stardust_reward' => $stardustReward,
                 'remaining_submits' => $remainingSubmits,
-                'score' => $score
+                'score' => $score,
+                'flagged' => $isFlagged,
+                'flag_reasons' => $telemetryFlagReasons,
             ]));
             
         } catch (\Exception $e) {
@@ -270,17 +582,18 @@ if ($action === 'meteor_game_remaining') {
         $userId = $CURUSER['id'];
         
         // 查询今日已提交次数
+        $maxDailySubmits = meteor_game_config_value('frequency.daily_submit_limit', 5);
         $todaySubmitCount = \App\Models\MeteorGameScore::where('user_id', $userId)
             ->whereDate('created_at', today())
             ->count();
         
-        $remainingSubmits = max(0, 5 - $todaySubmitCount);
+        $remainingSubmits = max(0, $maxDailySubmits - $todaySubmitCount);
         
         exit(json_encode([
             'success' => true, 
             'remaining_submits' => $remainingSubmits,
             'today_submits' => $todaySubmitCount,
-            'max_submits' => 5
+            'max_submits' => $maxDailySubmits
         ]));
         
     } catch (\Throwable $e) {

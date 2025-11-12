@@ -13,6 +13,7 @@ use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\HtmlString;
+use App\Models\MedalSeries;
 
 class MedalResource extends Resource
 {
@@ -43,6 +44,16 @@ class MedalResource extends Resource
                 Forms\Components\TextInput::make('price')->required()->integer()->label(__('label.price')),
                 Forms\Components\TextInput::make('image_large')->required()->label(__('label.medal.image_large')),
                 Forms\Components\TextInput::make('image_small')->required()->label(__('label.medal.image_small')),
+                Forms\Components\Select::make('series_id')
+                    ->label(__('medal-series.fields.series'))
+                    ->options(fn () => MedalSeries::query()->orderBy('priority', 'desc')->orderBy('id', 'desc')->pluck('name', 'id'))
+                    ->searchable()
+                    ->preload()
+                    ->nullable(),
+                Forms\Components\TextInput::make('series_position')
+                    ->label(__('medal-series.fields.series_position'))
+                    ->numeric()
+                    ->default(0),
                 Forms\Components\Radio::make('get_type')
                     ->options(Medal::listGetTypes(true))
                     ->inline()
@@ -111,6 +122,12 @@ class MedalResource extends Resource
                 Tables\Columns\TextColumn::make('name')->label(__('label.name'))->searchable(),
                 Tables\Columns\ImageColumn::make('image_large')->height(60)->label(__('label.medal.image_large')),
                 Tables\Columns\TextColumn::make('getTypeText')->label('Get type')->label(__('label.medal.get_type')),
+                Tables\Columns\TextColumn::make('series.name')
+                    ->label(__('medal-series.fields.series'))
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('series_position')
+                    ->label(__('medal-series.fields.series_position'))
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('display_on_medal_page')->label(__('label.medal.display_on_medal_page'))->boolean(),
                 Tables\Columns\TextColumn::make('sale_begin_end_time')
                     ->label(__('medal.fields.sale_begin_end_time'))

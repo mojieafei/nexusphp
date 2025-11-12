@@ -58,6 +58,7 @@ body {
     right: 20px;
     display: flex;
     justify-content: space-between;
+    gap: 12px;
     color: #fff;
     font-size: 24px;
     font-weight: bold;
@@ -70,6 +71,42 @@ body {
     padding: 10px 20px;
     border-radius: 10px;
     border: 2px solid rgba(138, 43, 226, 0.5);
+}
+
+.control-panel {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(138, 43, 226, 0.5);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 16px;
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
+    flex-wrap: wrap;
+}
+
+.control-panel label {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.control-panel input[type="range"] {
+    flex: 1;
+    accent-color: #8a2be2;
+}
+
+.control-panel span {
+    min-width: 72px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
 .game-start-screen {
@@ -303,6 +340,12 @@ body {
     .game-info {
         font-size: 18px;
     }
+
+    .control-panel {
+        position: static;
+        width: 100%;
+        margin-top: 16px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -390,6 +433,16 @@ body {
         padding: 8px 20px;
         font-size: 14px;
     }
+
+    .control-panel {
+        gap: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    
+    .control-panel span {
+        min-width: 0;
+    }
 }
 </style>
 </head>
@@ -400,8 +453,14 @@ body {
         <div>得分: <span id="scoreDisplay">0</span></div>
         <div>连击: <span id="comboDisplay">0</span></div>
         <div>时间: <span id="timerDisplay">60</span>秒</div>
+        <div>操作: <span id="inputCounter">0</span></div>
     </div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="control-panel">
+        <label for="touchSensitivity">触控/键盘灵敏度</label>
+        <input type="range" id="touchSensitivity" min="0" max="100" value="50" step="1">
+        <span id="touchSensitivityValue">中等</span>
+    </div>
     
     <!-- 开始游戏界面 -->
     <div class="game-start-screen" id="gameStartScreen">
@@ -594,6 +653,83 @@ function md5(string) {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+const TOUCH_SENSITIVITY_MIN = 0.1;
+const TOUCH_SENSITIVITY_MAX = 1.5;
+const TOUCH_SLIDER_MIN = 0;
+const TOUCH_SLIDER_MAX = 100;
+const TOUCH_SENSITIVITY_STORAGE_KEY = 'meteor_game_touch_sensitivity';
+const DEFAULT_TOUCH_SENSITIVITY = 0.5;
+
+let touchSensitivity = DEFAULT_TOUCH_SENSITIVITY;
+const sensitivitySlider = document.getElementById('touchSensitivity');
+const sensitivityValueEl = document.getElementById('touchSensitivityValue');
+
+const TELEMETRY_MAX_EVENTS = 400;
+const TELEMETRY_MAX_INPUTS = 600;
+const FLAG_REASON_LABELS = {
+    high_score_low_combo: '高分但连击偏低',
+    input_count_too_low: '操作次数过少',
+    event_count_too_low: '捕获事件过少',
+    bad_hit_ratio_high: '负面捕获占比过高',
+};
+
+const telemetry = {
+    version: 2,
+    startedAt: null,
+    endedAt: null,
+    events: [],
+    inputs: [],
+    summary: {
+        goodCatch: 0,
+        badCatch: 0,
+        miss: 0,
+    },
+};
+
+function resetTelemetry() {
+    telemetry.startedAt = null;
+    telemetry.endedAt = null;
+    telemetry.events = [];
+    telemetry.inputs = [];
+    telemetry.summary = {
+        goodCatch: 0,
+        badCatch: 0,
+        miss: 0,
+    };
+}
+
+function pushTelemetryEvent(payload) {
+    if (telemetry.startedAt === null) {
+        return;
+    }
+    const event = {
+        ...payload,
+        t: payload.t !== undefined ? payload.t : (Date.now() - telemetry.startedAt),
+    };
+    if (telemetry.events.length >= TELEMETRY_MAX_EVENTS) {
+        telemetry.events.shift();
+    }
+    telemetry.events.push(event);
+}
+
+function recordInputEvent(action, detail = {}) {
+    if (!gameState.gameStarted || telemetry.startedAt === null) {
+        return;
+    }
+    const inputRecord = {
+        type: action,
+        key: detail.key ?? null,
+        delta: detail.delta ?? null,
+        t: Date.now() - telemetry.startedAt,
+    };
+    if (telemetry.inputs.length >= TELEMETRY_MAX_INPUTS) {
+        telemetry.inputs.shift();
+    }
+    telemetry.inputs.push(inputRecord);
+}
+
+resetTelemetry();
+
 // 游戏状态
 let gameState = {
     score: 0,
@@ -608,7 +744,8 @@ let gameState = {
         y: canvas.height - 60,
         width: 120,
         height: 30,
-        speed: 8
+        speed: 8,
+        baseSpeed: 8
     },
     keys: {},
     lastMeteorTime: 0,
@@ -618,6 +755,7 @@ let gameState = {
 // 游戏循环和定时器变量
 let animationId;
 let timerInterval;
+let lastTouchInputTs = 0;
 
 // 太阳系行星类型（正分）
 const METEOR_TYPES = [
@@ -790,12 +928,25 @@ function updateGame(currentTime) {
             // 碰撞检测
             if (checkCollision(meteor)) {
                 meteor.caught = true;
-                
+
+                const comboBefore = gameState.combo;
+                let deltaScore = 0;
+
                 if (meteor.type === 'bad') {
-                    // 捕获到怪物 - 扣分并清零连击
-                    gameState.score += meteor.score; // 负分
-                    gameState.combo = 0; // 清零连击
-                    
+                    deltaScore = Number(meteor.score.toFixed(2));
+                    gameState.score = Number((gameState.score + deltaScore).toFixed(2));
+                    gameState.combo = 0;
+                    telemetry.summary.badCatch++;
+                    pushTelemetryEvent({
+                        type: 'catch_bad',
+                        meteor_name: meteor.name,
+                        meteor_type: meteor.type,
+                        base_score: meteor.score,
+                        delta_score: deltaScore,
+                        combo_before: comboBefore,
+                        combo_after: gameState.combo,
+                    });
+
                     // 强烈的屏幕震动效果
                     let shakeCount = 0;
                     const shakeInterval = setInterval(() => {
@@ -812,10 +963,21 @@ function updateGame(currentTime) {
                         }
                     }, 50);
                 } else {
-                    // 捕获到行星 - 加分和连击
-                    gameState.score += meteor.score * (1 + gameState.combo * 0.1);
+                    const comboMultiplier = 1 + comboBefore * 0.1;
+                    deltaScore = Number((meteor.score * comboMultiplier).toFixed(2));
+                    gameState.score = Number((gameState.score + deltaScore).toFixed(2));
                     gameState.combo++;
                     gameState.maxCombo = Math.max(gameState.maxCombo, gameState.combo);
+                    telemetry.summary.goodCatch++;
+                    pushTelemetryEvent({
+                        type: 'catch_good',
+                        meteor_name: meteor.name,
+                        meteor_type: meteor.type,
+                        base_score: meteor.score,
+                        delta_score: deltaScore,
+                        combo_before: comboBefore,
+                        combo_after: gameState.combo,
+                    });
                 }
                 
                 // 移除已捕获的对象
@@ -823,7 +985,18 @@ function updateGame(currentTime) {
             } else if (meteor.y > canvas.height) {
                 // 掉落 - 只有行星掉落才清零连击，怪物掉落没影响
                 if (meteor.type === 'good') {
+                    const comboBefore = gameState.combo;
                     gameState.combo = 0;
+                    telemetry.summary.miss++;
+                    pushTelemetryEvent({
+                        type: 'miss_good',
+                        meteor_name: meteor.name,
+                        meteor_type: meteor.type,
+                        base_score: meteor.score,
+                        delta_score: 0,
+                        combo_before: comboBefore,
+                        combo_after: gameState.combo,
+                    });
                 }
                 gameState.meteors.splice(index, 1);
             }
@@ -831,11 +1004,12 @@ function updateGame(currentTime) {
     });
     
     // 更新玩家位置
+    const keyboardSpeed = gameState.player.baseSpeed * (touchSensitivity / DEFAULT_TOUCH_SENSITIVITY);
     if (gameState.keys['ArrowLeft'] || gameState.keys['a'] || gameState.keys['A']) {
-        gameState.player.x = Math.max(gameState.player.width/2, gameState.player.x - gameState.player.speed);
+        gameState.player.x = Math.max(gameState.player.width/2, gameState.player.x - keyboardSpeed);
     }
     if (gameState.keys['ArrowRight'] || gameState.keys['d'] || gameState.keys['D']) {
-        gameState.player.x = Math.min(canvas.width - gameState.player.width/2, gameState.player.x + gameState.player.speed);
+        gameState.player.x = Math.min(canvas.width - gameState.player.width/2, gameState.player.x + keyboardSpeed);
     }
 }
 
@@ -875,11 +1049,23 @@ function renderGame() {
     if (gameState.uiUpdateCounter++ % 3 === 0) {
         document.getElementById('scoreDisplay').textContent = Math.floor(gameState.score);
         document.getElementById('comboDisplay').textContent = gameState.combo;
+        document.getElementById('inputCounter').textContent = telemetry.inputs.length;
     }
 }
 
 // 开始游戏
 function startGame() {
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    lastTouchInputTs = 0;
+    resetTelemetry();
+    telemetry.startedAt = Date.now();
+    telemetry.version = 2;
+    
     // 隐藏开始界面
     document.getElementById('gameStartScreen').style.display = 'none';
     
@@ -895,6 +1081,15 @@ function startGame() {
     gameState.gameStarted = true;
     gameState.meteors = [];
     gameState.lastMeteorTime = 0;
+    gameState.player.x = canvas.width / 2;
+    gameState.player.speed = gameState.player.baseSpeed;
+    
+    document.getElementById('scoreDisplay').textContent = '0';
+    document.getElementById('comboDisplay').textContent = '0';
+    document.getElementById('timerDisplay').textContent = gameState.timeLeft;
+    document.getElementById('inputCounter').textContent = '0';
+    document.getElementById('submitStatus').textContent = '';
+    document.getElementById('stardustAmount').textContent = '0';
     
     // 启动游戏循环
     animationId = requestAnimationFrame(gameLoop);
@@ -927,8 +1122,10 @@ function gameLoop(currentTime) {
 // 结束游戏
 function endGame() {
     gameState.gameOver = true;
+    gameState.gameStarted = false;
     clearInterval(timerInterval);
     cancelAnimationFrame(animationId);
+    telemetry.endedAt = Date.now();
     
     document.getElementById('finalScore').textContent = Math.floor(gameState.score);
     document.getElementById('finalCombo').textContent = gameState.maxCombo;
@@ -944,6 +1141,22 @@ function submitScore() {
     const score = Math.floor(gameState.score);
     const comboMax = gameState.maxCombo;
     const duration = 60 - gameState.timeLeft;
+    const endTimestamp = telemetry.endedAt ?? Date.now();
+    if (!telemetry.endedAt) {
+        telemetry.endedAt = endTimestamp;
+    }
+    const telemetryPayload = {
+        version: telemetry.version,
+        startedAt: telemetry.startedAt,
+        endedAt: endTimestamp,
+        events: telemetry.events.slice(),
+        inputs: telemetry.inputs.slice(),
+        summary: { ...telemetry.summary },
+        client: {
+            ua: navigator.userAgent,
+            platform: navigator.platform ?? null,
+        },
+    };
     
     // 生成Token（与后端保持一致）
     const tokenString = userId.toString() + score.toString() + comboMax.toString() + duration.toString() + '<?php echo date("Y-m-d"); ?>' + '<?php echo $userPasshash; ?>';
@@ -956,13 +1169,15 @@ function submitScore() {
     formData.append('combo_max', comboMax);
     formData.append('duration', duration);
     formData.append('game_token', gameToken);
+    formData.append('telemetry', JSON.stringify(telemetryPayload));
     
     console.log('提交分数:', {
         user_id: userId,
         score: score,
         combo_max: comboMax,
         duration: duration,
-        token: gameToken
+        token: gameToken,
+        telemetry: telemetryPayload
     });
     
     fetch('ajax.php', {
@@ -991,8 +1206,17 @@ function submitScore() {
                 if (data.remaining_submits !== undefined) {
                     message += ` (今日剩余提交次数: ${data.remaining_submits})`;
                 }
+                if (data.flagged) {
+                    message += '（数据已标记等待审核，星尘奖励已暂缓发放，排行榜暂不展示此成绩）';
+                    if (Array.isArray(data.flag_reasons) && data.flag_reasons.length) {
+                        const readableReasons = data.flag_reasons.map(reason => FLAG_REASON_LABELS[reason] || reason);
+                        message += ` 原因: ${readableReasons.join('、')}`;
+                    }
+                    statusEl.style.color = '#FFD166';
+                } else {
+                    statusEl.style.color = '#4ECDC4';
+                }
                 statusEl.textContent = message;
-                statusEl.style.color = '#4ECDC4';
                 loadLeaderboard('today');
             } else {
                 statusEl.textContent = '❌ ' + data.message;
@@ -1013,7 +1237,10 @@ function submitScore() {
 
 // 重新开始游戏
 function restartGame() {
-    location.reload();
+    document.getElementById('gameOverScreen').style.display = 'none';
+    gameState.gameOver = false;
+    gameState.gameStarted = false;
+    startGame();
 }
 
 // 加载排行榜
@@ -1090,25 +1317,41 @@ function loadLeaderboard(type, clickedButton) {
 // 键盘事件
 document.addEventListener('keydown', (e) => {
     gameState.keys[e.key] = true;
+    if (!e.repeat && ['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].includes(e.key)) {
+        recordInputEvent('keydown', { key: e.key });
+    }
 });
 
 document.addEventListener('keyup', (e) => {
     gameState.keys[e.key] = false;
+    if (['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].includes(e.key)) {
+        recordInputEvent('keyup', { key: e.key });
+    }
 });
 
 // 触摸事件（移动端支持）
 let touchX = 0;
 canvas.addEventListener('touchstart', (e) => {
     touchX = e.touches[0].clientX;
+    recordInputEvent('touchstart', { key: 'touch', delta: 0 });
 });
 
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     const newTouchX = e.touches[0].clientX;
     const deltaX = newTouchX - touchX;
-    gameState.player.x += deltaX * 0.5;
+    gameState.player.x += deltaX * touchSensitivity;
     gameState.player.x = Math.max(gameState.player.width/2, Math.min(canvas.width - gameState.player.width/2, gameState.player.x));
     touchX = newTouchX;
+    const now = Date.now();
+    if (now - lastTouchInputTs > 120) {
+        recordInputEvent('touchmove', { key: 'touch', delta: Math.round(deltaX * touchSensitivity) });
+        lastTouchInputTs = now;
+    }
+});
+
+canvas.addEventListener('touchend', () => {
+    recordInputEvent('touchend', { key: 'touch', delta: 0 });
 });
 
 // 加载今日剩余提交次数
@@ -1120,11 +1363,12 @@ function loadRemainingSubmits() {
             if (data.success) {
                 const remaining = data.remaining_submits;
                 const today = data.today_submits;
+                const maxSubmits = data.max_submits ?? 5;
                 
                 if (remaining > 0) {
-                    infoEl.innerHTML = `<span style="color: #4ECDC4;">✨ 今日剩余提交次数: <strong>${remaining}/5</strong> | 每次得分可获得星尘奖励（100积分=1✨星尘）</span>`;
+                    infoEl.innerHTML = `<span style="color: #4ECDC4;">✨ 今日剩余提交次数: <strong>${remaining}/${maxSubmits}</strong> | 每次得分可获得星尘奖励（100积分=1✨星尘）</span>`;
                 } else {
-                    infoEl.innerHTML = `<span style="color: #FF6B6B;">⚠️ 今日提交次数已用完 (${today}/5)，明天再来吧！游戏仍可继续玩，但不计入排行榜。</span>`;
+                    infoEl.innerHTML = `<span style="color: #FF6B6B;">⚠️ 今日提交次数已用完 (${today}/${maxSubmits})，明天再来吧！游戏仍可继续玩，但不计入排行榜。</span>`;
                 }
             } else {
                 infoEl.innerHTML = `<span style="color: #FF6B6B;">❌ 加载失败: ${data.message}</span>`;
@@ -1143,6 +1387,71 @@ requestAnimationFrame(gameLoop);
 loadLeaderboard('today');
 // 加载剩余提交次数
 loadRemainingSubmits();
+
+function sliderValueToSensitivity(sliderValue) {
+    const clamped = Math.min(Math.max(sliderValue, TOUCH_SLIDER_MIN), TOUCH_SLIDER_MAX);
+    const ratio = (clamped - TOUCH_SLIDER_MIN) / (TOUCH_SLIDER_MAX - TOUCH_SLIDER_MIN);
+    return Number((TOUCH_SENSITIVITY_MIN + ratio * (TOUCH_SENSITIVITY_MAX - TOUCH_SENSITIVITY_MIN)).toFixed(3));
+}
+
+function sensitivityToSliderValue(sensitivity) {
+    const clamped = Math.min(Math.max(sensitivity, TOUCH_SENSITIVITY_MIN), TOUCH_SENSITIVITY_MAX);
+    const ratio = (clamped - TOUCH_SENSITIVITY_MIN) / (TOUCH_SENSITIVITY_MAX - TOUCH_SENSITIVITY_MIN);
+    return Math.round(TOUCH_SLIDER_MIN + ratio * (TOUCH_SLIDER_MAX - TOUCH_SLIDER_MIN));
+}
+
+function getSensitivityLabel(value) {
+    let description = '中等';
+    if (value <= TOUCH_SENSITIVITY_MIN + 0.1) {
+        description = '极慢';
+    } else if (value <= TOUCH_SENSITIVITY_MIN + 0.25) {
+        description = '较慢';
+    } else if (value >= TOUCH_SENSITIVITY_MAX - 0.2) {
+        description = '极快';
+    } else if (value >= TOUCH_SENSITIVITY_MAX - 0.45) {
+        description = '较快';
+    }
+    return `${description} (${value.toFixed(2)}x)`;
+}
+
+function applyTouchSensitivity(newValue, persist = false) {
+    touchSensitivity = Number(newValue.toFixed(3));
+    if (sensitivityValueEl) {
+        sensitivityValueEl.textContent = getSensitivityLabel(touchSensitivity);
+    }
+    if (persist && typeof window !== 'undefined' && window.localStorage) {
+        try {
+            localStorage.setItem(TOUCH_SENSITIVITY_STORAGE_KEY, touchSensitivity.toString());
+        } catch (err) {
+            console.warn('无法保存灵敏度设置:', err);
+        }
+    }
+}
+
+(function initTouchSensitivity() {
+    let initialSensitivity = DEFAULT_TOUCH_SENSITIVITY;
+    if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem(TOUCH_SENSITIVITY_STORAGE_KEY);
+        if (stored) {
+            const parsed = parseFloat(stored);
+            if (!Number.isNaN(parsed)) {
+                initialSensitivity = Math.min(Math.max(parsed, TOUCH_SENSITIVITY_MIN), TOUCH_SENSITIVITY_MAX);
+            }
+        }
+    }
+    if (sensitivitySlider) {
+        sensitivitySlider.value = sensitivityToSliderValue(initialSensitivity).toString();
+    }
+    applyTouchSensitivity(initialSensitivity);
+})();
+
+if (sensitivitySlider) {
+    sensitivitySlider.addEventListener('input', (event) => {
+        const sliderValue = Number(event.target.value);
+        const newSensitivity = sliderValueToSensitivity(sliderValue);
+        applyTouchSensitivity(newSensitivity, true);
+    });
+}
 </script>
 </body>
 </html>

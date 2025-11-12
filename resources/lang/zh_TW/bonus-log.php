@@ -35,6 +35,8 @@ return [
         \App\Models\BonusLogs::BUSINESS_TYPE_SEEDING_OFFICIAL_ADDITION => '做種官種加成',
         \App\Models\BonusLogs::BUSINESS_TYPE_SEEDING_HAREM_ADDITION => '做種後宮加成',
         \App\Models\BonusLogs::BUSINESS_TYPE_SEEDING_MEDAL_ADDITION => '做種勳章加成',
+        \App\Models\BonusLogs::BUSINESS_TYPE_STARDUST_FARM_ADDITION => '星塵農場加成',
+        \App\Models\BonusLogs::BUSINESS_TYPE_MEDAL_SERIES_REWARD => '勳章系列獎勵',
     ],
     'fields' => [
         'business_type' => '業務類型',

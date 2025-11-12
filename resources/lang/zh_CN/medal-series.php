@@ -1,0 +1,77 @@
+<?php
+
+return [
+    'navigation' => [
+        'title' => '勋章系列',
+    ],
+    'sections' => [
+        'basic' => '基础信息',
+        'visual' => '展示素材',
+        'reward' => '奖励设置',
+        'bonus' => '魔力加成',
+    ],
+    'fields' => [
+        'name' => '系列名称',
+        'slug' => '系列标识',
+        'description' => '系列描述',
+        'cover_image' => '封面图 URL',
+        'banner_image' => '横幅图 URL',
+        'reward_title' => '奖励标题',
+        'reward_description' => '奖励说明',
+        'reward_amount' => '单次奖励数值',
+        'reward_currency' => '奖励类型',
+        'reward_interval_unit' => '领取周期',
+        'reward_interval_value' => '每周期可领取次数',
+        'reward_cooldown_hours' => '领取冷却（小时）',
+        'reward_start_at' => '可领取开始时间',
+        'reward_end_at' => '可领取结束时间',
+        'bonus_addition_factor' => '集齐魔力加成系数',
+        'bonus_addition_description' => '加成说明',
+        'is_active' => '启用',
+        'series' => '所属系列',
+        'series_position' => '系列内排序',
+        'medals_count' => '勋章数量',
+    ],
+    'reward_interval' => [
+        'none' => '不限周期',
+        'daily' => '每日',
+        'weekly' => '每周',
+        'monthly' => '每月',
+        'yearly' => '每年',
+    ],
+    'reward_currency' => [
+        'seedbonus' => '魔力值',
+    ],
+    'filters' => [
+        'is_active' => '是否启用',
+    ],
+    'claim_status' => [
+        'ready' => '可领取',
+        'inactive' => '奖励未启用',
+        'not_complete' => '尚未集齐',
+        'limit_reached' => '本周期已领取完',
+        'cooldown' => '冷却中',
+    ],
+    'claim_error' => [
+        'inactive' => '该系列奖励暂不可领取',
+        'not_complete' => '尚未集齐该系列全部勋章',
+        'limit_reached' => '本周期的领取次数已用完',
+        'cooldown' => '领取冷却中，请稍后再试',
+        'unsupported_currency' => '暂不支持该奖励类型',
+        'invalid_reward' => '奖励配置无效',
+    ],
+    'bonus_log' => '勋章系列奖励：:series',
+    'frontend' => [
+        'others_series' => '其他勋章',
+        'collection_progress' => '已收集 :owned/:total',
+        'reward_status_prefix' => '奖励状态：',
+        'reward_limit_remaining' => '本周期剩余次数：:count',
+        'claim_button' => '领取奖励',
+        'claimed_button' => '已领取',
+        'cooldown_until' => '冷却至 :time',
+        'reward_default_title' => '系列奖励',
+        'claim_success' => '领取成功！',
+        'claim_failed' => '领取失败',
+    ],
+];
+

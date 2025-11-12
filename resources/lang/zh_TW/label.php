@@ -28,6 +28,8 @@ return [
     'price' => '價格',
     'deadline' => '截止時間',
     'permanent' => '永久有效',
+    'search' => '搜尋',
+    'no_results' => '暫無結果',
     'operator' => '操作者',
     'action' => '操作',
     'submit' => '提交',

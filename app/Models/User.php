@@ -506,6 +506,11 @@ class User extends Authenticatable implements FilamentUser, HasName
         return $this->hasMany(Reward::class, 'userid');
     }
 
+    public function medalSeriesClaims()
+    {
+        return $this->hasMany(UserMedalSeriesClaim::class, 'user_id');
+    }
+
     public function thank_torrent_logs(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Thank::class, 'userid');

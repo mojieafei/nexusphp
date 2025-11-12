@@ -14,12 +14,31 @@ class MeteorGameScore extends NexusModel
         'combo_max',
         'duration',
         'ip_address',
+        'telemetry',
+        'telemetry_hash',
+        'is_flagged',
+        'flag_reasons',
+        'miss_count',
+        'good_catch_count',
+        'bad_catch_count',
+        'inputs_count',
+        'session_started_at',
+        'session_ended_at',
     ];
 
     protected $casts = [
         'score' => 'integer',
         'combo_max' => 'integer',
         'duration' => 'integer',
+        'telemetry' => 'array',
+        'flag_reasons' => 'array',
+        'is_flagged' => 'boolean',
+        'miss_count' => 'integer',
+        'good_catch_count' => 'integer',
+        'bad_catch_count' => 'integer',
+        'inputs_count' => 'integer',
+        'session_started_at' => 'datetime',
+        'session_ended_at' => 'datetime',
     ];
     
     protected $dates = [
@@ -60,6 +79,8 @@ class MeteorGameScore extends NexusModel
                 $join->on('meteor_game_scores.user_id', '=', 'max_scores.user_id')
                      ->on('meteor_game_scores.score', '=', 'max_scores.max_score');
             });
+
+        $query->where('meteor_game_scores.is_flagged', false);
         
         // 再次应用时间范围过滤
         if ($type === 'today') {

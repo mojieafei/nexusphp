@@ -35,6 +35,8 @@ return [
         \App\Models\BonusLogs::BUSINESS_TYPE_SEEDING_OFFICIAL_ADDITION => 'Seeding official addition',
         \App\Models\BonusLogs::BUSINESS_TYPE_SEEDING_HAREM_ADDITION => 'Seeding harem addition',
         \App\Models\BonusLogs::BUSINESS_TYPE_SEEDING_MEDAL_ADDITION => 'Seeding medal addition',
+        \App\Models\BonusLogs::BUSINESS_TYPE_STARDUST_FARM_ADDITION => 'Stardust farm addition',
+        \App\Models\BonusLogs::BUSINESS_TYPE_MEDAL_SERIES_REWARD => 'Medal series reward',
     ],
     'fields' => [
         'business_type' => 'Business type',

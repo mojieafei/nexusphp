@@ -28,6 +28,8 @@ return [
     'price' => 'Price',
     'deadline' => 'Deadline',
     'permanent' => 'Permanent',
+    'search' => 'Search',
+    'no_results' => 'No results found',
     'operator' => 'Operator',
     'action' => 'Action',
     'submit' => 'Submit',

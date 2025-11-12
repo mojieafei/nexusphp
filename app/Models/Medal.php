@@ -18,7 +18,7 @@ class Medal extends NexusModel
     protected $fillable = [
         'name', 'description', 'image_large', 'image_small', 'price', 'duration', 'get_type',
         'display_on_medal_page', 'sale_begin_time', 'sale_end_time', 'inventory', 'bonus_addition_factor',
-        'gift_fee_factor', 'priority', 'bonus_addition_duration'
+        'gift_fee_factor', 'priority', 'bonus_addition_duration', 'series_id', 'series_position'
     ];
 
     public $timestamps = true;
@@ -81,6 +81,11 @@ class Medal extends NexusModel
     public function users(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_medals', 'medal_id', 'uid')->withTimestamps();
+    }
+
+    public function series()
+    {
+        return $this->belongsTo(MedalSeries::class, 'series_id');
     }
 
     public function valid_users(): \Illuminate\Database\Eloquent\Relations\BelongsToMany

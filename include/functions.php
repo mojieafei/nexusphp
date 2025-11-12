@@ -7165,7 +7165,27 @@ function calculate_seed_bonus($uid, $torrentIdArr = null): array
     $zeroBonusFactor = \App\Models\Setting::get('bonus.zero_bonus_factor');
     $userMedalResult = \Nexus\Database\NexusDB::select("select round(sum(bonus_addition_factor), 5) as factor from medals where id in (select medal_id from user_medals where uid = $uid and (expire_at is null or expire_at > '$nowStr') and (bonus_addition_expire_at is null or bonus_addition_expire_at > '$nowStr'))");
     $medalAdditionalFactor = floatval($userMedalResult[0]['factor'] ?? 0);
-    do_log("$logPrefix, sql: $sql, count: " . count($torrentResult) . ", officialTag: $officialTag, officialAdditionalFactor: $officialAdditionalFactor, zeroBonusTag: $zeroBonusTag, zeroBonusFactor: $zeroBonusFactor, medalAdditionalFactor: $medalAdditionalFactor");
+
+    $seriesAdditionalResult = \Nexus\Database\NexusDB::select("
+        select round(sum(ms.bonus_addition_factor), 5) as factor
+        from medal_series ms
+        where ms.is_active = 1
+          and ms.bonus_addition_factor > 0
+          and exists (select 1 from medals m where m.series_id = ms.id)
+          and not exists (
+              select 1 from medals m
+              left join user_medals um on um.medal_id = m.id
+                  and um.uid = $uid
+                  and (um.expire_at is null or um.expire_at > '$nowStr')
+                  and (um.bonus_addition_expire_at is null or um.bonus_addition_expire_at > '$nowStr')
+              where m.series_id = ms.id
+                and um.id is null
+          )
+    ");
+    $seriesAdditionalFactor = floatval($seriesAdditionalResult[0]['factor'] ?? 0);
+    $medalAdditionalFactor += $seriesAdditionalFactor;
+
+    do_log("$logPrefix, sql: $sql, count: " . count($torrentResult) . ", officialTag: $officialTag, officialAdditionalFactor: $officialAdditionalFactor, zeroBonusTag: $zeroBonusTag, zeroBonusFactor: $zeroBonusFactor, medalAdditionalFactor: $medalAdditionalFactor, medalSeriesAddition: $seriesAdditionalFactor");
     $last_action = "";
     foreach ($torrentResult as $torrent)
     {
