@@ -1,19 +1,5 @@
 <!-- 星尘农场全站广播 -->
-<div id="stardustBroadcastWidget" style="
-    position: fixed;
-    top: 80px;
-    left: 20px;
-    width: 350px;
-    max-height: 400px;
-    background: rgba(26, 31, 58, 0.95);
-    border-radius: 15px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    backdrop-filter: blur(10px);
-    z-index: 9999999;
-    overflow: hidden;
-    transition: all 0.3s;
-    display: none;
-">
+<div id="stardustBroadcastWidget" class="stardust-broadcast-widget">
     <div style="
         padding: 15px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -42,23 +28,7 @@
 </div>
 
 <!-- 浮动广播按钮 -->
-<div id="stardustBroadcastBtn" style="
-    position: fixed;
-    top: 85px;
-    left: 20px;
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
-    z-index: 9999999;
-    transition: all 0.3s;
-    animation: pulse 2s infinite;
-" onclick="showStardustBroadcast()">
+<div id="stardustBroadcastBtn" class="stardust-broadcast-btn" onclick="showStardustBroadcast()">
     <span style="font-size: 28px;">📢</span>
     <div id="broadcastBadge" style="
         position: absolute;
@@ -87,6 +57,46 @@
 #stardustBroadcastBtn:hover {
     transform: scale(1.1);
     box-shadow: 0 6px 20px rgba(78, 205, 196, 0.6);
+}
+
+:root {
+    --broadcast-fixed-top: 20px;
+    --broadcast-fixed-side: 20px;
+    --broadcast-z-index: 9999999;
+}
+
+.stardust-broadcast-btn {
+    position: fixed;
+    top: var(--broadcast-fixed-top);
+    left: var(--broadcast-fixed-side);
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+    z-index: var(--broadcast-z-index);
+    transition: all 0.3s;
+    animation: pulse 2s infinite;
+}
+
+.stardust-broadcast-widget {
+    position: fixed;
+    top: calc(var(--broadcast-fixed-top) + 72px);
+    left: var(--broadcast-fixed-side);
+    width: min(320px, calc(100vw - 2 * var(--broadcast-fixed-side) - 20px));
+    max-height: 420px;
+    background: rgba(26, 31, 58, 0.95);
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+    z-index: var(--broadcast-z-index);
+    overflow: hidden;
+    transition: all 0.3s;
+    display: none;
 }
 
 .broadcast-item {

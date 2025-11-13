@@ -197,17 +197,17 @@ class MedalSeries extends NexusModel
 
             $state = $this->evaluateClaimState($ownedMedalIds, $seriesClaims);
             if (!$state['claimable']) {
-                $reason = __('medal-series.claim_error.' . $state['status']);
+                $reason = nexus_trans('medal-series.claim_error.' . $state['status']);
                 throw new \LogicException($reason);
             }
 
             if ($this->reward_currency !== 'seedbonus') {
-                throw new \LogicException(__('medal-series.claim_error.unsupported_currency'));
+                throw new \LogicException(nexus_trans('medal-series.claim_error.unsupported_currency'));
             }
 
             $rewardAmount = (float) $this->reward_amount;
             if ($rewardAmount <= 0) {
-                throw new \LogicException(__('medal-series.claim_error.invalid_reward'));
+                throw new \LogicException(nexus_trans('medal-series.claim_error.invalid_reward'));
             }
 
             /** @var User $freshUser */
@@ -225,7 +225,7 @@ class MedalSeries extends NexusModel
                 $oldValue,
                 $rewardAmount,
                 $newValue,
-                __('medal-series.bonus_log', ['series' => $this->name]),
+                nexus_trans('medal-series.bonus_log', ['series' => $this->name]),
                 BonusLogs::BUSINESS_TYPE_MEDAL_SERIES_REWARD
             );
 

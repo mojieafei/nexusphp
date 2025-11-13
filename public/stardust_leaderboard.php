@@ -16,15 +16,24 @@ stdhead("星尘农场 - 排行榜");
 }
 
 .leaderboard-header {
-    text-align: center;
     color: white;
     margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
 }
 
 .leaderboard-header h1 {
     font-size: 48px;
-    margin-bottom: 10px;
+    margin: 0;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.leaderboard-header p {
+    margin: 0;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .leaderboard-tabs {
@@ -71,19 +80,21 @@ stdhead("星尘农场 - 排行榜");
 }
 
 .rank-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 30% 40% 30%;
     align-items: center;
-    padding: 15px 20px;
+    padding: 18px 24px;
     margin: 10px 0;
-    background: linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 100%);
-    border-radius: 15px;
+    background: linear-gradient(90deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.06) 100%);
+    border-radius: 16px;
     transition: all 0.3s;
     border-left: 4px solid transparent;
+    column-gap: 16px;
 }
 
 .rank-item:hover {
-    transform: translateX(5px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transform: translateX(4px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.1);
 }
 
 .rank-item.top1 {
@@ -101,11 +112,31 @@ stdhead("星尘农场 - 排行榜");
     border-left-color: #CD7F32;
 }
 
-.rank-number {
-    font-size: 24px;
-    font-weight: bold;
-    width: 60px;
+.rank-col {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.rank-col--left {
+    justify-content: flex-start;
+}
+
+.rank-col--middle {
+    flex-direction: column;
+    justify-content: center;
     text-align: center;
+    gap: 6px;
+}
+
+.rank-col--right {
+    justify-content: flex-end;
+    text-align: right;
+}
+
+.rank-number {
+    font-size: 28px;
+    font-weight: bold;
 }
 
 .rank-item.top1 .rank-number { color: #FFD700; }
@@ -113,38 +144,35 @@ stdhead("星尘农场 - 排行榜");
 .rank-item.top3 .rank-number { color: #CD7F32; }
 
 .rank-avatar {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
-    margin: 0 15px;
-}
-
-.rank-info {
-    flex: 1;
 }
 
 .rank-name {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
-    color: #333;
-    margin-bottom: 5px;
+    color: #1f2a4d;
 }
 
 .rank-detail {
-    font-size: 14px;
-    color: #666;
+    font-size: 13px;
+    color: #5d6a85;
 }
 
 .rank-value {
     font-size: 24px;
     font-weight: bold;
     color: #667eea;
-    margin-right: 10px;
+}
+
+.rank-col--right .rank-value {
+    width: 100%;
 }
 
 .loading {
@@ -326,13 +354,17 @@ function renderLeaderboard(type, data) {
         
         html += `
             <div class="rank-item ${topClass}">
-                <div class="rank-number">${medal}</div>
-                <div class="rank-avatar">${item.username ? item.username.charAt(0).toUpperCase() : '👤'}</div>
-                <div class="rank-info">
+                <div class="rank-col rank-col--left">
+                    <div class="rank-number">${medal}</div>
+                    <div class="rank-avatar">${item.username ? item.username.charAt(0).toUpperCase() : '👤'}</div>
+                </div>
+                <div class="rank-col rank-col--middle">
                     <div class="rank-name">${item.username || '未知用户'}</div>
                     <div class="rank-detail">${detailText}</div>
                 </div>
-                <div class="rank-value">${valueText}</div>
+                <div class="rank-col rank-col--right">
+                    <div class="rank-value">${valueText}</div>
+                </div>
             </div>
         `;
     });

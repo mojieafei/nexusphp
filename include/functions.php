@@ -4061,7 +4061,7 @@ jQuery(document).ready(function(){
 </script>
 JS;
     print($js);
-    print('<img id="nexus-preview" style="display: none; position: absolute" src="" />');
+    print('<img id="nexus-preview" style="display: none; position: absolute; z-index: 9999; pointer-events: none" src="" />');
     
     // PJAX初始化
     print('<script type="application/javascript" src="js/jquery.pjax.js"></script>');
@@ -7164,7 +7164,7 @@ function calculate_seed_bonus($uid, $torrentIdArr = null): array
     $zeroBonusTag = \App\Models\Setting::get('bonus.zero_bonus_tag');
     $zeroBonusFactor = \App\Models\Setting::get('bonus.zero_bonus_factor');
     $userMedalResult = \Nexus\Database\NexusDB::select("select round(sum(bonus_addition_factor), 5) as factor from medals where id in (select medal_id from user_medals where uid = $uid and (expire_at is null or expire_at > '$nowStr') and (bonus_addition_expire_at is null or bonus_addition_expire_at > '$nowStr'))");
-    $medalAdditionalFactor = floatval($userMedalResult[0]['factor'] ?? 0);
+    $medalItemAdditionalFactor = floatval($userMedalResult[0]['factor'] ?? 0);
 
     $seriesAdditionalResult = \Nexus\Database\NexusDB::select("
         select round(sum(ms.bonus_addition_factor), 5) as factor
@@ -7183,9 +7183,9 @@ function calculate_seed_bonus($uid, $torrentIdArr = null): array
           )
     ");
     $seriesAdditionalFactor = floatval($seriesAdditionalResult[0]['factor'] ?? 0);
-    $medalAdditionalFactor += $seriesAdditionalFactor;
+    $medalAdditionalFactor = $medalItemAdditionalFactor + $seriesAdditionalFactor;
 
-    do_log("$logPrefix, sql: $sql, count: " . count($torrentResult) . ", officialTag: $officialTag, officialAdditionalFactor: $officialAdditionalFactor, zeroBonusTag: $zeroBonusTag, zeroBonusFactor: $zeroBonusFactor, medalAdditionalFactor: $medalAdditionalFactor, medalSeriesAddition: $seriesAdditionalFactor");
+    do_log("$logPrefix, sql: $sql, count: " . count($torrentResult) . ", officialTag: $officialTag, officialAdditionalFactor: $officialAdditionalFactor, zeroBonusTag: $zeroBonusTag, zeroBonusFactor: $zeroBonusFactor, medalItemAddition: $medalItemAdditionalFactor, medalSeriesAddition: $seriesAdditionalFactor, medalAdditionalFactor: $medalAdditionalFactor");
     $last_action = "";
     foreach ($torrentResult as $torrent)
     {
@@ -7227,6 +7227,8 @@ function calculate_seed_bonus($uid, $torrentIdArr = null): array
     $result['donor_times'] = $donortimes_bonus;
     $result['official_additional_factor'] = $officialAdditionalFactor;
     $result['medal_additional_factor'] = $medalAdditionalFactor;
+    $result['medal_item_additional_factor'] = $medalItemAdditionalFactor;
+    $result['medal_series_additional_factor'] = $seriesAdditionalFactor;
     
     // 星尘农场加成：每合成1个行星 +2% 魔力值，最多20%
     $stardustFarmAdditionFactor = calculate_stardust_farm_addition($uid);
@@ -7519,7 +7521,7 @@ function build_bonus_table(array $user, array $bonusResult = [], array $options 
     $totalBonus = $baseBonus;
 
     $rowSpan = 1;
-    $hasHaremAddition = $hasOfficialAddition = $hasMedalAddition = $hasStardustFarmAddition = false;
+    $hasHaremAddition = $hasOfficialAddition = $hasMedalAddition = $hasMedalSeriesAddition = $hasStardustFarmAddition = false;
     if ($haremFactor > 0) {
         $rowSpan++;
         $hasHaremAddition = true;
@@ -7530,10 +7532,20 @@ function build_bonus_table(array $user, array $bonusResult = [], array $options 
         $hasOfficialAddition = true;
         $totalBonus += $bonusResult['official_bonus'] * $officialAdditionalFactor;
     }
-    if ($bonusResult['medal_additional_factor'] > 0) {
+    $medalItemFactor = $bonusResult['medal_item_additional_factor'] ?? 0;
+    $medalSeriesFactor = $bonusResult['medal_series_additional_factor'] ?? 0;
+    if (!$medalItemFactor && !$medalSeriesFactor && !empty($bonusResult['medal_additional_factor'])) {
+        $medalItemFactor = $bonusResult['medal_additional_factor'];
+    }
+    if ($medalItemFactor > 0) {
         $rowSpan++;
         $hasMedalAddition = true;
-        $totalBonus += $bonusResult['medal_bonus'] * $bonusResult['medal_additional_factor'];
+        $totalBonus += $bonusResult['medal_bonus'] * $medalItemFactor;
+    }
+    if ($medalSeriesFactor > 0) {
+        $rowSpan++;
+        $hasMedalSeriesAddition = true;
+        $totalBonus += $bonusResult['medal_bonus'] * $medalSeriesFactor;
     }
     // 星尘农场加成
     $stardustFarmFactor = $bonusResult['stardust_farm_additional_factor'] ?? 0;
@@ -7577,8 +7589,21 @@ function build_bonus_table(array $user, array $bonusResult = [], array $options 
             mksize($bonusResult['size']),
             number_format($bonusResult['A'], 3),
             number_format($bonusResult['medal_bonus'], 3),
-            number_format($bonusResult['medal_additional_factor'], 3),
-            number_format($bonusResult['medal_bonus'] * $bonusResult['medal_additional_factor'], 3)
+            number_format($medalItemFactor, 3),
+            number_format($bonusResult['medal_bonus'] * $medalItemFactor, 3)
+        );
+    }
+
+    if ($hasMedalSeriesAddition) {
+        $table .= sprintf(
+            '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
+            '勋章系列加成',
+            $bonusResult['torrent_peer_count'],
+            mksize($bonusResult['size']),
+            number_format($bonusResult['A'], 3),
+            number_format($bonusResult['medal_bonus'], 3),
+            number_format($medalSeriesFactor, 3),
+            number_format($bonusResult['medal_bonus'] * $medalSeriesFactor, 3)
         );
     }
 
@@ -7632,6 +7657,8 @@ function build_bonus_table(array $user, array $bonusResult = [], array $options 
         'official_addition_factor' => $officialAdditionalFactor,
         'has_medal_addition' => $hasMedalAddition,
         'medal_addition_factor' => $bonusResult['medal_additional_factor'],
+        'has_medal_series_addition' => $hasMedalSeriesAddition,
+        'medal_series_addition_factor' => $medalSeriesFactor,
         'has_stardust_farm_addition' => $hasStardustFarmAddition,
         'stardust_farm_addition_factor' => $stardustFarmFactor,
     ];

@@ -658,6 +658,9 @@ if ($bonusTableResult['has_medal_addition']) {
     print("<ul>");
     print("<li>".sprintf($lang_mybonus['medal_additional_desc'], $CURUSER['id'])."</li>");
     print("<li>".$lang_mybonus['medal_additional_factor'].$bonusTableResult['medal_addition_factor']."</li>");
+    if (!empty($bonusTableResult['has_medal_series_addition']) && !empty($bonusTableResult['medal_series_addition_factor'])) {
+        print("<li>勋章系列额外加成系数：".$bonusTableResult['medal_series_addition_factor']."</li>");
+    }
     print("</ul>");
 }
 if ($bonusTableResult['has_official_addition']) {

@@ -175,9 +175,11 @@ body {
 }
 
 .crop-emoji {
-    font-size: 64px;
     margin-bottom: 10px;
-    filter: drop-shadow(0 0 10px rgba(138, 43, 226, 0.5));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 72px;
 }
 
 .crop-name {
@@ -278,7 +280,12 @@ body {
 }
 
 .shop-item-emoji {
-    font-size: 48px;
+    min-width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .shop-item-info {
@@ -347,8 +354,327 @@ body {
 }
 
 .inventory-item-emoji {
-    font-size: 48px;
     margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56px;
+}
+
+.crop-emoji .planet-icon,
+.shop-item-emoji .planet-icon,
+.inventory-item-emoji .planet-icon {
+    filter: drop-shadow(0 0 14px rgba(138, 43, 226, 0.45));
+}
+
+.planet-icon {
+    display: inline-block;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #4e9af1 0%, #0a1f60 85%);
+    position: relative;
+    box-shadow: inset -12px -12px 20px rgba(0, 0, 0, 0.35), inset 6px 6px 14px rgba(255, 255, 255, 0.15);
+    overflow: visible;
+}
+
+.planet-icon::before {
+    content: '';
+    position: absolute;
+    top: 18%;
+    left: 20%;
+    width: 40%;
+    height: 40%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    filter: blur(2px);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.planet-icon-lg {
+    width: 72px;
+    height: 72px;
+}
+
+.planet-icon-md {
+    width: 56px;
+    height: 56px;
+}
+
+.planet-icon-sm {
+    width: 48px;
+    height: 48px;
+}
+
+.planet-generic {
+    background: radial-gradient(circle at 30% 30%, #7f8c8d 0%, #2c3e50 85%);
+}
+
+.planet-moon {
+    background:
+        radial-gradient(circle at 68% 32%, rgba(255, 255, 255, 0.14) 0 18%, transparent 56%),
+        radial-gradient(circle at 42% 72%, rgba(0, 0, 0, 0.22) 0 20%, transparent 58%),
+        radial-gradient(circle at 30% 30%, #f7f7f7 0%, #cfcfcf 60%, #8f8f8f 100%);
+    box-shadow: inset -18px -18px 24px rgba(0, 0, 0, 0.4), inset 10px 10px 18px rgba(255, 255, 255, 0.18);
+}
+
+.planet-mercury {
+    background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.32) 0 18%, transparent 42%),
+        radial-gradient(circle at 68% 62%, rgba(0, 0, 0, 0.35) 0 20%, transparent 48%),
+        linear-gradient(120deg, #d6cec0 0%, #b39e87 38%, #7a5c48 62%, #37281f 82%, #0d0d0d 100%);
+    background-blend-mode: screen, multiply, normal;
+    box-shadow: inset -18px -18px 24px rgba(0, 0, 0, 0.55), inset 10px 10px 18px rgba(255, 255, 255, 0.18);
+}
+
+.planet-venus {
+    background:
+        radial-gradient(circle at 48% 28%, rgba(255, 233, 180, 0.28) 0 34%, transparent 70%),
+        linear-gradient(150deg, #ffe1ad 0%, #f4b565 45%, #c97d31 100%),
+        repeating-linear-gradient(28deg, rgba(255, 255, 255, 0.22) 0 12%, rgba(161, 90, 29, 0.16) 12% 24%);
+    background-blend-mode: screen, multiply, normal;
+    box-shadow: inset -20px -18px 28px rgba(130, 65, 10, 0.42), inset 10px 10px 18px rgba(255, 221, 181, 0.22);
+}
+
+.planet-earth {
+    background:
+        radial-gradient(circle at 35% 30%, #4a90e2 0%, #2e7cd6 25%, #1e5fa8 50%, #0f3f86 75%, #051b43 100%);
+    box-shadow: 
+        inset -14px -14px 20px rgba(0, 0, 0, 0.4),
+        inset 8px 8px 20px rgba(255, 255, 255, 0.2),
+        0 0 25px rgba(78, 205, 196, 0.3),
+        0 0 40px rgba(52, 152, 219, 0.2);
+    filter: drop-shadow(0 0 15px rgba(78, 205, 196, 0.4));
+    overflow: visible;
+}
+
+.planet-earth::before {
+    content: '';
+    position: absolute;
+    inset: -3%;
+    border-radius: 50%;
+    background: 
+        radial-gradient(circle at 35% 30%, transparent 85%, rgba(135, 206, 250, 0.25) 90%, rgba(78, 205, 196, 0.15) 95%, transparent 100%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.planet-mars {
+    background:
+        radial-gradient(circle at 30% 32%, rgba(255, 213, 160, 0.2) 0 28%, transparent 60%),
+        linear-gradient(138deg, #e07b3c 0%, #b04a20 55%, #5d230e 100%);
+}
+
+.planet-jupiter {
+    background:
+        repeating-linear-gradient(160deg, #f8e7c3 0%, #f1d9ae 8%, #cf9d6a 8%, #cf9d6a 16%, #b67a45 16%, #b67a45 24%, #90613b 24%, #90613b 32%);
+    background-size: 140% 140%;
+    box-shadow: inset -18px -18px 28px rgba(0, 0, 0, 0.38), inset 10px 10px 20px rgba(255, 255, 255, 0.18);
+}
+
+.planet-saturn {
+    background:
+        radial-gradient(circle at 42% 26%, rgba(255, 240, 199, 0.22) 0 30%, transparent 70%),
+        linear-gradient(150deg, #ffe3aa 0%, #e0ba6e 48%, #b67d32 100%),
+        repeating-linear-gradient(20deg, rgba(255, 255, 255, 0.2) 0 12%, rgba(164, 107, 35, 0.18) 12% 24%);
+    background-blend-mode: screen, multiply, normal;
+    box-shadow: inset -16px -16px 22px rgba(0, 0, 0, 0.32), inset 8px 8px 16px rgba(255, 255, 255, 0.12);
+}
+
+.planet-saturn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120%;
+    height: 42%;
+    border: 4px solid rgba(255, 222, 173, 0.7);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) rotate(-18deg);
+    box-shadow: 0 0 12px rgba(255, 222, 173, 0.4);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.planet-uranus {
+    background:
+        radial-gradient(circle at 46% 24%, rgba(255, 255, 255, 0.22) 0 28%, transparent 66%),
+        linear-gradient(135deg, #c6f9ff 0%, #6bc8dd 45%, #1d6a8c 100%);
+}
+
+.planet-neptune {
+    background:
+        radial-gradient(circle at 60% 28%, rgba(255, 255, 255, 0.18) 0 24%, transparent 60%),
+        linear-gradient(140deg, #7bc4ff 0%, #2a68d5 55%, #0b226a 100%);
+}
+
+.planet-sun {
+    background: 
+        radial-gradient(circle at 50% 50%, #ffffff 0%, #fff6a1 15%, #ffd700 30%, #ffb347 50%, #ff8c42 70%, #ff6b6b 85%, #d63031 100%);
+    box-shadow: 
+        0 0 40px rgba(255, 255, 0, 0.6),
+        0 0 60px rgba(255, 204, 0, 0.5),
+        0 0 80px rgba(255, 153, 0, 0.4),
+        0 0 100px rgba(255, 102, 0, 0.3),
+        inset -12px -12px 24px rgba(255, 94, 0, 0.35),
+        inset 8px 8px 20px rgba(255, 255, 200, 0.2);
+    filter: drop-shadow(0 0 20px rgba(255, 204, 0, 0.6));
+    overflow: visible;
+}
+
+.planet-moon::after {
+    content: '';
+    position: absolute;
+    inset: 18%;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 30% 30%, rgba(0, 0, 0, 0.32) 0 16%, rgba(255, 255, 255, 0.18) 22%, transparent 48%),
+        radial-gradient(circle at 60% 38%, rgba(0, 0, 0, 0.28) 0 10%, rgba(255, 255, 255, 0.16) 16%, transparent 34%),
+        radial-gradient(circle at 48% 72%, rgba(0, 0, 0, 0.24) 0 14%, rgba(255, 255, 255, 0.18) 22%, transparent 44%),
+        radial-gradient(circle at 68% 66%, rgba(0, 0, 0, 0.2) 0 8%, rgba(255, 255, 255, 0.18) 14%, transparent 36%),
+        radial-gradient(circle at 40% 52%, rgba(255, 255, 255, 0.12) 0 6%, transparent 24%);
+    opacity: 0.88;
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+}
+
+.planet-mercury::after {
+    content: '';
+    position: absolute;
+    inset: 12%;
+    border-radius: 50%;
+    background:
+        radial-gradient(ellipse at 22% 38%, rgba(0, 0, 0, 0.38) 0 16%, transparent 44%),
+        radial-gradient(ellipse at 32% 68%, rgba(0, 0, 0, 0.32) 0 14%, transparent 46%),
+        radial-gradient(circle at 62% 34%, rgba(255, 255, 255, 0.24) 0 14%, transparent 40%),
+        radial-gradient(circle at 76% 68%, rgba(0, 0, 0, 0.28) 0 12%, transparent 42%),
+        linear-gradient(115deg, transparent 0 42%, rgba(0, 0, 0, 0.65) 70%, rgba(0, 0, 0, 0.85) 100%);
+    opacity: 0.8;
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+}
+
+.planet-venus::after {
+    content: '';
+    position: absolute;
+    inset: 8%;
+    border-radius: 50%;
+    background:
+        conic-gradient(from 200deg, rgba(255, 255, 255, 0.2) 0 18%, transparent 18% 32%, rgba(255, 255, 255, 0.18) 32% 48%, transparent 48% 68%, rgba(255, 255, 255, 0.16) 68% 84%, transparent 84% 100%);
+    filter: blur(1.2px);
+    opacity: 0.8;
+    mix-blend-mode: lighten;
+    pointer-events: none;
+}
+
+.planet-earth::after {
+    content: '';
+    position: absolute;
+    inset: 7%;
+    border-radius: 50%;
+    background:
+        /* 海洋高光层打底（略带渐变） */
+        radial-gradient(circle at 45% 55%, rgba(135, 206, 250, 0.35) 0 40%, transparent 70%),
+        radial-gradient(circle at 30% 35%, rgba(52, 152, 219, 0.25) 0 32%, transparent 65%),
+        /* 北美 + 南美轮廓 */
+        radial-gradient(circle at 26% 40%, rgba(39, 174, 96, 0.98) 0 14%, rgba(39, 174, 96, 0.98) 18%, rgba(39, 174, 96, 0) 22%),
+        radial-gradient(circle at 28% 62%, rgba(39, 174, 96, 0.9) 0 12%, rgba(39, 174, 96, 0.15) 20%, transparent 28%),
+        radial-gradient(circle at 32% 78%, rgba(46, 204, 113, 0.85) 0 10%, rgba(46, 204, 113, 0.12) 18%, transparent 26%),
+        /* 非洲 + 欧洲 + 亚洲主体 */
+        radial-gradient(circle at 60% 50%, rgba(33, 140, 58, 0.98) 0 18%, rgba(33, 140, 58, 0.4) 24%, transparent 32%),
+        radial-gradient(circle at 70% 42%, rgba(39, 174, 96, 0.92) 0 16%, rgba(39, 174, 96, 0.2) 22%, transparent 30%),
+        radial-gradient(circle at 63% 60%, rgba(210, 180, 140, 0.85) 0 12%, rgba(210, 180, 140, 0.2) 20%, transparent 28%),
+        radial-gradient(circle at 76% 58%, rgba(184, 134, 88, 0.78) 0 10%, rgba(184, 134, 88, 0.15) 18%, transparent 26%),
+        radial-gradient(circle at 82% 47%, rgba(52, 152, 219, 0.5) 0 9%, transparent 22%),
+        radial-gradient(circle at 78% 70%, rgba(46, 204, 113, 0.7) 0 9%, rgba(46, 204, 113, 0.12) 18%, transparent 25%),
+        /* 印度半岛与东南亚半岛 */
+        radial-gradient(circle at 64% 64%, rgba(39, 174, 96, 0.9) 0 7%, rgba(39, 174, 96, 0.15) 14%, transparent 22%),
+        radial-gradient(circle at 72% 66%, rgba(210, 180, 140, 0.6) 0 6%, transparent 16%),
+        /* 云层 - 放顶部几层 */
+        radial-gradient(ellipse at 46% 30%, rgba(255, 255, 255, 0.6) 0 20%, rgba(255, 255, 255, 0.25) 30%, transparent 50%),
+        radial-gradient(ellipse at 62% 72%, rgba(255, 255, 255, 0.55) 0 18%, rgba(255, 255, 255, 0.2) 30%, transparent 52%),
+        radial-gradient(ellipse at 34% 78%, rgba(255, 255, 255, 0.5) 0 16%, transparent 46%),
+        /* 极地 */
+        radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.82) 0 11%, transparent 32%),
+        radial-gradient(circle at 50% 86%, rgba(255, 255, 255, 0.78) 0 13%, transparent 35%);
+    pointer-events: none;
+}
+
+.planet-mars::after {
+    content: '';
+    position: absolute;
+    inset: 12%;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 65% 38%, rgba(142, 68, 173, 0.2) 0 18%, transparent 52%),
+        radial-gradient(circle at 36% 68%, rgba(44, 62, 80, 0.28) 0 18%, transparent 55%),
+        radial-gradient(circle at 32% 32%, rgba(255, 255, 255, 0.18) 0 14%, transparent 48%),
+        radial-gradient(circle at 72% 68%, rgba(142, 68, 173, 0.16) 0 16%, transparent 52%),
+        radial-gradient(circle at 52% 20%, rgba(254, 255, 255, 0.35) 0 10%, transparent 42%);
+    mix-blend-mode: overlay;
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.planet-jupiter::after {
+    content: '';
+    position: absolute;
+    inset: 14%;
+    border-radius: 50%;
+    background:
+        radial-gradient(ellipse at 62% 64%, rgba(231, 76, 60, 0.65) 0 22%, rgba(211, 84, 0, 0.38) 30%, transparent 58%),
+        linear-gradient(160deg, rgba(255, 255, 255, 0.13) 0 18%, transparent 18% 38%, rgba(255, 255, 255, 0.09) 38% 58%, transparent 58% 80%, rgba(255, 255, 255, 0.1) 80% 100%);
+    mix-blend-mode: lighten;
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+.planet-uranus::after {
+    content: '';
+    position: absolute;
+    inset: 18%;
+    border-radius: 50%;
+    background:
+        linear-gradient(150deg, rgba(255, 255, 255, 0.16) 0 45%, transparent 55% 100%),
+        linear-gradient(30deg, rgba(46, 204, 206, 0.16) 0 38%, transparent 58% 100%),
+        radial-gradient(circle at 68% 58%, rgba(255, 255, 255, 0.18) 0 12%, transparent 46%);
+    mix-blend-mode: screen;
+    opacity: 0.72;
+    pointer-events: none;
+}
+
+.planet-neptune::after {
+    content: '';
+    position: absolute;
+    inset: 15%;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 66% 58%, rgba(52, 152, 219, 0.75) 0 20%, rgba(52, 152, 219, 0.35) 32%, transparent 58%),
+        radial-gradient(circle at 28% 42%, rgba(255, 255, 255, 0.15) 0 18%, transparent 55%),
+        linear-gradient(150deg, rgba(255, 255, 255, 0.1) 0 30%, transparent 60% 100%);
+    mix-blend-mode: screen;
+    opacity: 0.88;
+    pointer-events: none;
+}
+
+.planet-sun::after {
+    content: '';
+    position: absolute;
+    inset: 4%;
+    border-radius: 50%;
+    background:
+        radial-gradient(ellipse at 75% 35%, rgba(255, 255, 150, 0.5) 0 20%, transparent 50%),
+        radial-gradient(ellipse at 25% 65%, rgba(255, 200, 100, 0.4) 0 18%, transparent 48%),
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0 15%, transparent 45%),
+        radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.35) 0 20%, transparent 55%),
+        radial-gradient(circle at 70% 60%, rgba(255, 180, 0, 0.4) 0 18%, transparent 50%),
+        radial-gradient(circle at 65% 60%, rgba(255, 94, 0, 0.35) 0 22%, transparent 55%);
+    box-shadow:
+        0 0 30px rgba(255, 255, 0, 0.5),
+        0 0 50px rgba(255, 204, 0, 0.4),
+        0 0 70px rgba(255, 153, 0, 0.3);
+    mix-blend-mode: screen;
+    opacity: 0.95;
+    pointer-events: none;
 }
 
 .inventory-item-name {
@@ -513,9 +839,12 @@ body {
     border: 3px solid rgba(138, 43, 226, 0.8);
     border-radius: 20px;
     padding: 30px;
-    max-width: 500px;
+    width: min(90vw, 640px);
     max-height: 80vh;
-    overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .modal-title {
@@ -526,16 +855,34 @@ body {
 }
 
 .modal-close {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    font-size: 30px;
+    align-self: flex-end;
+    position: sticky;
+    top: 0;
+    margin-bottom: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 24px;
     cursor: pointer;
-    color: #aaa;
+    color: #cbd3ff;
+    background: rgba(10, 15, 40, 0.85);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10;
 }
 
 .modal-close:hover {
-    color: white;
+    color: #ffffff;
+    background: rgba(138, 43, 226, 0.35);
+    transform: scale(1.05);
+}
+
+#seedsList {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 8px;
 }
 
 /* 响应式 */
@@ -833,6 +1180,31 @@ const isOwnFarm = <?php echo $isOwnFarm ? 'true' : 'false'; ?>;
 const targetUserId = <?php echo $targetUserId; ?>;
 const currentUserId = <?php echo $CURUSER['id']; ?>;
 
+const PLANET_CLASS_MAP = {
+    'moon': 'planet-moon',
+    'mercury': 'planet-mercury',
+    'venus': 'planet-venus',
+    'earth': 'planet-earth',
+    'mars': 'planet-mars',
+    'jupiter': 'planet-jupiter',
+    'saturn': 'planet-saturn',
+    'uranus': 'planet-uranus',
+    'neptune': 'planet-neptune',
+    'sun': 'planet-sun'
+};
+
+function getPlanetClassName(crop) {
+    if (!crop) return 'planet-generic';
+    const keySource = (crop.name_en || crop.name || '').toString().toLowerCase();
+    return PLANET_CLASS_MAP[keySource] || 'planet-generic';
+}
+
+function renderPlanetIcon(crop, size = 'lg') {
+    const sizeClass = size === 'sm' ? 'planet-icon-sm' : (size === 'md' ? 'planet-icon-md' : 'planet-icon-lg');
+    const className = getPlanetClassName(crop);
+    return `<span class="planet-icon ${sizeClass} ${className}" title="${crop ? crop.name : '天体'}"></span>`;
+}
+
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
     loadFarmData();
@@ -1062,7 +1434,7 @@ function renderLands() {
             if (!crop) return;
 
             div.innerHTML = `
-                <div class="crop-emoji">${crop.emoji}</div>
+                <div class="crop-emoji">${renderPlanetIcon(crop, 'lg')}</div>
                 <div class="crop-name">${crop.name}</div>
                 <div class="crop-status">${getStatusText(land)}</div>
                 ${renderLandActions(land)}
@@ -1145,7 +1517,7 @@ function openPlantModal(landId) {
         const div = document.createElement('div');
         div.className = 'shop-item';
         div.innerHTML = `
-            <div class="shop-item-emoji">${crop.emoji}</div>
+            <div class="shop-item-emoji">${renderPlanetIcon(crop, 'md')}</div>
             <div class="shop-item-info">
                 <div class="shop-item-name">${crop.name}</div>
                 <div class="shop-item-details">
@@ -1237,7 +1609,7 @@ function renderInventory() {
         const div = document.createElement('div');
         div.className = 'inventory-item';
         div.innerHTML = `
-            <div class="inventory-item-emoji">${crop.emoji}</div>
+            <div class="inventory-item-emoji">${renderPlanetIcon(crop, 'md')}</div>
             <div class="inventory-item-name">${crop.name}碎片</div>
             <div class="inventory-item-count">${item.quantity}/9</div>
             ${isOwnFarm && item.quantity >= 9 ? `<button class="craft-btn" onclick="craftPlanet(${crop.id})">合成行星</button>` : ''}
@@ -1257,7 +1629,7 @@ function renderInventory() {
         const div = document.createElement('div');
         div.className = 'inventory-item';
         div.innerHTML = `
-            <div class="inventory-item-emoji">${crop.emoji}</div>
+            <div class="inventory-item-emoji">${renderPlanetIcon(crop, 'md')}</div>
             <div class="inventory-item-name">${crop.name}</div>
             <div class="inventory-item-count">×${item.quantity}</div>
         `;

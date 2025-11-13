@@ -41,7 +41,7 @@ class StardustFarmRepository extends BaseRepository
         
         // 获取用户等级信息
         $user = \App\Models\User::find($userId);
-        $canPurchaseLand = $user && $user->class >= UC_VETERAN_USER;
+        $canPurchaseLand = $user && $user->class >= UC_POWER_USER;
         $nextLandPrice = $farm->getNextLandPrice();
 
         return [
@@ -52,8 +52,8 @@ class StardustFarmRepository extends BaseRepository
             'crops' => $crops,
             'can_purchase_land' => $canPurchaseLand,
             'next_land_price' => $nextLandPrice,
-            'required_class' => UC_VETERAN_USER,
-            'required_class_name' => get_user_class_name(UC_VETERAN_USER, false, false, true),
+            'required_class' => UC_POWER_USER,
+            'required_class_name' => get_user_class_name(UC_POWER_USER, false, false, true),
         ];
     }
 
@@ -206,8 +206,8 @@ class StardustFarmRepository extends BaseRepository
     {
         // 检查用户等级（需要 Veteran User 以上）
         $user = \App\Models\User::find($userId);
-        if (!$user || $user->class < UC_VETERAN_USER) {
-            $requiredClassName = get_user_class_name(UC_VETERAN_USER, false, false, true);
+        if (!$user || $user->class < UC_POWER_USER) {
+            $requiredClassName = get_user_class_name(UC_POWER_USER, false, false, true);
             throw new \InvalidArgumentException("购买土地需要达到 {$requiredClassName} 等级");
         }
         
