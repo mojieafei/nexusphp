@@ -90,6 +90,11 @@ class BannerResource extends Resource
                             ->default(0)
                             ->required(),
                         
+                        Forms\Components\Toggle::make('disable_overlay_logo')
+                            ->label('禁用悬浮Logo')
+                            ->helperText('开启后，该 Banner 展示时不叠加全局角落 Logo')
+                            ->default(false),
+                        
                         Forms\Components\DateTimePicker::make('start_time')
                             ->label('开始时间')
                             ->helperText('留空表示不限制')
@@ -128,6 +133,10 @@ class BannerResource extends Resource
                         'success' => 'image',
                         'primary' => 'video',
                     ]),
+                
+                Tables\Columns\IconColumn::make('disable_overlay_logo')
+                    ->label('隐藏Logo')
+                    ->boolean(),
                 
                 Tables\Columns\TextColumn::make('resource_url')
                     ->label('资源路径')

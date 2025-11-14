@@ -2587,7 +2587,8 @@ function display_homepage_banner()
 			'type' => $banner->resource_type,
 			'jump_url' => $banner->jump_url,
 			'title' => $banner->title,
-			'id' => $banner->id
+			'id' => $banner->id,
+			'disable_logo' => (bool)$banner->disable_overlay_logo,
 		];
 	}
 	
@@ -2619,8 +2620,9 @@ function display_homepage_banner()
 		echo '<button type="button" class="banner-video-toggle" aria-label="切换视频背景播放" aria-pressed="false" style="display:none;">▶ 播放视频背景</button>';
 	}
 	
+	$initialLogoDisplay = (!empty($bannerFiles[0]['disable_logo'])) ? 'none' : 'block';
 	// 添加悬浮 logo
-	echo '<div class="banner-logo" style="position: absolute; top: 20px; left: 20px; z-index: 100; opacity: 0.9; transition: opacity 0.3s;">';
+	echo '<div class="banner-logo" style="position: absolute; top: 20px; left: 20px; z-index: 100; opacity: 0.9; transition: opacity 0.3s; display: ' . $initialLogoDisplay . ';">';
 	echo '<img src="img/logo.png" alt="Logo" style="height: 60px; width: auto; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));">';
 	echo '</div>';
 	
@@ -2631,18 +2633,19 @@ function display_homepage_banner()
 		$clickStyle = $jumpUrl ? 'cursor: pointer;' : '';
 		$dataJumpUrl = $jumpUrl ? 'data-jump-url="' . $jumpUrl . '"' : '';
 		
+		$disableLogoAttr = 'data-disable-logo="' . ($banner['disable_logo'] ? '1' : '0') . '"';
 		if ($banner['type'] === 'video') {
 			$videoAttrs = 'class="banner-video" style="width: 100%; height: 100%; object-fit: cover; display: block; margin: 0 auto; pointer-events: none;" preload="metadata" muted loop playsinline';
 			if ($shouldAutoPlayVideo) {
 				$videoAttrs .= ' autoplay';
 			}
-			echo '<div class="banner-item" ' . $dataJumpUrl . ' style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%; ' . $clickStyle . '">';
+			echo '<div class="banner-item" ' . $dataJumpUrl . ' ' . $disableLogoAttr . ' style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%; ' . $clickStyle . '">';
 			echo '<video ' . $videoAttrs . '>';
 			echo '<source src="' . $path . '" type="video/' . htmlspecialchars($banner['ext']) . '">';
 			echo '</video>';
 			echo '</div>';
 		} else {
-			echo '<div class="banner-item" ' . $dataJumpUrl . ' style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%; ' . $clickStyle . '">';
+			echo '<div class="banner-item" ' . $dataJumpUrl . ' ' . $disableLogoAttr . ' style="display: ' . $display . '; position: absolute; top: 0; left: 0; width: 100%; height: 100%; ' . $clickStyle . '">';
 			echo '<img class="banner-image" src="' . $path . '" style="width: 100%; height: 100%; object-fit: cover; display: block; margin: 0 auto; pointer-events: none;" alt="' . htmlspecialchars($banner['title']) . '">';
 			echo '</div>';
 		}
@@ -2679,6 +2682,7 @@ function display_homepage_banner()
 			var loadingDiv = document.querySelector(".banner-loading");
 			var leftArrow = document.querySelector(".banner-arrow-left");
 			var rightArrow = document.querySelector(".banner-arrow-right");
+			var overlayLogo = document.querySelector(".homepage-banner-container .banner-logo");
 			var startX = 0;
 			var currentX = 0;
 			var isDragging = false;
@@ -2723,6 +2727,14 @@ function display_homepage_banner()
 				}
 			}
 			
+			function updateLogoVisibility(index) {
+				if (!overlayLogo) return;
+				var item = items[index];
+				if (!item) return;
+				var shouldHide = item.getAttribute("data-disable-logo") === "1";
+				overlayLogo.style.display = shouldHide ? "none" : "block";
+			}
+			
 			function showBanner(index) {
 				items.forEach(function(item, i) {
 					item.style.display = i === index ? "block" : "none";
@@ -2735,7 +2747,10 @@ function display_homepage_banner()
 				currentIndex = index;
 				// 切换后调整高度
 				setTimeout(adjustBannerHeight, 100);
+				updateLogoVisibility(currentIndex);
 			}
+			
+			updateLogoVisibility(currentIndex);
 			
 			// 监听资源加载完成
 			items.forEach(function(item) {

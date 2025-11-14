@@ -19,7 +19,8 @@ class Banner extends NexusModel
         'end_time', 
         'is_active', 
         'visible_to', 
-        'sort_order'
+        'sort_order',
+        'disable_overlay_logo',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class Banner extends NexusModel
         'is_active' => 'boolean',
         'visible_to' => 'integer',
         'sort_order' => 'integer',
+        'disable_overlay_logo' => 'boolean',
     ];
 
     public $timestamps = true;
