@@ -844,33 +844,37 @@ body {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 20px;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
 }
 
 .modal-title {
     font-size: 24px;
     font-weight: bold;
-    margin-bottom: 20px;
     color: #8a2be2;
+    margin: 0;
 }
 
 .modal-close {
-    align-self: flex-end;
-    position: sticky;
-    top: 0;
-    margin-bottom: 8px;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 26px;
+    cursor: pointer;
+    color: #cbd3ff;
+    background: rgba(10, 15, 40, 0.9);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-size: 24px;
-    cursor: pointer;
-    color: #cbd3ff;
-    background: rgba(10, 15, 40, 0.85);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 10;
+    transition: all 0.2s ease;
 }
 
 .modal-close:hover {
@@ -1164,8 +1168,10 @@ body {
 <!-- 种植模态框 -->
 <div class="modal" id="plantModal">
     <div class="modal-content">
-        <span class="modal-close" onclick="closePlantModal()">&times;</span>
-        <h2 class="modal-title">选择种子</h2>
+        <div class="modal-header">
+            <h2 class="modal-title">选择种子</h2>
+            <span class="modal-close" onclick="closePlantModal()">&times;</span>
+        </div>
         <div id="seedsList">
             <!-- 动态生成 -->
         </div>
