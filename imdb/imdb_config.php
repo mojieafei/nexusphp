@@ -13,7 +13,7 @@
 
 // the proxy to use for connections to imdb.
 // leave it empty for no proxy.
-// this is only supported with PEAR. 
+// this is only supported with PEAR.
 define ('PROXY', "");
 define ('PROXY_PORT', "");
 
@@ -31,7 +31,7 @@ class imdb_config {
   var $photoroot;
   var $timeout;
   var $imageext;
-  
+
   /** Constructor and only method of this base class.
    *  There's no need to call this yourself - you should just place your
    *  configuration data here.
@@ -53,7 +53,7 @@ class imdb_config {
     //whether to store the pages retrieved for later use.
     $this->storecache = true;
     // automatically delete cached files older than X secs
-    $this->cache_expire = 365*24*60*60;
+    $this->cache_expire = 7*24*60*60;
     // the extension of cached images
     $this->imageext = '.jpg';
     // images are stored here after calling photo_localurl()
