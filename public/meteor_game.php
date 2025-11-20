@@ -454,6 +454,8 @@ body {
         <div>连击: <span id="comboDisplay">0</span></div>
         <div>时间: <span id="timerDisplay">60</span>秒</div>
         <div>操作: <span id="inputCounter">0</span></div>
+        <div>子弹: <span id="bulletCount">0</span></div>
+        <div>当前: <span id="currentBulletType">🔵 普通</span></div>
     </div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div class="control-panel">
@@ -483,8 +485,16 @@ body {
             <ul>
                 <li>⏱️ 任务时限：60秒</li>
                 <li>🎯 控制方式：键盘 ← → 或 A D 键移动重力捕获器</li>
+                <li>🔫 发射子弹：空格键或 W 键发射子弹（可按住连续发射）</li>
+                <li>🎁 道具系统：从天上掉落各种子弹道具，接住后获得对应效果</li>
+                <li>🔵 普通子弹：基础子弹，击中后消失</li>
+                <li>💎 穿透子弹：可穿透多个目标（最多3个）</li>
+                <li>💥 爆炸子弹：范围伤害，一次消灭多个目标</li>
+                <li>⭐ 多重子弹：一次发射3颗子弹</li>
+                <li>⚡ 快速子弹：高射速，冷却时间短</li>
                 <li>✅ 行星加分：🌙月球(+10) 🌍地球(+15) 🔴火星(+20) 🪐木星(+30) 🪐土星(+35) ☀️太阳(+50)</li>
                 <li>❌ 怪物扣分：👾外星虫(-15) ☄️陨石怪(-25) 🕳️黑洞(-50)</li>
+                <li>💥 子弹技巧：子弹可以击飞行星（可再次接住得分）或消灭怪物（避免扣分）</li>
                 <li>⚡ 连击奖励：连续捕获行星获得额外积分(+10%)</li>
                 <li>⚠️ 注意：漏掉行星或捕获怪物都会中断连击</li>
             </ul>
@@ -730,6 +740,66 @@ function recordInputEvent(action, detail = {}) {
 
 resetTelemetry();
 
+// 子弹类型定义
+const BULLET_TYPES = {
+    normal: {
+        name: '普通子弹',
+        emoji: '🔵',
+        color: '#00d4ff',
+        cooldown: 200,
+        speed: 12,
+        radius: 4,
+        effect: 'normal' // 普通：击中后消失
+    },
+    penetrate: {
+        name: '穿透子弹',
+        emoji: '💎',
+        color: '#9b59b6',
+        cooldown: 250,
+        speed: 14,
+        radius: 5,
+        effect: 'penetrate' // 穿透：可以穿透多个目标
+    },
+    explode: {
+        name: '爆炸子弹',
+        emoji: '💥',
+        color: '#e74c3c',
+        cooldown: 300,
+        speed: 10,
+        radius: 6,
+        effect: 'explode', // 爆炸：范围伤害
+        explodeRadius: 60
+    },
+    multi: {
+        name: '多重子弹',
+        emoji: '⭐',
+        color: '#f39c12',
+        cooldown: 150,
+        speed: 12,
+        radius: 4,
+        effect: 'multi', // 多重：一次发射3颗
+        count: 3
+    },
+    rapid: {
+        name: '快速子弹',
+        emoji: '⚡',
+        color: '#2ecc71',
+        cooldown: 100,
+        speed: 16,
+        radius: 4,
+        effect: 'rapid' // 快速：高射速
+    }
+};
+
+// 道具类型（从天上掉落的子弹道具）
+const POWERUP_TYPES = [
+    { type: 'normal', emoji: '🔵', name: '普通子弹', chance: 0.35, size: 24 },
+    { type: 'penetrate', emoji: '💎', name: '穿透子弹', chance: 0.25, size: 26 },
+    { type: 'explode', emoji: '💥', name: '爆炸子弹', chance: 0.15, size: 28 },
+    { type: 'multi', emoji: '⭐', name: '多重子弹', chance: 0.15, size: 26 },
+    { type: 'rapid', emoji: '⚡', name: '快速子弹', chance: 0.10, size: 24 }
+];
+
 // 游戏状态
 let gameState = {
     score: 0,
@@ -738,7 +808,11 @@ let gameState = {
     timeLeft: 60,
     gameOver: false,
     gameStarted: false,
+    timeUp: false, // 时间已到，但游戏仍在继续（等待所有元素消失）
     meteors: [],
+    bullets: [], // 子弹数组
+    powerups: [], // 道具数组
+    currentBulletType: 'normal', // 当前子弹类型
     player: {
         x: canvas.width / 2,
         y: canvas.height - 60,
@@ -749,7 +823,10 @@ let gameState = {
     },
     keys: {},
     lastMeteorTime: 0,
-    meteorInterval: 800
+    meteorInterval: 800,
+    lastPowerupTime: 0,
+    powerupInterval: 5000, // 道具生成间隔（5秒）
+    lastShotTime: 0 // 上次发射时间
 };
 
 // 游戏循环和定时器变量
@@ -790,6 +867,31 @@ function createMeteor() {
         y: -meteorType.size,
         ...meteorType,
         caught: false
+    };
+}
+
+// 创建道具
+function createPowerup() {
+    const rand = Math.random();
+    let cumulativeChance = 0;
+    let powerupType = POWERUP_TYPES[0];
+    
+    for (let type of POWERUP_TYPES) {
+        cumulativeChance += type.chance;
+        if (rand < cumulativeChance) {
+            powerupType = type;
+            break;
+        }
+    }
+    
+    return {
+        x: Math.random() * (canvas.width - powerupType.size * 2) + powerupType.size,
+        y: -powerupType.size,
+        ...powerupType,
+        speed: 2.5, // 道具下落速度较慢
+        caught: false,
+        rotation: 0, // 旋转角度（用于动画）
+        rotationSpeed: 0.05 // 旋转速度
     };
 }
 
@@ -899,33 +1001,318 @@ function drawMeteor(meteor) {
     ctx.restore();
 }
 
-// 碰撞检测
+// 绘制道具
+function drawPowerup(powerup) {
+    if (powerup.caught) return;
+    
+    ctx.save();
+    
+    // 旋转动画
+    powerup.rotation += powerup.rotationSpeed;
+    
+    // 发光效果
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = BULLET_TYPES[powerup.type].color;
+    
+    // 绘制背景光晕
+    const gradient = ctx.createRadialGradient(powerup.x, powerup.y, 0, powerup.x, powerup.y, powerup.size);
+    gradient.addColorStop(0, BULLET_TYPES[powerup.type].color + '80');
+    gradient.addColorStop(1, BULLET_TYPES[powerup.type].color + '00');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(powerup.x, powerup.y, powerup.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 绘制 emoji
+    ctx.shadowBlur = 0;
+    ctx.font = powerup.size * 1.8 + 'px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.translate(powerup.x, powerup.y);
+    ctx.rotate(powerup.rotation);
+    ctx.fillText(powerup.emoji, 0, 0);
+    
+    ctx.restore();
+}
+
+// 碰撞检测（玩家与流星）- 支持左右两侧碰撞
 function checkCollision(meteor) {
     const p = gameState.player;
-    return meteor.y + meteor.size >= p.y &&
-           meteor.y + meteor.size <= p.y + p.height &&
-           meteor.x >= p.x - p.width/2 &&
-           meteor.x <= p.x + p.width/2;
+    const meteorRadius = meteor.size;
+    
+    // 飞船的边界（矩形）
+    const shipLeft = p.x - p.width/2;
+    const shipRight = p.x + p.width/2;
+    const shipTop = p.y;
+    const shipBottom = p.y + p.height;
+    
+    // 行星的中心点
+    const meteorX = meteor.x;
+    const meteorY = meteor.y;
+    
+    // 找到矩形上距离圆心最近的点
+    let closestX = Math.max(shipLeft, Math.min(meteorX, shipRight));
+    let closestY = Math.max(shipTop, Math.min(meteorY, shipBottom));
+    
+    // 计算最近点到圆心的距离
+    const dx = meteorX - closestX;
+    const dy = meteorY - closestY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // 如果距离小于圆的半径，则发生碰撞
+    return distance < meteorRadius;
+}
+
+// 子弹与流星碰撞检测
+function checkBulletMeteorCollision(bullet, meteor) {
+    const dx = bullet.x - meteor.x;
+    const dy = bullet.y - meteor.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance < (bullet.radius + meteor.size);
+}
+
+// 发射子弹
+function shootBullet() {
+    const bulletType = BULLET_TYPES[gameState.currentBulletType];
+    const now = Date.now();
+    if (now - gameState.lastShotTime < bulletType.cooldown) {
+        return; // 冷却中
+    }
+    
+    gameState.lastShotTime = now;
+    const p = gameState.player;
+    
+    if (bulletType.effect === 'multi') {
+        // 多重子弹：一次发射多颗
+        const count = bulletType.count || 3;
+        const spread = 20; // 子弹之间的角度差
+        const startAngle = -(count - 1) * spread / 2;
+        
+        for (let i = 0; i < count; i++) {
+            const angle = startAngle + i * spread;
+            const radian = (angle * Math.PI) / 180;
+            gameState.bullets.push({
+                x: p.x,
+                y: p.y,
+                radius: bulletType.radius,
+                speed: bulletType.speed,
+                color: bulletType.color,
+                type: gameState.currentBulletType,
+                vx: Math.sin(radian) * 2, // 横向速度分量
+                penetrateCount: bulletType.effect === 'penetrate' ? 3 : 0, // 穿透次数
+                explodeRadius: bulletType.explodeRadius || 0
+            });
+        }
+    } else {
+        // 普通发射
+        gameState.bullets.push({
+            x: p.x,
+            y: p.y,
+            radius: bulletType.radius,
+            speed: bulletType.speed,
+            color: bulletType.color,
+            type: gameState.currentBulletType,
+            vx: 0,
+            penetrateCount: bulletType.effect === 'penetrate' ? 3 : 0, // 穿透次数
+            explodeRadius: bulletType.explodeRadius || 0
+        });
+    }
+    
+    recordInputEvent('shoot', { key: 'space', bullet_type: gameState.currentBulletType });
 }
 
 // 更新游戏
 function updateGame(currentTime) {
     if (gameState.gameOver) return;
     
-    // 生成新流星
-    if (currentTime - gameState.lastMeteorTime > gameState.meteorInterval) {
-        gameState.meteors.push(createMeteor());
-        gameState.lastMeteorTime = currentTime;
-        // 随着时间推移，流星生成速度加快
-        gameState.meteorInterval = Math.max(400, 800 - (60 - gameState.timeLeft) * 10);
+    // 只有在时间未到时才生成新元素
+    if (!gameState.timeUp) {
+        // 生成新流星
+        if (currentTime - gameState.lastMeteorTime > gameState.meteorInterval) {
+            gameState.meteors.push(createMeteor());
+            gameState.lastMeteorTime = currentTime;
+            // 随着时间推移，流星生成速度加快
+            gameState.meteorInterval = Math.max(400, 800 - (60 - gameState.timeLeft) * 10);
+        }
+        
+        // 生成新道具
+        if (currentTime - gameState.lastPowerupTime > gameState.powerupInterval) {
+            gameState.powerups.push(createPowerup());
+            gameState.lastPowerupTime = currentTime;
+            // 随着时间推移，道具生成频率稍微加快
+            gameState.powerupInterval = Math.max(3000, 5000 - (60 - gameState.timeLeft) * 30);
+        }
     }
+    
+    // 更新子弹位置
+    gameState.bullets = gameState.bullets.filter(bullet => {
+        bullet.y -= bullet.speed;
+        if (bullet.vx) {
+            bullet.x += bullet.vx; // 多重子弹的横向移动
+        }
+        return bullet.y > -bullet.radius && bullet.x > -bullet.radius && bullet.x < canvas.width + bullet.radius; // 子弹飞出屏幕才移除
+    });
+    
+    // 检测子弹与流星的碰撞（倒序遍历，避免删除时索引错乱）
+    for (let bulletIndex = gameState.bullets.length - 1; bulletIndex >= 0; bulletIndex--) {
+        const bullet = gameState.bullets[bulletIndex];
+        let bulletHit = false;
+        const bulletType = BULLET_TYPES[bullet.type || 'normal'];
+        
+        // 爆炸子弹：检测范围内的所有目标
+        if (bulletType.effect === 'explode' && !bullet.exploded) {
+            const explodeRadius = bullet.explodeRadius || 60;
+            const hitTargets = [];
+            
+            for (let meteorIndex = gameState.meteors.length - 1; meteorIndex >= 0; meteorIndex--) {
+                const meteor = gameState.meteors[meteorIndex];
+                if (!meteor.caught) {
+                    const dx = bullet.x - meteor.x;
+                    const dy = bullet.y - meteor.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < explodeRadius + meteor.size) {
+                        hitTargets.push({ meteor, index: meteorIndex });
+                    }
+                }
+            }
+            
+            // 处理爆炸范围内的所有目标
+            if (hitTargets.length > 0) {
+                hitTargets.forEach(({ meteor, index }) => {
+                    if (meteor.type === 'bad') {
+                        meteor.caught = true;
+                        gameState.meteors.splice(index, 1);
+                        pushTelemetryEvent({
+                            type: 'shoot_bad_explode',
+                            meteor_name: meteor.name,
+                            meteor_type: meteor.type,
+                            base_score: meteor.score,
+                        });
+                    } else {
+                        if (!meteor.originalSpeed) {
+                            meteor.originalSpeed = meteor.speed;
+                        }
+                        meteor.y -= 150;
+                        meteor.speed = -4;
+                        meteor.hitByBullet = true;
+                        pushTelemetryEvent({
+                            type: 'shoot_good_explode',
+                            meteor_name: meteor.name,
+                            meteor_type: meteor.type,
+                            base_score: meteor.score,
+                        });
+                    }
+                });
+                gameState.bullets.splice(bulletIndex, 1);
+                bulletHit = true;
+            }
+        } else {
+            // 普通/穿透子弹：逐个检测
+            for (let meteorIndex = gameState.meteors.length - 1; meteorIndex >= 0; meteorIndex--) {
+                const meteor = gameState.meteors[meteorIndex];
+                
+                if (!meteor.caught && !bulletHit && checkBulletMeteorCollision(bullet, meteor)) {
+                    // 子弹击中流星
+                    if (meteor.type === 'bad') {
+                        // 消灭怪物：直接移除，不扣分，不断连击
+                        meteor.caught = true;
+                        gameState.meteors.splice(meteorIndex, 1);
+                        
+                        pushTelemetryEvent({
+                            type: 'shoot_bad',
+                            meteor_name: meteor.name,
+                            meteor_type: meteor.type,
+                            base_score: meteor.score,
+                        });
+                        
+                        // 穿透子弹：减少穿透次数，不立即移除
+                        if (bulletType.effect === 'penetrate' && bullet.penetrateCount > 0) {
+                            bullet.penetrateCount--;
+                            // 继续检测其他目标
+                        } else {
+                            gameState.bullets.splice(bulletIndex, 1);
+                            bulletHit = true;
+                            break;
+                        }
+                    } else {
+                        // 击飞行星：向上弹起，可以再次接住
+                        if (!meteor.originalSpeed) {
+                            meteor.originalSpeed = meteor.speed; // 保存原始速度
+                        }
+                        meteor.y -= 150; // 向上弹起150像素
+                        meteor.speed = -4; // 向上移动（负速度，比原始速度稍快）
+                        meteor.hitByBullet = true; // 标记被击中
+                        
+                        pushTelemetryEvent({
+                            type: 'shoot_good',
+                            meteor_name: meteor.name,
+                            meteor_type: meteor.type,
+                            base_score: meteor.score,
+                        });
+                        
+                        // 穿透子弹：减少穿透次数，不立即移除
+                        if (bulletType.effect === 'penetrate' && bullet.penetrateCount > 0) {
+                            bullet.penetrateCount--;
+                            // 继续检测其他目标
+                        } else {
+                            gameState.bullets.splice(bulletIndex, 1);
+                            bulletHit = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 检测玩家与道具的碰撞
+    gameState.powerups.forEach((powerup, index) => {
+        if (!powerup.caught) {
+            powerup.y += powerup.speed;
+            powerup.rotation += powerup.rotationSpeed;
+            
+            // 检测是否接住道具
+            const p = gameState.player;
+            const dx = powerup.x - p.x;
+            const dy = powerup.y - p.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < powerup.size + p.width / 2 && powerup.y + powerup.size >= p.y && powerup.y <= p.y + p.height) {
+                // 接住道具，更新子弹类型
+                gameState.currentBulletType = powerup.type;
+                powerup.caught = true;
+                gameState.powerups.splice(index, 1);
+                
+                pushTelemetryEvent({
+                    type: 'powerup_collect',
+                    powerup_type: powerup.type,
+                    powerup_name: powerup.name,
+                });
+            } else if (powerup.y > canvas.height) {
+                // 道具掉落，移除
+                powerup.caught = true;
+                gameState.powerups.splice(index, 1);
+            }
+        }
+    });
     
     // 更新流星位置
     gameState.meteors.forEach((meteor, index) => {
         if (!meteor.caught) {
-            meteor.y += meteor.speed;
+            // 如果被子弹击中，先向上移动
+            if (meteor.hitByBullet && meteor.speed < 0) {
+                meteor.y += meteor.speed;
+                // 如果弹到一定高度，恢复下落
+                if (meteor.y < -meteor.size * 2) {
+                    meteor.speed = meteor.originalSpeed || (meteor.type === 'good' ? 3 : 3.5); // 恢复原始速度
+                    meteor.hitByBullet = false;
+                }
+            } else {
+                meteor.y += meteor.speed;
+            }
             
-            // 碰撞检测
+            // 碰撞检测（玩家接住）
             if (checkCollision(meteor)) {
                 meteor.caught = true;
 
@@ -1011,6 +1398,23 @@ function updateGame(currentTime) {
     if (gameState.keys['ArrowRight'] || gameState.keys['d'] || gameState.keys['D']) {
         gameState.player.x = Math.min(canvas.width - gameState.player.width/2, gameState.player.x + keyboardSpeed);
     }
+    
+    // 按住发射：如果按住空格键或W键，且冷却时间到了，就发射
+    if (gameState.keys['shooting'] && gameState.gameStarted && !gameState.gameOver) {
+        shootBullet();
+    }
+    
+    // 检查是否所有元素都已消失（时间已到且所有流星、道具、子弹都处理完毕）
+    if (gameState.timeUp && !gameState.gameOver) {
+        const hasMeteors = gameState.meteors.length > 0;
+        const hasPowerups = gameState.powerups.length > 0;
+        const hasBullets = gameState.bullets.length > 0;
+        
+        if (!hasMeteors && !hasPowerups && !hasBullets) {
+            // 所有元素都已消失，真正结束游戏
+            endGame();
+        }
+    }
 }
 
 // 渲染游戏
@@ -1041,6 +1445,31 @@ function renderGame() {
     // 绘制所有流星
     gameState.meteors.forEach(meteor => drawMeteor(meteor));
     
+    // 绘制所有道具
+    gameState.powerups.forEach(powerup => drawPowerup(powerup));
+    
+    // 绘制所有子弹
+    gameState.bullets.forEach(bullet => {
+        ctx.save();
+        ctx.fillStyle = bullet.color;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = bullet.color;
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 爆炸子弹：显示爆炸范围（如果即将爆炸）
+        if (bullet.explodeRadius && bullet.type === 'explode') {
+            ctx.strokeStyle = bullet.color + '40';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(bullet.x, bullet.y, bullet.explodeRadius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        ctx.restore();
+    });
+    
     // 绘制玩家
     drawPlayer();
     
@@ -1050,6 +1479,11 @@ function renderGame() {
         document.getElementById('scoreDisplay').textContent = Math.floor(gameState.score);
         document.getElementById('comboDisplay').textContent = gameState.combo;
         document.getElementById('inputCounter').textContent = telemetry.inputs.length;
+        document.getElementById('bulletCount').textContent = gameState.bullets.length;
+        
+        // 更新当前子弹类型显示
+        const currentType = BULLET_TYPES[gameState.currentBulletType];
+        document.getElementById('currentBulletType').textContent = currentType.emoji + ' ' + currentType.name;
     }
 }
 
@@ -1078,16 +1512,35 @@ function startGame() {
     gameState.maxCombo = 0;
     gameState.timeLeft = 60;
     gameState.gameOver = false;
+    gameState.timeUp = false; // 重置时间状态
     gameState.gameStarted = true;
     gameState.meteors = [];
+    gameState.bullets = [];
+    gameState.powerups = [];
+    gameState.currentBulletType = 'normal'; // 重置为普通子弹
     gameState.lastMeteorTime = 0;
+    gameState.lastPowerupTime = 0;
+    gameState.lastShotTime = 0;
     gameState.player.x = canvas.width / 2;
     gameState.player.speed = gameState.player.baseSpeed;
     
     document.getElementById('scoreDisplay').textContent = '0';
     document.getElementById('comboDisplay').textContent = '0';
-    document.getElementById('timerDisplay').textContent = gameState.timeLeft;
+    // 重置时间显示样式
+    const timerContainer = document.querySelector('.game-info > div:nth-child(3)'); // 时间显示容器
+    if (timerContainer) {
+        timerContainer.style.color = '';
+        timerContainer.innerHTML = '时间: <span id="timerDisplay">60</span>秒';
+    } else {
+        const timerEl = document.getElementById('timerDisplay');
+        if (timerEl) {
+            timerEl.textContent = gameState.timeLeft;
+            timerEl.parentElement.style.color = '';
+        }
+    }
     document.getElementById('inputCounter').textContent = '0';
+    document.getElementById('bulletCount').textContent = '0';
+    document.getElementById('currentBulletType').textContent = '🔵 普通';
     document.getElementById('submitStatus').textContent = '';
     document.getElementById('stardustAmount').textContent = '0';
     
@@ -1097,11 +1550,32 @@ function startGame() {
     // 启动倒计时
     timerInterval = setInterval(() => {
         if (!gameState.gameOver && gameState.gameStarted) {
-            gameState.timeLeft--;
-            document.getElementById('timerDisplay').textContent = gameState.timeLeft;
+            if (gameState.timeLeft > 0) {
+                gameState.timeLeft--;
+                const timerEl = document.getElementById('timerDisplay');
+                if (timerEl) {
+                    timerEl.textContent = gameState.timeLeft;
+                }
+            }
             
-            if (gameState.timeLeft <= 0) {
-                endGame();
+            if (gameState.timeLeft <= 0 && !gameState.timeUp) {
+                // 时间到，停止生成新元素，但游戏继续
+                gameState.timeUp = true;
+                // 显示提示信息
+                const timerContainer = document.querySelector('.game-info > div:nth-child(3)'); // 时间显示容器
+                if (timerContainer) {
+                    timerContainer.style.color = '#ffd700';
+                    timerContainer.innerHTML = '时间: <span id="timerDisplay">0</span>秒 <span style="color: #ff6b6b; font-size: 14px;">(等待元素消失)</span>';
+                } else {
+                    // 备用方案：直接更新文本
+                    const timerEl = document.getElementById('timerDisplay');
+                    if (timerEl) {
+                        timerEl.textContent = '0';
+                        if (timerEl.parentElement) {
+                            timerEl.parentElement.style.color = '#ffd700';
+                        }
+                    }
+                }
             }
         }
     }, 1000);
@@ -1114,12 +1588,13 @@ function gameLoop(currentTime) {
     }
     renderGame();
     
+    // 即使时间到了，只要游戏未真正结束，就继续循环
     if (!gameState.gameOver) {
         animationId = requestAnimationFrame(gameLoop);
     }
 }
 
-// 结束游戏
+// 结束游戏（真正结束，所有元素都已消失）
 function endGame() {
     gameState.gameOver = true;
     gameState.gameStarted = false;
@@ -1320,12 +1795,25 @@ document.addEventListener('keydown', (e) => {
     if (!e.repeat && ['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].includes(e.key)) {
         recordInputEvent('keydown', { key: e.key });
     }
+    // 空格键或W键：标记为按下（在游戏循环中处理连续发射）
+    if ((e.key === ' ' || e.key === 'w' || e.key === 'W') && gameState.gameStarted && !gameState.gameOver) {
+        e.preventDefault();
+        // 立即发射一次（首次按下）
+        if (!gameState.keys['shooting']) {
+            shootBullet();
+        }
+        gameState.keys['shooting'] = true; // 标记为正在按住
+    }
 });
 
 document.addEventListener('keyup', (e) => {
     gameState.keys[e.key] = false;
     if (['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].includes(e.key)) {
         recordInputEvent('keyup', { key: e.key });
+    }
+    // 松开空格键或W键
+    if (e.key === ' ' || e.key === 'w' || e.key === 'W') {
+        gameState.keys['shooting'] = false;
     }
 });
 
