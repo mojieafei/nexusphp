@@ -347,7 +347,7 @@ const gameState = {
         // 自动摆动相关
         swingSpeed: 0.008, // 摆动速度（弧度/毫秒）
         swingDirection: 1, // 1为向右，-1为向左
-        swingAngle: Math.PI * 0.6, // 最大摆动角度（左右各60度）
+        swingAngle: Math.PI * 165 / 180, // 最大摆动角度（左右各82.5度，总共165度）
         currentSwingAngle: 0 // 当前摆动角度（从0到swingAngle，再到-swingAngle）
     },
     
@@ -589,16 +589,17 @@ function updateGame(deltaTime) {
     
     // 更新机械手
     if (claw.extended) {
-        if (!claw.grabbing) {
-            // 伸出
+        // 检查是否在伸出阶段
+        const isExtending = claw.length < claw.maxLength;
+        
+        if (isExtending) {
+            // 伸出阶段：增加长度
             claw.length += claw.extendSpeed;
-            if (claw.length >= claw.maxLength) {
+            if (claw.length > claw.maxLength) {
                 claw.length = claw.maxLength;
-                // 开始收回
-                claw.extended = false;
             }
             
-            // 检查碰撞
+            // 检查碰撞（在伸出过程中持续检查）
             for (let fragment of gameState.fragments) {
                 if (checkCollision(fragment)) {
                     claw.grabbing = true;
@@ -607,22 +608,28 @@ function updateGame(deltaTime) {
                 }
             }
         } else {
-            // 收回（带碎片）
-            const retractSpeed = claw.retractSpeed / claw.grabbedItem.weight;
-            claw.length -= retractSpeed;
-            
-            if (claw.grabbedItem) {
+            // 已经到达最大长度，开始收回阶段
+            if (claw.grabbing && claw.grabbedItem) {
+                // 收回（带碎片）
+                const retractSpeed = claw.retractSpeed / claw.grabbedItem.weight;
+                claw.length -= retractSpeed;
+                
                 // 更新碎片位置（相对于飞船位置）
                 const shipY = ship.y + ship.height / 2;
                 const clawX = ship.x + Math.sin(claw.angle) * claw.length;
                 const clawY = shipY + Math.cos(claw.angle) * claw.length;
                 claw.grabbedItem.x = clawX;
                 claw.grabbedItem.y = clawY;
+            } else {
+                // 收回（空手）
+                claw.length -= claw.retractSpeed;
             }
             
-            // 回到飞船
+            // 检查是否回到飞船
             if (claw.length <= 0) {
-                if (claw.grabbedItem) {
+                claw.length = 0;
+                
+                if (claw.grabbing && claw.grabbedItem) {
                     // 获得分数
                     gameState.score += claw.grabbedItem.score;
                     gameState.caught++;
@@ -639,9 +646,9 @@ function updateGame(deltaTime) {
                     
                     claw.grabbedItem = null;
                 }
+                
                 claw.grabbing = false;
                 claw.extended = false;
-                claw.length = 0;
             }
         }
     }
