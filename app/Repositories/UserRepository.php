@@ -149,7 +149,8 @@ class UserRepository extends BaseRepository
             'added' => now()->toDateTimeString(),
             'status' => User::STATUS_CONFIRMED,
             'class' => $class,
-            'passkey' => md5($username.date("Y-m-d H:i:s").$passhash)
+            'passkey' => md5($username.date("Y-m-d H:i:s").$passhash),
+            'performance_mode' => 'minimal' // 新注册用户默认使用极简模式
         ];
         $user = new User($data);
         if (!empty($params['id'])) {

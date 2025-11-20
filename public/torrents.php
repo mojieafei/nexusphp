@@ -927,7 +927,8 @@ if ($tagId > 0) {
 } else if (empty($officialType)) {
     // 默认排除官种（tag_id=3）
     $tagFilter = " LEFT JOIN torrent_tags as exclude_official ON torrents.id = exclude_official.torrent_id AND exclude_official.tag_id = 3 ";
-    $wherea[] = "exclude_official.torrent_id IS NULL";
+    // 将排除条件添加到 $where 中
+    $where .= ($where ? " AND " : "") . "exclude_official.torrent_id IS NULL";
 }
 $torrentExtraFilter = "";
 if ($search_area == 1) {

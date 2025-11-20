@@ -55,22 +55,105 @@ jQuery(document).ready(function () {
     }
     var previewEle = jQuery('#nexus-preview')
     var imgEle, selector = 'img.preview', imgPosition
+    var previewTimer = null
+    var currentPreviewImg = null
+    
+    // 隐藏预览的函数
+    function hidePreview() {
+        if (previewTimer) {
+            clearTimeout(previewTimer)
+            previewTimer = null
+        }
+        previewEle.stop(true, true).fadeOut(150)
+        currentPreviewImg = null
+    }
+    
     jQuery("body").on("mouseover", selector, function (e) {
         imgEle = jQuery(this);
+        currentPreviewImg = imgEle[0]
+        
+        // 清除之前的隐藏定时器
+        if (previewTimer) {
+            clearTimeout(previewTimer)
+            previewTimer = null
+        }
+        
         // previewEle = jQuery('<img style="display: none;position:absolute;">').appendTo(imgEle.parent())
         imgPosition = getImgPosition(e, imgEle)
         let position = getPosition(e, imgPosition)
         let src = imgEle.attr("src")
         if (src) {
-            previewEle.attr("src", src).css(position).fadeIn("fast");
+            previewEle.attr("src", src).css(position).stop(true, true).fadeIn(200);
         }
     }).on("mouseout", selector, function (e) {
-        // previewEle.remove()
-        // previewEle = null
-        previewEle.hide()
+        // 延迟隐藏，给鼠标移动到预览窗口的时间
+        previewTimer = setTimeout(function() {
+            // 检查鼠标是否在预览窗口上
+            var relatedTarget = e.relatedTarget || e.toElement
+            if (!relatedTarget || !jQuery(relatedTarget).closest('#nexus-preview').length) {
+                hidePreview()
+            }
+        }, 100)
     }).on("mousemove", selector, function (e) {
+        // 清除隐藏定时器
+        if (previewTimer) {
+            clearTimeout(previewTimer)
+            previewTimer = null
+        }
+        
         let position = getPosition(e, imgPosition)
         previewEle.css(position)
+    })
+    
+    // 全局鼠标移动监听：当鼠标快速移动离开图片时，确保预览消失
+    var lastMouseMoveTime = 0
+    var mouseMoveCheckTimer = null
+    
+    jQuery(document).on("mousemove", function(e) {
+        lastMouseMoveTime = Date.now()
+        
+        // 如果当前有预览显示
+        if (currentPreviewImg && previewEle.is(':visible')) {
+            // 清除之前的检查定时器
+            if (mouseMoveCheckTimer) {
+                clearTimeout(mouseMoveCheckTimer)
+            }
+            
+            // 延迟检查，避免频繁触发
+            mouseMoveCheckTimer = setTimeout(function() {
+                // 检查鼠标是否还在当前图片上
+                var target = e.target
+                var isOnImage = target === currentPreviewImg || 
+                               jQuery(target).closest(selector).is(currentPreviewImg) ||
+                               jQuery(currentPreviewImg).is(target) ||
+                               jQuery(currentPreviewImg).find(target).length > 0
+                var isOnPreview = jQuery(target).closest('#nexus-preview').length > 0
+                
+                // 如果鼠标既不在图片上，也不在预览窗口上，隐藏预览
+                if (!isOnImage && !isOnPreview) {
+                    hidePreview()
+                }
+            }, 50) // 50ms延迟检查，平衡性能和响应速度
+        }
+    })
+    
+    // 预览窗口的鼠标事件：鼠标进入预览窗口时取消隐藏
+    previewEle.on("mouseenter", function() {
+        if (previewTimer) {
+            clearTimeout(previewTimer)
+            previewTimer = null
+        }
+        if (mouseMoveCheckTimer) {
+            clearTimeout(mouseMoveCheckTimer)
+            mouseMoveCheckTimer = null
+        }
+    }).on("mouseleave", function() {
+        hidePreview()
+    })
+    
+    // 页面失去焦点时也隐藏预览
+    jQuery(window).on("blur", function() {
+        hidePreview()
     })
 
     // lazy load

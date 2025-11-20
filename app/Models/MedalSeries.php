@@ -94,9 +94,21 @@ class MedalSeries extends NexusModel
     public function orderedMedals(): Collection
     {
         return $this->medals
-            ->sortByDesc('series_position')
-            ->sortByDesc('priority')
-            ->sortByDesc('id')
+            ->filter(function ($medal) {
+                return $medal->display_on_medal_page == 1;
+            })
+            ->sort(function ($a, $b) {
+                // 第一优先级：series_position 降序
+                if ($a->series_position != $b->series_position) {
+                    return $b->series_position <=> $a->series_position;
+                }
+                // 第二优先级：priority 降序
+                if ($a->priority != $b->priority) {
+                    return $b->priority <=> $a->priority;
+                }
+                // 第三优先级：id 降序
+                return $b->id <=> $a->id;
+            })
             ->values();
     }
 

@@ -87,55 +87,171 @@ echo $Cache->next_row();
 // ------------- start: hot and classic movies ------------------//
 //displayHotAndClassic();
 // ------------- end: hot and classic movies ------------------//
-// ------------- start: funbox ------------------//
-if ($showfunbox_main == "yes" && (!isset($CURUSER) || $CURUSER['showfb'] == "yes")){
-	// Get the newest fun stuff
-	if (!$row = $Cache->get_value('current_fun_content')){
-		$result = sql_query("SELECT fun.*, IF(ADDTIME(added, '1 0:0:0') < NOW(),true,false) AS neednew FROM fun WHERE status != 'banned' AND status != 'dull' ORDER BY added DESC LIMIT 1") or sqlerr(__FILE__,__LINE__);
-		$row = mysql_fetch_array($result);
-		$Cache->cache_value('current_fun_content', $row, 1043);
-	}
-	if (!$row) //There is no funbox item
-	{
-		print("<h2>".$lang_index['text_funbox'].(user_can('newfunitem') ? "<font class=\"small\"> - [<a class=\"altlink\" href=\"fun.php?action=new\"><b>".$lang_index['text_new_fun']."</b></a>]</font>" : "")."</h2>");
-	}
-	else
-	{
-	$totalvote = $Cache->get_value('current_fun_vote_count');
-	if ($totalvote == ""){
-		$totalvote = get_row_count("funvotes", "WHERE funid = ".sqlesc($row['id']));
-		$Cache->cache_value('current_fun_vote_count', $totalvote, 756);
-	}
-	$funvote = $Cache->get_value('current_fun_vote_funny_count');
-	if ($funvote == ""){
-		$funvote = get_row_count("funvotes", "WHERE funid = ".sqlesc($row['id'])." AND vote='fun'");
-		$Cache->cache_value('current_fun_vote_funny_count', $funvote, 756);
-	}
-//check whether current user has voted
-	$funvoted = get_row_count("funvotes", "WHERE funid = ".sqlesc($row['id'])." AND userid=".sqlesc($CURUSER['id']));
+// ------------- start: funbox and shoutbox side by side ------------------//
+$showFunbox = ($showfunbox_main == "yes" && (!isset($CURUSER) || $CURUSER['showfb'] == "yes"));
+$showShoutbox = ($showshoutbox_main == "yes");
 
-	print ("<h2>".$lang_index['text_funbox']);
-	if ($CURUSER)
-	{
-		print("<font class=\"small\">".(user_can('log') ? " - [<a class=\"altlink\" href=\"log.php?action=funbox\"><b>".$lang_index['text_more_fun']."</b></a>]": "").($row['neednew'] && user_can('newfunitem') ? " - [<a class=altlink href=\"fun.php?action=new\"><b>".$lang_index['text_new_fun']."</b></a>]" : "" ).( ($CURUSER['id'] == $row['userid'] || user_can('funmanage')) ? " - [<a class=\"altlink\" href=\"fun.php?action=edit&amp;id=".$row['id']."&amp;returnto=index.php\"><b>".$lang_index['text_edit']."</b></a>]" : "").(get_user_class() >= $funmanage_class ? " - [<a class=\"altlink\" href=\"fun.php?action=delete&amp;id=".$row['id']."&amp;returnto=index.php\"><b>".$lang_index['text_delete']."</b></a>] - [<a class=\"altlink\" href=\"fun.php?action=ban&amp;id=".$row['id']."&amp;returnto=index.php\"><b>".$lang_index['text_ban']."</b></a>]" : "")."</font>");
-	}
-	print("</h2>");
+if ($showFunbox || $showShoutbox) {
+	// Add optimized CSS styles
+	$funboxShoutboxCss = <<<CSS
+/* 趣味盒和群聊区并排布局优化 */
+.funbox-shoutbox-container {
+	display: table;
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	margin: 0;
+}
 
-	print("<table width=\"100%\"><tr><td class=\"text\">");
-	print("<iframe src=\"fun.php?action=view\" width='100%' height='300' frameborder='0' name='funbox' marginwidth='0' marginheight='0'></iframe><br /><br />\n");
+.funbox-shoutbox-container tr {
+	display: table-row;
+}
 
-	if ($CURUSER)
-	{
-		$funonclick = " onclick=\"funvote(".$row['id'].",'fun'".")\"";
-		$dullonclick = " onclick=\"funvote(".$row['id'].",'dull'".")\"";
-		print("<span id=\"funvote\"><b>".$funvote."</b>".$lang_index['text_out_of'].$totalvote.$lang_index['text_people_found_it'].($funvoted ? "" : "<font class=\"striking\">".$lang_index['text_your_opinion']."</font>&nbsp;&nbsp;<input type=\"button\" class='btn' name='fun' id='fun' ".$funonclick." value=\"".$lang_index['submit_fun']."\" />&nbsp;<input type=\"button\" class='btn' name='dull' id='dull' ".$dullonclick." value=\"".$lang_index['submit_dull']."\" />")."</span><span id=\"voteaccept\" style=\"display: none;\">".$lang_index['text_vote_accepted']."</span>");
+.funbox-shoutbox-container td {
+	display: table-cell;
+	vertical-align: top;
+	position: relative;
+}
+
+/* 卡片式设计 */
+.funbox-card, .shoutbox-card {
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 15px;
+	margin-bottom: 10px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	transition: all 0.3s ease;
+}
+
+.funbox-card:hover, .shoutbox-card:hover {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	transform: translateY(-2px);
+}
+
+/* 分隔线 - 只在两个模块都显示时显示 */
+.funbox-column::after {
+	content: '';
+	position: absolute;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background: linear-gradient(180deg, 
+		transparent 0%, 
+		rgba(255, 255, 255, 0.2) 10%, 
+		rgba(255, 255, 255, 0.2) 90%, 
+		transparent 100%
+	);
+}
+
+/* iframe 美化 */
+.funbox-card iframe[name="funbox"],
+.shoutbox-card iframe[name="sbox"],
+.shoutbox-card iframe#iframe-shout-box {
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.2);
+	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 响应式设计 - 小屏幕时上下布局 */
+@media (max-width: 768px) {
+	.funbox-shoutbox-container,
+	.funbox-shoutbox-container tr,
+	.funbox-shoutbox-container td {
+		display: block;
+		width: 100% !important;
 	}
-	print("</td></tr></table>");
+	
+	.funbox-column {
+		padding-right: 0 !important;
+		margin-bottom: 15px;
+	}
+	
+	.funbox-column::after {
+		display: none;
+	}
+	
+	.shoutbox-column {
+		padding-left: 0 !important;
+	}
+	
+	.funbox-card, .shoutbox-card {
+		margin-bottom: 15px;
 	}
 }
-// ------------- end: funbox ------------------//
-// ------------- start: shoutbox ------------------//
-if ($showshoutbox_main == "yes") {
+CSS;
+	\Nexus\Nexus::css($funboxShoutboxCss, 'header', false);
+	
+	// Calculate column width based on what's displayed
+	$funboxWidth = ($showFunbox && $showShoutbox) ? "50%" : "100%";
+	$shoutboxWidth = ($showFunbox && $showShoutbox) ? "50%" : "100%";
+	
+	// Start outer container table for side-by-side layout
+	$containerClass = "funbox-shoutbox-container";
+	print("<table class=\"{$containerClass}\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\"><tr>\n");
+	
+	// ------------- start: funbox (left column) ------------------//
+	if ($showFunbox) {
+		$funboxPadding = $showShoutbox ? "padding-right: 15px;" : "";
+		$columnClass = $showShoutbox ? "funbox-column" : "";
+		print("<td class=\"{$columnClass}\" width=\"{$funboxWidth}\" valign=\"top\" style=\"{$funboxPadding}\">\n");
+		print("<div class=\"funbox-card\">\n");
+		// Get the newest fun stuff
+		if (!$row = $Cache->get_value('current_fun_content')){
+			$result = sql_query("SELECT fun.*, IF(ADDTIME(added, '1 0:0:0') < NOW(),true,false) AS neednew FROM fun WHERE status != 'banned' AND status != 'dull' ORDER BY added DESC LIMIT 1") or sqlerr(__FILE__,__LINE__);
+			$row = mysql_fetch_array($result);
+			$Cache->cache_value('current_fun_content', $row, 1043);
+		}
+		if (!$row) //There is no funbox item
+		{
+			print("<h2>".$lang_index['text_funbox'].(user_can('newfunitem') ? "<font class=\"small\"> - [<a class=\"altlink\" href=\"fun.php?action=new\"><b>".$lang_index['text_new_fun']."</b></a>]</font>" : "")."</h2>");
+		}
+		else
+		{
+			$totalvote = $Cache->get_value('current_fun_vote_count');
+			if ($totalvote == ""){
+				$totalvote = get_row_count("funvotes", "WHERE funid = ".sqlesc($row['id']));
+				$Cache->cache_value('current_fun_vote_count', $totalvote, 756);
+			}
+			$funvote = $Cache->get_value('current_fun_vote_funny_count');
+			if ($funvote == ""){
+				$funvote = get_row_count("funvotes", "WHERE funid = ".sqlesc($row['id'])." AND vote='fun'");
+				$Cache->cache_value('current_fun_vote_funny_count', $funvote, 756);
+			}
+			//check whether current user has voted
+			$funvoted = get_row_count("funvotes", "WHERE funid = ".sqlesc($row['id'])." AND userid=".sqlesc($CURUSER['id']));
+
+			print ("<h2>".$lang_index['text_funbox']);
+			if ($CURUSER)
+			{
+				print("<font class=\"small\">".(user_can('log') ? " - [<a class=\"altlink\" href=\"log.php?action=funbox\"><b>".$lang_index['text_more_fun']."</b></a>]": "").($row['neednew'] && user_can('newfunitem') ? " - [<a class=altlink href=\"fun.php?action=new\"><b>".$lang_index['text_new_fun']."</b></a>]" : "" ).( ($CURUSER['id'] == $row['userid'] || user_can('funmanage')) ? " - [<a class=\"altlink\" href=\"fun.php?action=edit&amp;id=".$row['id']."&amp;returnto=index.php\"><b>".$lang_index['text_edit']."</b></a>]" : "").(get_user_class() >= $funmanage_class ? " - [<a class=\"altlink\" href=\"fun.php?action=delete&amp;id=".$row['id']."&amp;returnto=index.php\"><b>".$lang_index['text_delete']."</b></a>] - [<a class=\"altlink\" href=\"fun.php?action=ban&amp;id=".$row['id']."&amp;returnto=index.php\"><b>".$lang_index['text_ban']."</b></a>]" : "")."</font>");
+			}
+			print("</h2>");
+
+			print("<table width=\"100%\"><tr><td class=\"text\">");
+			print("<iframe src=\"fun.php?action=view\" width='100%' height='300' frameborder='0' name='funbox' marginwidth='0' marginheight='0'></iframe><br /><br />\n");
+
+			if ($CURUSER)
+			{
+				$funonclick = " onclick=\"funvote(".$row['id'].",'fun'".")\"";
+				$dullonclick = " onclick=\"funvote(".$row['id'].",'dull'".")\"";
+				print("<span id=\"funvote\"><b>".$funvote."</b>".$lang_index['text_out_of'].$totalvote.$lang_index['text_people_found_it'].($funvoted ? "" : "<font class=\"striking\">".$lang_index['text_your_opinion']."</font>&nbsp;&nbsp;<input type=\"button\" class='btn' name='fun' id='fun' ".$funonclick." value=\"".$lang_index['submit_fun']."\" />&nbsp;<input type=\"button\" class='btn' name='dull' id='dull' ".$dullonclick." value=\"".$lang_index['submit_dull']."\" />")."</span><span id=\"voteaccept\" style=\"display: none;\">".$lang_index['text_vote_accepted']."</span>");
+			}
+			print("</td></tr></table>");
+		}
+		print("</div>\n"); // Close funbox-card
+		print("</td>\n");
+	}
+	// ------------- end: funbox ------------------//
+	
+	// ------------- start: shoutbox (right column) ------------------//
+	if ($showShoutbox) {
+		$shoutboxPadding = $showFunbox ? "padding-left: 15px;" : "";
+		$columnClass = $showFunbox ? "shoutbox-column" : "";
+		print("<td class=\"{$columnClass}\" width=\"{$shoutboxWidth}\" valign=\"top\" style=\"{$shoutboxPadding}\">\n");
+		print("<div class=\"shoutbox-card\">\n");
 ?>
     <h2>
         <?php echo $lang_index['text_shoutbox'] ?> - <font class="small"><?php echo $lang_index['text_auto_refresh_after']?></font>
@@ -162,19 +278,26 @@ JS;
         ?>
     </h2>
 <?php
-	print("<table width=\"100%\"><tr><td class=\"text\">\n");
-	print("<iframe id='iframe-shout-box' src='shoutbox.php?type=shoutbox' width='100%' height='180' frameborder='0' name='sbox' marginwidth='0' marginheight='0'></iframe><br /><br />\n");
-	print("<form action='shoutbox.php' method='get' target='sbox' name='shbox'>\n");
-    print('<div style="display: flex">');
-	print("<label for='shbox_text'>".$lang_index['text_message']."</label><input type='text' name='shbox_text' id='shbox_text' size='100' style='flex-grow: 1; border: 1px solid gray;' />  <input type='submit' id='hbsubmit' class='btn' name='shout' value=\"".$lang_index['sumbit_shout']."\" />");
-	if ($CURUSER['hidehb'] != 'yes' && $showhelpbox_main =='yes')
-		print("<input type='submit' class='btn' name='toguest' value=\"".$lang_index['sumbit_to_guest']."\" />");
-	print("<input type='reset' class='btn' value=\"".$lang_index['submit_clear']."\" /> <input type='hidden' name='sent' value='yes' /><input type='hidden' name='type' value='shoutbox' />");
-	print('</div>');
-    print(smile_row("shbox","shbox_text"));
-	print("</form></td></tr></table>");
+		print("<table width=\"100%\"><tr><td class=\"text\">\n");
+		print("<iframe id='iframe-shout-box' src='shoutbox.php?type=shoutbox' width='100%' height='300' frameborder='0' name='sbox' marginwidth='0' marginheight='0'></iframe><br /><br />\n");
+		print("<form action='shoutbox.php' method='get' target='sbox' name='shbox'>\n");
+		print('<div style="display: flex">');
+		print("<label for='shbox_text'>".$lang_index['text_message']."</label><input type='text' name='shbox_text' id='shbox_text' size='100' style='flex-grow: 1; border: 1px solid gray;' />  <input type='submit' id='hbsubmit' class='btn' name='shout' value=\"".$lang_index['sumbit_shout']."\" />");
+		if ($CURUSER['hidehb'] != 'yes' && $showhelpbox_main =='yes')
+			print("<input type='submit' class='btn' name='toguest' value=\"".$lang_index['sumbit_to_guest']."\" />");
+		print("<input type='reset' class='btn' value=\"".$lang_index['submit_clear']."\" /> <input type='hidden' name='sent' value='yes' /><input type='hidden' name='type' value='shoutbox' />");
+		print('</div>');
+		print(smile_row("shbox","shbox_text"));
+		print("</form></td></tr></table>");
+		print("</div>\n"); // Close shoutbox-card
+		print("</td>\n");
+	}
+	// ------------- end: shoutbox ------------------//
+	
+	// Close outer container
+	print("</tr></table>\n");
 }
-// ------------- end: shoutbox ------------------//
+// ------------- end: funbox and shoutbox side by side ------------------//
 
 $extraModules = [];
 $extraModules = apply_filter('nexus_home_module', $extraModules);

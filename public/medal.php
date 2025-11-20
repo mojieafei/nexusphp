@@ -360,7 +360,7 @@ begin_main_frame();
         gap: 14px;
         justify-content: space-between;
         align-items: center;
-        color: rgba(30, 41, 59, 0.85);
+        color: rgba(255, 255, 255, 0.95);
     }
     .medal-reward-body > div:first-child {
         display: flex;
@@ -369,11 +369,13 @@ begin_main_frame();
         color: inherit;
     }
     .medal-reward-body > div:first-child div {
-        color: rgba(30, 41, 59, 0.76);
+        color: rgba(255, 255, 255, 0.85);
         font-size: 14px;
+        line-height: 1.5;
     }
     .medal-reward-body strong {
-        color: rgba(17, 24, 39, 0.92);
+        color: #ffffff;
+        font-weight: 700;
     }
     .medal-reward-actions {
         display: flex;

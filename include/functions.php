@@ -2293,7 +2293,12 @@ function menu ($selected = "home") {
 	}elseif (preg_match("/forums/i", $script_name)) {
 		$selected = "forums";
 	}elseif (preg_match("/torrents/i", $script_name)) {
-		$selected = "torrents";
+		// 检查是否是官媒页面（tag_id=3）
+		if (isset($_REQUEST['tag_id']) && intval($_REQUEST['tag_id']) == 3) {
+			$selected = "official_media";
+		} else {
+			$selected = "torrents";
+		}
 	}elseif (preg_match("/special/i", $script_name)) {
 		$selected = "special";
 	}elseif (preg_match("/offers/i", $script_name) OR preg_match("/offcomment/i", $script_name)) {
@@ -2336,6 +2341,7 @@ function menu ($selected = "home") {
             print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"forums.php\">".$lang_functions['text_forums']."</a></li>");
         else
             print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"" . $extforumurl."\" target=\"_blank\">".$lang_functions['text_forums']."</a></li>");
+        print ("<li" . ($selected == "official_media" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?tag_id=3\" rel='sub-menu'>".$lang_functions['text_official_media']."</a></li>");
         print ("<li" . ($selected == "torrents" ? " class=\"selected\"" : "") . "><a href=\"torrents.php\" rel='sub-menu'>".($normalSectionName[$lang] ?? $lang_functions['text_torrents'])."</a></li>");
         // 官方资源下拉菜单 - 临时隐藏，下个版本优化
         /* 
@@ -3739,25 +3745,25 @@ else {
 		<td class="bottom" align="left">
             <span class="medium">
                 <?php echo $lang_functions['text_welcome_back'] ?>, <?php echo get_username($CURUSER['id'])?>
-                [<a href="logout.php"><?php echo $lang_functions['text_logout'] ?></a>]
-                [<a href="usercp.php"><?php echo $lang_functions['text_user_cp'] ?></a>]
-                <?php if (get_user_class() >= UC_MODERATOR) { ?> [<a href="staffpanel.php"><?php echo $lang_functions['text_staff_panel'] ?></a>] <?php }?>
-                <?php if (get_user_class() >= UC_SYSOP) { ?> [<a href="settings.php"><?php echo $lang_functions['text_site_settings'] ?></a>]<?php } ?>
-                [<a href="torrents.php?inclbookmarked=1&amp;allsec=1&amp;incldead=0"><?php echo $lang_functions['text_bookmarks'] ?></a>]
-                <font class = 'color_bonus'><?php echo $lang_functions['text_bonus'] ?></font>[<a href="mybonus.php" data-pjax-ignore="1"><?php echo $lang_functions['text_use'] ?></a>]: <?php echo number_format($CURUSER['seedbonus'], 1)?>
+                <a href="logout.php"><?php echo $lang_functions['text_logout'] ?></a>
+                <a href="usercp.php"><?php echo $lang_functions['text_user_cp'] ?></a>
+                <?php if (get_user_class() >= UC_MODERATOR) { ?> <a href="staffpanel.php"><?php echo $lang_functions['text_staff_panel'] ?></a> <?php }?>
+                <?php if (get_user_class() >= UC_SYSOP) { ?> <a href="settings.php"><?php echo $lang_functions['text_site_settings'] ?></a><?php } ?>
+                <a href="torrents.php?inclbookmarked=1&amp;allsec=1&amp;incldead=0"><?php echo $lang_functions['text_bookmarks'] ?></a>
+                <font class = 'color_bonus'><?php echo $lang_functions['text_bonus'] ?></font><a href="mybonus.php" data-pjax-ignore="1"><?php echo $lang_functions['text_use'] ?></a>: <?php echo number_format($CURUSER['seedbonus'], 1)?>
                 <?php if($attendance){ printf(' <a href="attendance.php" data-pjax-ignore="1" class="">'.$lang_functions['text_attended'].'</a>', $attendance->points, $CURUSER['attendance_card']); }else{ printf(' <a href="attendance.php" data-pjax-ignore="1" class="faqlink">%s</a>', $lang_functions['text_attendance']);}?>
-                <a href="medal.php" data-pjax-ignore="1">[<?php echo nexus_trans('medal.label')?>]</a>
-                <a href="task.php">[<?php echo nexus_trans('exam.type_task')?>]</a>
-                <font class='color_invite'><?php echo $lang_functions['text_invite'] ?></font>[<a href="invite.php?id=<?php echo $CURUSER['id']?>"><?php echo $lang_functions['text_send'] ?></a>]: <?php echo sprintf('%s(%s)', $CURUSER['invites'], \App\Models\Invite::query()->where('inviter', $CURUSER['id'])->where('invitee', '')->where('expired_at', '>', now())->count())?>
-                <?php if(get_user_class() >= \App\Models\User::getAccessAdminClassMin()) printf('[<a href="%s" target="_blank">%s</a>]', nexus_env('FILAMENT_PATH', 'nexusphp'), $lang_functions['text_management_system'])?>
+                <a href="medal.php" data-pjax-ignore="1"><?php echo nexus_trans('medal.label')?></a>
+                <a href="task.php"><?php echo nexus_trans('exam.type_task')?></a>
+                <font class='color_invite'><?php echo $lang_functions['text_invite'] ?></font><a href="invite.php?id=<?php echo $CURUSER['id']?>"><?php echo $lang_functions['text_send'] ?></a>: <?php echo sprintf('%s(%s)', $CURUSER['invites'], \App\Models\Invite::query()->where('inviter', $CURUSER['id'])->where('invitee', '')->where('expired_at', '>', now())->count())?>
+                <?php if(get_user_class() >= \App\Models\User::getAccessAdminClassMin()) printf('<a href="%s" target="_blank">%s</a>', nexus_env('FILAMENT_PATH', 'nexusphp'), $lang_functions['text_management_system'])?>
                 <br />
 	            <font class="color_ratio"><?php echo $lang_functions['text_ratio'] ?></font> <?php echo $ratio?>
                 <font class='color_uploaded'><?php echo $lang_functions['text_uploaded'] ?></font> <?php echo mksize($CURUSER['uploaded'])?>
                 <font class='color_downloaded'> <?php echo $lang_functions['text_downloaded'] ?></font> <?php echo mksize($CURUSER['downloaded'])?>
                 <font class='color_active'><?php echo $lang_functions['text_active_torrents'] ?></font> <img class="arrowup" alt="Torrents seeding" title="<?php echo $lang_functions['title_torrents_seeding'] ?>" src="pic/trans.gif" /><?php echo $activeseed?>  <img class="arrowdown" alt="Torrents leeching" title="<?php echo $lang_functions['title_torrents_leeching'] ?>" src="pic/trans.gif" /><?php echo $activeleech?>&nbsp;&nbsp;
                 <font class='color_connectable'><?php echo $lang_functions['text_connectable'] ?></font><?php echo $connectable?> <?php echo maxslots();?>
-                <?php if(\App\Models\HitAndRun::getIsEnabled()) { ?><font class='color_bonus'>H&R: </font> <?php echo sprintf('[<a href="myhr.php">%s</a>]', (new \App\Repositories\HitAndRunRepository())->getStatusStats($CURUSER['id']))?><?php }?>
-                <?php if(\App\Models\Claim::getConfigIsEnabled()) { ?><font class='color_bonus'><?php echo $lang_functions['menu_claim']?></font> <?php echo sprintf('[<a href="claim.php?uid=%s">%s</a>]', $CURUSER['id'], (new \App\Repositories\ClaimRepository())->getStats($CURUSER['id']))?><?php }?>
+                <?php if(\App\Models\HitAndRun::getIsEnabled()) { ?><font class='color_bonus'>H&R: </font> <?php echo sprintf('<a href="myhr.php">%s</a>', (new \App\Repositories\HitAndRunRepository())->getStatusStats($CURUSER['id']))?><?php }?>
+                <?php if(\App\Models\Claim::getConfigIsEnabled()) { ?><font class='color_bonus'><?php echo $lang_functions['menu_claim']?></font> <?php echo sprintf('<a href="claim.php?uid=%s">%s</a>', $CURUSER['id'], (new \App\Repositories\ClaimRepository())->getStats($CURUSER['id']))?><?php }?>
             </span>
         </td>
                 <?php if(SearchBox::isSpecialEnabled() && get_setting('main.enable_global_search') == 'yes'){?>

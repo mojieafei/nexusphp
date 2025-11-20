@@ -651,7 +651,7 @@ img.bar_end {
         0 0 30px rgba(0, 212, 255, 0.15),
         inset 0 0 15px rgba(0, 212, 255, 0.05);
     position: relative;
-    z-index: 999 !important;
+    z-index: 100 !important; /* 降低z-index，避免遮挡勋章悬浮预览 */
 }
 
 #nav::before {
@@ -717,10 +717,16 @@ img.bar_end {
     text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
 }
 
+/* 官媒链接特殊样式 - 只用字体颜色醒目 */
+#nav ul.menu > li > a[href*="tag_id=3"] {
+    color: var(--star-gold) !important;
+    font-weight: 600;
+}
+
 /* 官方资源下拉菜单 */
 #nav li.dropdown-menu {
     position: relative;
-    z-index: 999999 !important;
+    z-index: 100 !important; /* 降低z-index，避免遮挡勋章悬浮预览 */
 }
 
 #nav li.dropdown-menu .dropdown-toggle {
@@ -738,7 +744,7 @@ img.bar_end {
     right: 0;
     height: 4px;
     background: transparent;
-    z-index: 999998 !important;
+    z-index: 99 !important; /* 降低z-index，避免遮挡勋章悬浮预览 */
 }
 
 #nav li.dropdown-menu .dropdown-content {
@@ -753,7 +759,7 @@ img.bar_end {
     padding: 6px 0;
     margin: 0;
     min-width: 150px;
-    z-index: 2147483647 !important;
+    z-index: 2147483646 !important; /* 稍微低于勋章悬浮预览，确保勋章预览在最上层 */
     animation: dropdownFadeIn 0.2s ease;
     pointer-events: auto;
 }
@@ -804,10 +810,125 @@ table.mainouter td.text {
     z-index: 1 !important;
 }
 
-/* 导航栏容器 - 确保最高层级 */
+/* ============================================
+   功能栏按钮美化 (Function Bar Buttons)
+   ============================================ */
+/* 功能栏容器样式 */
+#info_block .bottom {
+    padding: 10px 12px;
+    color: var(--text-primary);
+    line-height: 1.8;
+}
+
+/* 功能栏中的所有链接按钮基础样式 */
+#info_block .bottom a {
+    display: inline-block;
+    padding: 3px 8px;
+    margin: 1px 3px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+    border: 1px solid transparent;
+    background: rgba(10, 22, 40, 0.6);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+/* 使用CSS计数器循环分配四个主题色 */
+#info_block .bottom {
+    counter-reset: func-btn-counter;
+}
+
+#info_block .bottom a {
+    counter-increment: func-btn-counter;
+}
+
+/* 第1个颜色：电蓝色 (Electric Blue) */
+#info_block .bottom a:nth-of-type(4n+1) {
+    color: var(--electric-blue);
+    border-color: rgba(0, 212, 255, 0.3);
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 212, 255, 0.08));
+}
+
+#info_block .bottom a:nth-of-type(4n+1):hover {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.2));
+    border-color: var(--electric-blue);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(0, 212, 255, 0.8);
+}
+
+/* 第2个颜色：等离子紫 (Plasma Purple) */
+#info_block .bottom a:nth-of-type(4n+2) {
+    color: var(--plasma-purple);
+    border-color: rgba(168, 85, 247, 0.3);
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.08));
+}
+
+#info_block .bottom a:nth-of-type(4n+2):hover {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(168, 85, 247, 0.2));
+    border-color: var(--plasma-purple);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.8);
+}
+
+/* 第3个颜色：星金 (Star Gold) */
+#info_block .bottom a:nth-of-type(4n+3) {
+    color: var(--star-gold);
+    border-color: rgba(251, 191, 36, 0.3);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.08));
+}
+
+#info_block .bottom a:nth-of-type(4n+3):hover {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(251, 191, 36, 0.2));
+    border-color: var(--star-gold);
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+}
+
+/* 第4个颜色：霓虹绿 (Neon Green) */
+#info_block .bottom a:nth-of-type(4n+4) {
+    color: var(--neon-green);
+    border-color: rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.08));
+}
+
+#info_block .bottom a:nth-of-type(4n+4):hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.2));
+    border-color: var(--neon-green);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+    #info_block .bottom a {
+        padding: 2px 6px;
+        font-size: 12px;
+        margin: 1px 2px;
+    }
+    
+    #info_block .bottom {
+        line-height: 1.6;
+        padding: 8px 10px;
+    }
+}
+
+/* 导航栏容器 - 降低z-index确保不遮挡勋章悬浮预览 */
 #nav_block {
     position: relative;
-    z-index: 999999 !important;
+    z-index: 100 !important; /* 降低z-index，避免遮挡勋章悬浮预览 */
 }
 
 /* ============================================
