@@ -3256,6 +3256,25 @@ if ($metadescription_tweak){
 <?php
 print(get_style_addicode());
 $css_uri = get_css_uri();
+// 自动生成CSS版本号（基于文件修改时间），用于CDN缓存刷新
+if (empty($cssupdatedate)) {
+	// 如果没有手动设置的版本号，则基于主要CSS文件的修改时间自动生成
+	$themeCssPath = $css_uri . "theme.css";
+	// 构建完整文件路径
+	$rootpath = dirname(dirname(__FILE__));
+	$themeCssFullPath = $rootpath . '/' . ltrim($themeCssPath, '/');
+	if (file_exists($themeCssFullPath)) {
+		$cssupdatedate = 'v=' . filemtime($themeCssFullPath);
+	} else {
+		// 如果找不到文件，使用当前时间戳作为后备
+		$cssupdatedate = 'v=' . time();
+	}
+} else {
+	// 如果手动设置了版本号，确保格式正确（添加v=前缀如果不存在）
+	if (strpos($cssupdatedate, 'v=') !== 0 && strpos($cssupdatedate, '?') !== 0) {
+		$cssupdatedate = 'v=' . $cssupdatedate;
+	}
+}
 $cssupdatedate = ($cssupdatedate ? "?".htmlspecialchars($cssupdatedate) : "");
 
 $uiMode = 'default';
