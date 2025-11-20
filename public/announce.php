@@ -106,7 +106,7 @@ foreach(array("numwant", "num want", "num_want") as $k)
 		break;
 	}
 }
-m
+
 // set if seeder based on left field
 $seeder = ($left == 0) ? "yes" : "no";
 

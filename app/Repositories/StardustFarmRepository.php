@@ -14,8 +14,10 @@ class StardustFarmRepository extends BaseRepository
 {
     /**
      * 获取用户农场完整信息
+     * @param int $userId 农场所有者ID
+     * @param int|null $currentUserId 当前访问用户ID（用于判断是否可以偷取）
      */
-    public function getUserFarmData(int $userId): array
+    public function getUserFarmData(int $userId, ?int $currentUserId = null): array
     {
         $farm = StardustFarm::getOrCreateForUser($userId);
         
@@ -32,6 +34,29 @@ class StardustFarmRepository extends BaseRepository
             $land->updateStatus();
         }
 
+        // 如果是访问别人的农场，需要根据当前用户调整can_be_stolen字段
+        $isViewingOtherFarm = ($currentUserId !== null && $currentUserId !== $userId);
+        if ($isViewingOtherFarm) {
+            // 检查当前用户今天是否已经偷过这个好友
+            $hasStolenToday = StardustInteraction::hasActionToday($currentUserId, $userId, 'steal');
+            
+            // 转换土地数组并调整can_be_stolen字段
+            $landsArray = $lands->map(function($land) use ($hasStolenToday) {
+                $landData = $land->toArray();
+                
+                // 如果当前用户今天已经偷过这个好友，或者这块地今天已经被偷过，则不能偷
+                if ($hasStolenToday || StardustInteraction::hasLandBeenStolenToday($land->id)) {
+                    $landData['can_be_stolen'] = false;
+                }
+                // 否则保持原有的can_be_stolen值
+                
+                return $landData;
+            })->toArray();
+        } else {
+            // 自己的农场，直接转换
+            $landsArray = $lands->toArray();
+        }
+
         // 获取背包信息
         $fragments = StardustInventory::getUserFragments($userId);
         $planets = StardustInventory::getUserPlanets($userId);
@@ -46,7 +71,7 @@ class StardustFarmRepository extends BaseRepository
 
         return [
             'farm' => $farm->toArray(),
-            'lands' => $lands->toArray(),
+            'lands' => $landsArray,
             'fragments' => $fragments,
             'planets' => $planets,
             'crops' => $crops,

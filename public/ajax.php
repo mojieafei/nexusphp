@@ -785,7 +785,8 @@ class AjaxInterface{
         global $CURUSER;
         $repo = new \App\Repositories\StardustFarmRepository();
         $targetUserId = isset($params['user_id']) ? intval($params['user_id']) : $CURUSER['id'];
-        return $repo->getUserFarmData($targetUserId);
+        $currentUserId = $CURUSER['id'] ?? null;
+        return $repo->getUserFarmData($targetUserId, $currentUserId);
     }
 
     /**
