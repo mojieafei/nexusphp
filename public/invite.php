@@ -208,6 +208,13 @@ JS;
                     $status = "<a href=userdetails.php?id={$arr['id']}><font color=#1f7309>".$lang_invite['text_confirmed']."</font></a>";
                 else
                     $status = "<a href=checkuser.php?id={$arr['id']}><font color=#ca0226>".$lang_invite['text_pending']."</font></a>";
+                // 计算当前做种时魔（如果seed_points_per_hour为0，则实时计算）
+                $haremSeedPoints = floatval($arr['seed_points_per_hour'] ?? 0);
+                if ($haremSeedPoints <= 0) {
+                    $seedBonusResult = calculate_seed_bonus($arr['id']);
+                    $haremSeedPoints = $seedBonusResult['seed_points'];
+                }
+                
                 print("<tr class=rowfollow>
 <td class=rowfollow>".get_username($arr['id'])."</td>
 <td>{$arr['email']}</td>
@@ -217,11 +224,12 @@ JS;
 <td class=rowfollow>$ratio</td>
 <td class=rowfollow>".number_format($arr['seeding_torrent_count'])."</td>
 <td class=rowfollow>".mksize($arr['seeding_torrent_size'])."</td>
-<td class=rowfollow>".number_format($arr['seed_points_per_hour'], 3)."</td>
+<td class=rowfollow>".number_format($haremSeedPoints, 3)."</td>
 ");
 
                 if ($haremAdditionFactor > 0) {
-                    print ("<td class=rowfollow>".number_format(floatval($arr['seed_points_per_hour']) * $haremAdditionFactor, 3)."</td>");
+                    $haremBonus = $haremSeedPoints * $haremAdditionFactor;
+                    print ("<td class=rowfollow>".number_format($haremBonus, 3)."</td>");
                 }
                 print("<td class=rowfollow>{$arr['last_announce_at']}</td>");
                 print("<td class=rowfollow>$status</td>");
