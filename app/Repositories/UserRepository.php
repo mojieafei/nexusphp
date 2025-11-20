@@ -429,7 +429,15 @@ class UserRepository extends BaseRepository
             return;
         }
         $classRequire = Setting::get($minAuthClass);
-        if ($operator->class < $classRequire || $operator->class <= $user->class) {
+        if ($operator->class < $classRequire) {
+            throw new InsufficientPermissionException();
+        }
+        // 特殊规则：如果双方都是STAFF_LEADER（站长），允许编辑
+        if ($operator->class == User::CLASS_STAFF_LEADER && $user->class == User::CLASS_STAFF_LEADER) {
+            return;
+        }
+        // 否则，操作者级别必须大于目标用户
+        if ($operator->class <= $user->class) {
             throw new InsufficientPermissionException();
         }
     }
@@ -526,8 +534,19 @@ class UserRepository extends BaseRepository
         $operator = $this->getUser($operator);
         $targetUser = $this->getUser($targetUser);
         if ($operator) {
-            if ($operator->class <= $targetUser->class || $operator->class <= $newClass)
-            throw new InsufficientPermissionException();
+            // 特殊规则：如果双方都是STAFF_LEADER（站长），允许编辑
+            $isBothStaffLeader = $operator->class == User::CLASS_STAFF_LEADER && $targetUser->class == User::CLASS_STAFF_LEADER;
+            if (!$isBothStaffLeader) {
+                // 否则，操作者级别必须大于目标用户，且大于新级别
+                if ($operator->class <= $targetUser->class || $operator->class <= $newClass) {
+                    throw new InsufficientPermissionException();
+                }
+            } else {
+                // 双方都是STAFF_LEADER时，新级别不能超过STAFF_LEADER
+                if ($newClass > User::CLASS_STAFF_LEADER) {
+                    throw new InsufficientPermissionException();
+                }
+            }
         }
         if ($targetUser->class == $newClass && $newClass != User::CLASS_VIP) {
             return  true;

@@ -1079,98 +1079,268 @@ begin_main_frame();
 </div>
 
 <?php
-$confirmBuyMsg = nexus_trans('medal.confirm_to_buy');
-$confirmGiftMsg = nexus_trans('medal.confirm_to_gift');
-$claimSuccess = nexus_trans('medal-series.frontend.claim_success');
-$claimFailed = nexus_trans('medal-series.frontend.claim_failed');
+$confirmBuyMsg = json_encode(nexus_trans('medal.confirm_to_buy'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$confirmGiftMsg = json_encode(nexus_trans('medal.confirm_to_gift'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$claimSuccess = json_encode(nexus_trans('medal-series.frontend.claim_success'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$claimFailed = json_encode(nexus_trans('medal-series.frontend.claim_failed'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $js = <<<JS
-// 强制重置页面状态
-try {
-    if (window.history && window.history.replaceState) {
-        window.history.replaceState({}, document.title, window.location.href);
+// 测试：确认代码已加载
+(function() {
+    console.log('=== 勋章页面JavaScript开始加载 ===');
+    console.log('jQuery是否可用:', typeof jQuery !== 'undefined');
+    console.log('layer是否可用:', typeof layer !== 'undefined');
+    
+    // 强制重置页面状态
+    try {
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.href);
+        }
+        if (window.jQuery && jQuery.fn && jQuery.fn.pjax) {
+            jQuery(document).off('.pjax');
+            jQuery('#pjax-container').removeData('pjax');
+        }
+    } catch (e) {
+        console.warn('页面状态重置异常:', e);
     }
-    if (window.jQuery && jQuery.fn && jQuery.fn.pjax) {
-        jQuery(document).off('.pjax');
-        jQuery('#pjax-container').removeData('pjax');
-    }
-} catch (e) {
-    console.warn('页面状态重置异常:', e);
-}
+})();
 
-jQuery(document).on('click', '.buy', function (e) {
+// 等待DOM加载完成后再绑定
+(function() {
+    function initMedalButtons() {
+        console.log('DOM已加载，开始绑定事件');
+        
+        // 测试：检查按钮是否存在
+        var buyButtons = jQuery('.medal-card-actions input[type="button"][data-id]');
+        console.log('找到购买按钮数量:', buyButtons.length);
+        buyButtons.each(function(i) {
+            var btn = jQuery(this);
+            console.log('按钮' + i + ':', btn.attr('data-id'), 'disabled:', btn.prop('disabled'), 'class:', btn.attr('class'));
+        });
+        
+        var giftButtons = jQuery('.medal-card-gift-row input[type="button"][data-id]');
+        console.log('找到赠送按钮数量:', giftButtons.length);
+    }
+    
+    if (typeof jQuery !== 'undefined') {
+        if (jQuery(document).ready) {
+            jQuery(document).ready(initMedalButtons);
+        } else {
+            initMedalButtons();
+        }
+    } else {
+        console.error('jQuery未加载！');
+    }
+})();
+
+// 购买按钮事件 - 使用更具体的选择器
+jQuery(document).on('click', '.medal-card-actions input.buy', function (e) {
     e.preventDefault();
-    let medalId = jQuery(this).attr('data-id');
-    layer.confirm("{$confirmBuyMsg}", {
-        btn: ['OK', 'Cancel']
-    }, function (index) {
-        layer.close(index);
-        let params = {
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    console.log('购买按钮被点击');
+    
+    var btn = jQuery(this);
+    if (btn.prop('disabled')) {
+        console.log('按钮已禁用，忽略点击');
+        return false;
+    }
+    
+    var medalId = btn.attr('data-id');
+    if (!medalId) {
+        console.error('购买按钮：勋章ID缺失');
+        if (typeof layer !== 'undefined') {
+            layer.alert('勋章ID缺失');
+        } else {
+            alert('勋章ID缺失');
+        }
+        return false;
+    }
+    console.log('购买按钮点击，勋章ID:', medalId);
+    
+    var confirmCallback = function() {
+        btn.prop('disabled', true);
+        var params = {
             action: "buyMedal",
             params: {medal_id: medalId}
         };
+        console.log('发送购买请求:', params);
         jQuery.post('ajax.php', params, function(response) {
+            console.log('购买响应:', response);
+            btn.prop('disabled', false);
             if (response.ret != 0) {
-                layer.alert(response.msg);
+                var msg = response.msg || '购买失败';
+                if (typeof layer !== 'undefined') {
+                    layer.alert(msg);
+                } else {
+                    alert(msg);
+                }
                 return;
             }
-            window.location.reload();
-        }, 'json');
-    }, function (index) {
-        layer.close(index);
-    });
+            if (typeof layer !== 'undefined') {
+                layer.msg('购买成功', {time: 1500}, function() {
+                    window.location.reload();
+                });
+            } else {
+                alert('购买成功');
+                window.location.reload();
+            }
+        }, 'json').fail(function(xhr) {
+            console.error('购买请求失败:', xhr);
+            btn.prop('disabled', false);
+            var errorMsg = '请求失败，请重试';
+            if (xhr.responseJSON && xhr.responseJSON.msg) {
+                errorMsg = xhr.responseJSON.msg;
+            }
+            if (typeof layer !== 'undefined') {
+                layer.alert(errorMsg);
+            } else {
+                alert(errorMsg);
+            }
+        });
+    };
+    
+    if (typeof layer === 'undefined') {
+        console.warn('layer未加载，使用confirm');
+        if (confirm('确认购买勋章 ID: ' + medalId + '?')) {
+            confirmCallback();
+        }
+    } else {
+        layer.confirm({$confirmBuyMsg}, {
+            btn: ['确认', '取消']
+        }, function (index) {
+            layer.close(index);
+            confirmCallback();
+        }, function (index) {
+            layer.close(index);
+        });
+    }
+    
+    return false;
 });
 
-jQuery(document).on('click', '.gift', function (e) {
+// 赠送按钮事件 - 使用更具体的选择器
+jQuery(document).on('click', '.medal-card-gift-row input.gift', function (e) {
     e.preventDefault();
-    let medalId = jQuery(this).attr('data-id');
-    let uid = jQuery(this).prev('.uid').val();
-    if (!uid) {
-        layer.alert('Require UID');
-        return;
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    console.log('赠送按钮被点击');
+    
+    var btn = jQuery(this);
+    if (btn.prop('disabled')) {
+        console.log('按钮已禁用，忽略点击');
+        return false;
     }
-    layer.confirm("{$confirmGiftMsg}" + uid + " ?", {
-        btn: ['OK', 'Cancel']
-    }, function (index) {
-        layer.close(index);
-        let params = {
+    
+    var medalId = btn.attr('data-id');
+    if (!medalId) {
+        console.error('赠送按钮：勋章ID缺失');
+        if (typeof layer !== 'undefined') {
+            layer.alert('勋章ID缺失');
+        } else {
+            alert('勋章ID缺失');
+        }
+        return false;
+    }
+    
+    var uidInput = btn.closest('.medal-card-gift-row').find('.uid');
+    var uid = uidInput.val();
+    if (!uid || uid.trim() === '') {
+        var msg = '请输入用户ID';
+        if (typeof layer !== 'undefined') {
+            layer.alert(msg);
+        } else {
+            alert(msg);
+        }
+        uidInput.focus();
+        return false;
+    }
+    console.log('赠送按钮点击，勋章ID:', medalId, '用户ID:', uid);
+    
+    var confirmCallback = function() {
+        btn.prop('disabled', true);
+        var params = {
             action: "giftMedal",
             params: {medal_id: medalId, uid: uid}
         };
+        console.log('发送赠送请求:', params);
         jQuery.post('ajax.php', params, function(response) {
+            console.log('赠送响应:', response);
+            btn.prop('disabled', false);
             if (response.ret != 0) {
-                layer.alert(response.msg);
+                var msg = response.msg || '赠送失败';
+                if (typeof layer !== 'undefined') {
+                    layer.alert(msg);
+                } else {
+                    alert(msg);
+                }
                 return;
             }
-            window.location.reload();
-        }, 'json');
-    }, function (index) {
-        layer.close(index);
-    });
+            if (typeof layer !== 'undefined') {
+                layer.msg('赠送成功', {time: 1500}, function() {
+                    window.location.reload();
+                });
+            } else {
+                alert('赠送成功');
+                window.location.reload();
+            }
+        }, 'json').fail(function(xhr) {
+            console.error('赠送请求失败:', xhr);
+            btn.prop('disabled', false);
+            var errorMsg = '请求失败，请重试';
+            if (xhr.responseJSON && xhr.responseJSON.msg) {
+                errorMsg = xhr.responseJSON.msg;
+            }
+            if (typeof layer !== 'undefined') {
+                layer.alert(errorMsg);
+            } else {
+                alert(errorMsg);
+            }
+        });
+    };
+    
+    if (typeof layer === 'undefined') {
+        console.warn('layer未加载，使用confirm');
+        if (confirm('确认赠送勋章 ID: ' + medalId + ' 给用户 ' + uid + '?')) {
+            confirmCallback();
+        }
+    } else {
+        layer.confirm({$confirmGiftMsg} + " 给用户 " + uid + " ?", {
+            btn: ['确认', '取消']
+        }, function (index) {
+            layer.close(index);
+            confirmCallback();
+        }, function (index) {
+            layer.close(index);
+        });
+    }
+    
+    return false;
 });
 
 jQuery(document).on('click', '.series-claim-btn', function (e) {
     e.preventDefault();
-    const btn = jQuery(this);
+    var btn = jQuery(this);
     if (btn.prop('disabled')) {
         return;
     }
-    const seriesId = btn.data('series-id');
+    var seriesId = btn.data('series-id');
     if (!seriesId) {
         return;
     }
     btn.prop('disabled', true);
     jQuery.post('ajax.php', {action: 'medal_series_claim', series_id: seriesId}, function(response) {
         if (response.success) {
-            layer.msg(response.message || "{$claimSuccess}", {time: 1500}, function () {
+            layer.msg(response.message || {$claimSuccess}, {time: 1500}, function () {
                 window.location.reload();
             });
         } else {
             btn.prop('disabled', false);
-            layer.alert(response.message || "{$claimFailed}");
+            layer.alert(response.message || {$claimFailed});
         }
     }, 'json').fail(function(xhr) {
         btn.prop('disabled', false);
-        layer.alert(xhr.responseJSON?.message || "{$claimFailed}");
+        var errorMsg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : {$claimFailed};
+        layer.alert(errorMsg);
     });
 });
 
@@ -1181,22 +1351,35 @@ jQuery(document).on('click', '.series-claim-btn', function (e) {
         jQuery('.medal-card.medal-highlight').removeClass('medal-highlight');
         
         // 找到目标勋章
-        var $medal = jQuery('#' + medalId);
-        if ($medal.length === 0) {
+        var medalElement = jQuery('#' + medalId);
+        if (medalElement.length === 0) {
+            // 如果元素还没渲染，等待一小段时间后重试
+            setTimeout(function() {
+                var retryElement = jQuery('#' + medalId);
+                if (retryElement.length > 0) {
+                    doScrollAndHighlight(retryElement);
+                }
+            }, 50);
             return;
         }
         
-        // 平滑滚动到目标位置
-        var offset = $medal.offset().top - 100; // 留出顶部空间
-        jQuery('html, body').animate({
+        doScrollAndHighlight(medalElement);
+    }
+    
+    function doScrollAndHighlight(medalElement) {
+        // 获取目标位置
+        var offset = medalElement.offset().top - 100; // 留出顶部空间
+        
+        // 立即开始滚动，使用较快的动画
+        jQuery('html, body').stop(true, false).animate({
             scrollTop: offset
-        }, 600, 'swing', function() {
+        }, 400, 'swing', function() {
             // 滚动完成后添加高亮动效
-            $medal.addClass('medal-highlight');
+            medalElement.addClass('medal-highlight');
             
             // 2秒后移除高亮类，但保留:target样式
             setTimeout(function() {
-                $medal.removeClass('medal-highlight');
+                medalElement.removeClass('medal-highlight');
             }, 2000);
         });
     }
@@ -1211,27 +1394,37 @@ jQuery(document).on('click', '.series-claim-btn', function (e) {
         }
     }
     
-    // 监听hash变化（点击"最近上新"的勋章时）
-    jQuery(window).on('hashchange', function() {
-        if (window.location.hash) {
-            var medalId = window.location.hash.substring(1);
-            if (medalId && medalId.startsWith('medal-')) {
-                highlightMedal(medalId);
-            }
-        }
-    });
-    
-    // 拦截"最近上新"卡片的点击，确保触发高亮
+    // 拦截"最近上新"卡片的点击，立即滚动到目标位置
     jQuery(document).on('click', '.medal-new-card', function(e) {
         var href = jQuery(this).attr('href');
         if (href && href.startsWith('#')) {
             var medalId = href.substring(1);
             if (medalId && medalId.startsWith('medal-')) {
                 e.preventDefault();
-                // 更新URL hash
-                window.location.hash = href;
-                // 手动触发高亮
+                e.stopPropagation();
+                
+                // 立即滚动，不等待hashchange事件
                 highlightMedal(medalId);
+                
+                // 更新URL hash（不影响滚动，只是更新地址栏）
+                if (window.history && window.history.pushState) {
+                    window.history.pushState(null, null, href);
+                } else {
+                    window.location.hash = href;
+                }
+            }
+        }
+    });
+    
+    // 监听hash变化（用于浏览器前进/后退按钮）
+    jQuery(window).on('hashchange', function() {
+        if (window.location.hash) {
+            var medalId = window.location.hash.substring(1);
+            if (medalId && medalId.startsWith('medal-')) {
+                // 使用requestAnimationFrame确保DOM已准备好
+                requestAnimationFrame(function() {
+                    highlightMedal(medalId);
+                });
             }
         }
     });

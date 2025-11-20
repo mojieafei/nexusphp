@@ -43,10 +43,28 @@ class UserProfile extends ViewRecord
         return self::$rep;
     }
 
+    /**
+     * 检查当前用户是否可以编辑目标用户
+     * 规则：级别大于目标用户，或者双方都是STAFF_LEADER（站长可以编辑站长）
+     */
+    private function canEditUser(): bool
+    {
+        $currentUser = Auth::user();
+        // 如果当前用户级别大于目标用户，可以编辑
+        if ($currentUser->class > $this->record->class) {
+            return true;
+        }
+        // 特殊规则：如果双方都是STAFF_LEADER（站长），可以编辑
+        if ($currentUser->class == User::CLASS_STAFF_LEADER && $this->record->class == User::CLASS_STAFF_LEADER) {
+            return true;
+        }
+        return false;
+    }
+
     protected function getHeaderActions(): array
     {
         $actions = [];
-        if (Auth::user()->class > $this->record->class) {
+        if ($this->canEditUser()) {
             $actions[] = $this->buildGrantPropsAction();
             $actions[] = $this->buildGrantMedalAction();
             $actions[] = $this->buildAssignExamAction();

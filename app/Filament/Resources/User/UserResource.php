@@ -46,6 +46,24 @@ class UserResource extends Resource
         return self::$rep;
     }
 
+    /**
+     * 检查当前用户是否可以编辑目标用户
+     * 规则：级别大于目标用户，或者双方都是STAFF_LEADER（站长可以编辑站长）
+     */
+    private static function canEditUser(User $record): bool
+    {
+        $currentUser = Auth::user();
+        // 如果当前用户级别大于目标用户，可以编辑
+        if ($currentUser->class > $record->class) {
+            return true;
+        }
+        // 特殊规则：如果双方都是STAFF_LEADER（站长），可以编辑
+        if ($currentUser->class == User::CLASS_STAFF_LEADER && $record->class == User::CLASS_STAFF_LEADER) {
+            return true;
+        }
+        return false;
+    }
+
     public static function getNavigationLabel(): string
     {
         return __('admin.sidebar.users_list');
@@ -191,7 +209,7 @@ class UserResource extends Resource
         return Infolists\Components\Actions\Action::make("changeClass")
             ->label(__('label.change'))
             ->button()
-            ->visible(fn (User $record): bool => (Auth::user()->class > $record->class))
+            ->visible(fn (User $record): bool => self::canEditUser($record))
             ->form([
                 Forms\Components\Select::make('class')
                     ->options(User::listClass(User::CLASS_PEASANT, Auth::user()->class - 1))
@@ -234,12 +252,11 @@ class UserResource extends Resource
         return Infolists\Components\Actions\Action::make(__('admin.resources.user.actions.confirm_btn'))
             ->modalHeading(__('admin.resources.user.actions.confirm_btn'))
             ->requiresConfirmation()
-            ->visible(fn (User $record): bool => (Auth::user()->class > $record->class))
+            ->visible(fn (User $record): bool => self::canEditUser($record) && $record->status == User::STATUS_PENDING)
             ->button()
             ->color('success')
-            ->visible(fn ($record) => $record->status == User::STATUS_PENDING)
             ->action(function (User $record) {
-                if (Auth::user()->class <= $record->class) {
+                if (!self::canEditUser($record)) {
                     send_admin_fail_notification("No Permission!");
                     return;
                 }
@@ -256,7 +273,7 @@ class UserResource extends Resource
             ->label(fn (User $record) => $record->enabled == 'yes' ? __('admin.resources.user.actions.disable_modal_btn') : __('admin.resources.user.actions.enable_modal_btn'))
             ->modalHeading(fn (User $record) => $record->enabled == 'yes' ? __('admin.resources.user.actions.disable_modal_title') : __('admin.resources.user.actions.enable_modal_title'))
             ->button()
-            ->visible(fn (User $record): bool => (Auth::user()->class > $record->class))
+            ->visible(fn (User $record): bool => self::canEditUser($record))
             ->form([
                 Forms\Components\TextInput::make('reason')->label(__('admin.resources.user.actions.enable_disable_reason'))->placeholder(__('admin.resources.user.actions.enable_disable_reason_placeholder')),
                 Forms\Components\Hidden::make('action')->default(fn (User $record) => $record->enabled == 'yes' ? 'disable' : 'enable'),
@@ -283,7 +300,7 @@ class UserResource extends Resource
             ->label(fn (User $record) => $record->downloadpos == 'yes' ? __('admin.resources.user.actions.disable_download_privileges_btn') : __('admin.resources.user.actions.enable_download_privileges_btn'))
             ->button()
             ->requiresConfirmation()
-            ->visible(fn (User $record): bool => (Auth::user()->class > $record->class))
+            ->visible(fn (User $record): bool => self::canEditUser($record))
             ->action(function (User $record) {
                 $userRep = self::getRep();
                 try {

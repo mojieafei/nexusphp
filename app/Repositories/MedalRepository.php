@@ -60,9 +60,20 @@ class MedalRepository extends BaseRepository
     public function  grantToUser(int $uid, int $medalId, $duration = null)
     {
         $user = User::query()->findOrFail($uid, User::$commonFields);
-        if (Auth::user()->class <= $user->class) {
+        $operator = Auth::user();
+        
+        // 权限检查：级别大于目标用户，或者双方都是STAFF_LEADER（站长可以给自己授予勋章）
+        $canEdit = false;
+        if ($operator->class > $user->class) {
+            $canEdit = true;
+        } elseif ($operator->class == User::CLASS_STAFF_LEADER && $user->class == User::CLASS_STAFF_LEADER) {
+            $canEdit = true;
+        }
+        
+        if (!$canEdit) {
             throw new \LogicException("No permission!");
         }
+        
         $medal = Medal::query()->findOrFail($medalId);
         $exists = $user->valid_medals()->where('medal_id', $medalId)->exists();
         do_log(last_query());
