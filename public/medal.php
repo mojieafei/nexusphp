@@ -431,17 +431,55 @@ begin_main_frame();
     .medal-card:target {
         border-color: rgba(148, 197, 255, 0.9);
         box-shadow: 0 0 0 3px rgba(148, 197, 255, 0.4), 0 28px 52px rgba(30, 64, 175, 0.45);
-        animation: targetHighlight 1.6s ease;
+        animation: targetHighlight 2s ease;
+    }
+    .medal-card.medal-highlight {
+        border-color: rgba(148, 197, 255, 0.9) !important;
+        box-shadow: 0 0 0 3px rgba(148, 197, 255, 0.4), 0 28px 52px rgba(30, 64, 175, 0.45) !important;
+        animation: medalPulse 2s ease;
+        transform: scale(1.02);
     }
     @keyframes targetHighlight {
         0% {
             transform: scale(1.0);
+            box-shadow: 0 0 0 3px rgba(148, 197, 255, 0.4), 0 28px 52px rgba(30, 64, 175, 0.45);
+        }
+        20% {
+            transform: scale(1.03);
+            box-shadow: 0 0 0 5px rgba(148, 197, 255, 0.6), 0 32px 60px rgba(30, 64, 175, 0.55);
         }
         40% {
-            transform: scale(1.015);
+            transform: scale(1.02);
+            box-shadow: 0 0 0 4px rgba(148, 197, 255, 0.5), 0 30px 56px rgba(30, 64, 175, 0.5);
+        }
+        60% {
+            transform: scale(1.01);
         }
         100% {
             transform: scale(1.0);
+            box-shadow: 0 0 0 3px rgba(148, 197, 255, 0.4), 0 28px 52px rgba(30, 64, 175, 0.45);
+        }
+    }
+    @keyframes medalPulse {
+        0% {
+            transform: scale(1.02);
+            box-shadow: 0 0 0 3px rgba(148, 197, 255, 0.4), 0 28px 52px rgba(30, 64, 175, 0.45);
+        }
+        25% {
+            transform: scale(1.04);
+            box-shadow: 0 0 0 6px rgba(148, 197, 255, 0.6), 0 35px 65px rgba(30, 64, 175, 0.6);
+        }
+        50% {
+            transform: scale(1.02);
+            box-shadow: 0 0 0 4px rgba(148, 197, 255, 0.5), 0 30px 56px rgba(30, 64, 175, 0.5);
+        }
+        75% {
+            transform: scale(1.03);
+            box-shadow: 0 0 0 5px rgba(148, 197, 255, 0.55), 0 32px 60px rgba(30, 64, 175, 0.55);
+        }
+        100% {
+            transform: scale(1.02);
+            box-shadow: 0 0 0 3px rgba(148, 197, 255, 0.4), 0 28px 52px rgba(30, 64, 175, 0.45);
         }
     }
     .medal-card.owned {
@@ -1135,6 +1173,69 @@ jQuery(document).on('click', '.series-claim-btn', function (e) {
         layer.alert(xhr.responseJSON?.message || "{$claimFailed}");
     });
 });
+
+// 处理勋章高亮动效
+(function() {
+    function highlightMedal(medalId) {
+        // 移除之前的高亮
+        jQuery('.medal-card.medal-highlight').removeClass('medal-highlight');
+        
+        // 找到目标勋章
+        var $medal = jQuery('#' + medalId);
+        if ($medal.length === 0) {
+            return;
+        }
+        
+        // 平滑滚动到目标位置
+        var offset = $medal.offset().top - 100; // 留出顶部空间
+        jQuery('html, body').animate({
+            scrollTop: offset
+        }, 600, 'swing', function() {
+            // 滚动完成后添加高亮动效
+            $medal.addClass('medal-highlight');
+            
+            // 2秒后移除高亮类，但保留:target样式
+            setTimeout(function() {
+                $medal.removeClass('medal-highlight');
+            }, 2000);
+        });
+    }
+    
+    // 页面加载时检查URL hash
+    if (window.location.hash) {
+        var medalId = window.location.hash.substring(1);
+        if (medalId && medalId.startsWith('medal-')) {
+            setTimeout(function() {
+                highlightMedal(medalId);
+            }, 100);
+        }
+    }
+    
+    // 监听hash变化（点击"最近上新"的勋章时）
+    jQuery(window).on('hashchange', function() {
+        if (window.location.hash) {
+            var medalId = window.location.hash.substring(1);
+            if (medalId && medalId.startsWith('medal-')) {
+                highlightMedal(medalId);
+            }
+        }
+    });
+    
+    // 拦截"最近上新"卡片的点击，确保触发高亮
+    jQuery(document).on('click', '.medal-new-card', function(e) {
+        var href = jQuery(this).attr('href');
+        if (href && href.startsWith('#')) {
+            var medalId = href.substring(1);
+            if (medalId && medalId.startsWith('medal-')) {
+                e.preventDefault();
+                // 更新URL hash
+                window.location.hash = href;
+                // 手动触发高亮
+                highlightMedal(medalId);
+            }
+        }
+    });
+})();
 JS;
 \Nexus\Nexus::js($js, 'footer', false);
 

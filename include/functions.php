@@ -7330,26 +7330,35 @@ function calculate_stardust_farm_addition($uid)
 
 function calculate_harem_addition($uid)
 {
-//    $harems = \App\Models\User::query()
-//        ->where('invited_by', $uid)
-//        ->where('status', \App\Models\User::STATUS_CONFIRMED)
-//        ->where('enabled', \App\Models\User::ENABLED_YES)
-//        ->get(['id']);
-//    $addition = 0;
-//    $haremsCount = $harems->count();
-//    foreach ($harems as $harem) {
-//        $result = calculate_seed_bonus($harem->id);
-//        $addition += $result['seed_points'];
-//    }
-//    do_log("[HAREM_ADDITION], user: $uid, haremsCount: $haremsCount ,addition: $addition");
-
-    $addition = \Nexus\Database\NexusDB::table("users")
-        ->where("invited_by", $uid)
+    // 获取所有直接后宫用户
+    $harems = \App\Models\User::query()
+        ->where('invited_by', $uid)
         ->where('status', \App\Models\User::STATUS_CONFIRMED)
         ->where('enabled', \App\Models\User::ENABLED_YES)
-        ->sum("seed_points_per_hour")
-    ;
-    do_log("[HAREM_ADDITION], user: $uid, addition: $addition");
+        ->get(['id', 'seed_points_per_hour']);
+    
+    $haremsCount = $harems->count();
+    $addition = 0;
+    $calculatedCount = 0;
+    $fromCacheCount = 0;
+    
+    foreach ($harems as $harem) {
+        $haremSeedPoints = floatval($harem->seed_points_per_hour ?? 0);
+        
+        // 如果 seed_points_per_hour 为0或NULL，则实时计算
+        if ($haremSeedPoints <= 0) {
+            $result = calculate_seed_bonus($harem->id);
+            $haremSeedPoints = $result['seed_points'];
+            $calculatedCount++;
+            do_log("[HAREM_ADDITION], user: $uid, harem: {$harem->id}, calculated: $haremSeedPoints");
+        } else {
+            $fromCacheCount++;
+        }
+        
+        $addition += $haremSeedPoints;
+    }
+    
+    do_log("[HAREM_ADDITION], user: $uid, haremsCount: $haremsCount, fromCache: $fromCacheCount, calculated: $calculatedCount, addition: $addition");
     return $addition;
 }
 
