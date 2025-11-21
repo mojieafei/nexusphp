@@ -32,7 +32,6 @@ echo "3. 查找所有可能的日志文件：\n";
 $searchPaths = [
     '/tmp',
     sys_get_temp_dir(),
-    storage_path('logs'),
     ROOT_PATH . 'storage/logs',
 ];
 
@@ -52,26 +51,34 @@ foreach ($searchPaths as $path) {
 echo "\n";
 
 // 4. 检查 cleanup 相关日志
-echo "4. 检查 cleanup 相关日志（最近 20 行）：\n";
+echo "4. 检查 cleanup 相关日志（最近 30 行）：\n";
 if (file_exists($actualLogFile)) {
-    $lines = file($actualLogFile);
+    $content = file_get_contents($actualLogFile);
+    $lines = explode("\n", $content);
     $cleanupLines = [];
     foreach ($lines as $line) {
         if (stripos($line, 'cleanup') !== false || 
             stripos($line, 'batch_key') !== false || 
             stripos($line, 'runBatchJob') !== false ||
-            stripos($line, 'CalculateUserSeedBonus') !== false) {
+            stripos($line, 'CalculateUserSeedBonus') !== false ||
+            stripos($line, 'CLEANUP_CLI') !== false ||
+            stripos($line, 'seed_bonus') !== false) {
             $cleanupLines[] = $line;
         }
     }
     if (!empty($cleanupLines)) {
-        echo "   找到 " . count($cleanupLines) . " 条相关日志，显示最后 20 条：\n";
-        $recent = array_slice($cleanupLines, -20);
+        echo "   找到 " . count($cleanupLines) . " 条相关日志，显示最后 30 条：\n";
+        $recent = array_slice($cleanupLines, -30);
         foreach ($recent as $line) {
             echo "   " . trim($line) . "\n";
         }
     } else {
         echo "   没有找到 cleanup 相关日志\n";
+        echo "   显示日志文件最后 20 行：\n";
+        $recent = array_slice($lines, -20);
+        foreach ($recent as $line) {
+            echo "   " . trim($line) . "\n";
+        }
     }
 } else {
     echo "   日志文件不存在，无法检查\n";
