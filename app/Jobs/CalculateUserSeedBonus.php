@@ -64,6 +64,9 @@ class CalculateUserSeedBonus implements ShouldQueue
      */
     public function handle()
     {
+        $debugLog = '/tmp/seed_bonus_debug.log';
+        file_put_contents($debugLog, date('Y-m-d H:i:s') . " [START] requestId: {$this->requestId}, idStr: " . ($this->idStr ?: 'empty') . ", idRedisKey: " . ($this->idRedisKey ?? 'empty') . "\n", FILE_APPEND);
+        
         $beginTimestamp = time();
         $logPrefix = sprintf(
             "[CLEANUP_CLI_CALCULATE_SEED_BONUS_HANDLE_JOB], commonRequestId: %s, beginUid: %s, endUid: %s, idStr: %s, idRedisKey: %s",
@@ -77,21 +80,27 @@ class CalculateUserSeedBonus implements ShouldQueue
 
         $idStr = $this->idStr;
         $delIdRedisKey = false;
+        file_put_contents($debugLog, date('Y-m-d H:i:s') . " [STEP1] idStr: " . ($idStr ?: 'empty') . ", idRedisKey: " . ($this->idRedisKey ?? 'empty') . "\n", FILE_APPEND);
         do_log("$logPrefix, [STEP1], idStr: " . ($idStr ?: 'empty') . ", idRedisKey: " . ($this->idRedisKey ?? 'empty'));
         if (empty($idStr) && !empty($this->idRedisKey)) {
             $delIdRedisKey = true;
             $idStr = NexusDB::cache_get($this->idRedisKey);
+            file_put_contents($debugLog, date('Y-m-d H:i:s') . " [STEP2] get from Redis, idStr: " . ($idStr ?: 'empty') . "\n", FILE_APPEND);
             do_log("$logPrefix, [STEP2], get from Redis, idStr: " . ($idStr ?: 'empty'));
             if (empty($idStr)) {
+                file_put_contents($debugLog, date('Y-m-d H:i:s') . " [ERROR] Redis key expired! idRedisKey: {$this->idRedisKey}\n", FILE_APPEND);
                 do_log("$logPrefix, [ERROR], Redis key expired or not found! idRedisKey: {$this->idRedisKey}, beginUid: {$this->beginUid}, endUid: {$this->endUid}", "error");
                 return;
             }
         }
         if (empty($idStr)) {
+            file_put_contents($debugLog, date('Y-m-d H:i:s') . " [ERROR] no idStr or idRedisKey!\n", FILE_APPEND);
             do_log("$logPrefix, [ERROR], no idStr or idRedisKey! beginUid: {$this->beginUid}, endUid: {$this->endUid}, idRedisKey: " . ($this->idRedisKey ?? 'empty'), "error");
             return;
         }
-        do_log("$logPrefix, [STEP3], got idStr, count: " . count(explode(',', $idStr)));
+        $userCount = count(explode(',', $idStr));
+        file_put_contents($debugLog, date('Y-m-d H:i:s') . " [STEP3] got idStr, user count: $userCount\n", FILE_APPEND);
+        do_log("$logPrefix, [STEP3], got idStr, count: $userCount");
         $sql = sprintf("select %s from users where id in (%s)", implode(',', User::$commonFields), $idStr);
         $results = NexusDB::select($sql);
         if (empty($results)) {
@@ -200,16 +209,20 @@ class CalculateUserSeedBonus implements ShouldQueue
             "update users set seed_points = case id %s end, seed_points_per_hour = case id %s end, seedbonus = case id %s end, seeding_torrent_count = case id %s end, seeding_torrent_size = case id %s end, seed_points_updated_at = '%s' where id in (%s)",
             implode(" ", $seedPointsUpdates), implode(" ", $seedPointsPerHourUpdates), implode(" ", $seedBonusUpdates), implode(" ", $seedingTorrentCountUpdates), implode(" ", $seedingTorrentSizeUpdates), $nowStr, $idStr
         );
+        file_put_contents($debugLog, date('Y-m-d H:i:s') . " [SQL_BEFORE] user count: " . count($seedPointsUpdates) . ", sql length: " . strlen($sql) . "\n", FILE_APPEND);
         do_log("$logPrefix, [SQL_BEFORE_EXECUTE], sql length: " . strlen($sql) . ", user count: " . count($seedPointsUpdates));
         $result = NexusDB::statement($sql);
         if ($result === false) {
             $error = mysql_error();
             $errno = mysql_errno();
+            file_put_contents($debugLog, date('Y-m-d H:i:s') . " [SQL_ERROR] errno: $errno, error: $error\n", FILE_APPEND);
             do_log("$logPrefix, [SQL_ERROR], SQL execution failed! errno: $errno, error: $error, sql: $sql", "error");
         } else {
             $affectedRows = mysql_affected_rows();
+            file_put_contents($debugLog, date('Y-m-d H:i:s') . " [SQL_SUCCESS] affected rows: $affectedRows\n", FILE_APPEND);
             do_log("$logPrefix, [SQL_SUCCESS], result: " . var_export($result, true) . ", affected rows: $affectedRows");
             if ($affectedRows == 0) {
+                file_put_contents($debugLog, date('Y-m-d H:i:s') . " [WARNING] affected rows is 0!\n", FILE_APPEND);
                 do_log("$logPrefix, [WARNING], SQL executed but affected rows is 0! This may indicate WHERE condition didn't match any rows. idStr: $idStr, sql: $sql", "error");
             } else {
                 do_log("$logPrefix, [SQL_SUCCESS_DETAIL], successfully updated $affectedRows users");
