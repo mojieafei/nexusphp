@@ -265,7 +265,7 @@ body {
         <div class="control-panel">
             <button class="btn-start" id="startBtn">开始游戏</button>
             <div style="flex: 1;">
-                <div>操作说明: 机械手自动摆动 | 点击发射机械手 | 空格键快速发射</div>
+                <div>操作说明: 机械臂360度自动旋转 | 点击发射机械手 | 空格键快速发射</div>
                 <div id="submitLimitInfo">加载中...</div>
             </div>
         </div>
@@ -336,19 +336,15 @@ const gameState = {
     level: 1,
     caught: 0,
     
-    // 飞船（在顶部中心）
+    // 飞船（在屏幕中央）
     ship: {
-        x: 0, // 将在初始化时设置
-        y: 50,
+        x: 0, // 将在初始化时设置到屏幕中心
+        y: 0, // 将在初始化时设置到屏幕中心
         width: 80,
         height: 40,
-        angle: -Math.PI / 2, // 初始角度向下
-        angleSpeed: 0.02,
-        // 自动摆动相关
-        swingSpeed: 0.008, // 摆动速度（弧度/毫秒）
-        swingDirection: 1, // 1为向右，-1为向左
-        swingAngle: Math.PI * 165 / 180, // 最大摆动角度（左右各82.5度，总共165度）
-        currentSwingAngle: 0 // 当前摆动角度（从0到swingAngle，再到-swingAngle）
+        angle: 0, // 当前旋转角度（360度旋转）
+        // 360度旋转相关
+        rotationSpeed: 0.003 // 旋转速度（弧度/毫秒）
     },
     
     // 机械手
@@ -356,8 +352,8 @@ const gameState = {
         extended: false,
         length: 0,
         maxLength: 400,
-        extendSpeed: 8,
-        retractSpeed: 6,
+        extendSpeed: 0.5, // 像素/毫秒
+        retractSpeed: 0.4, // 像素/毫秒
         angle: -Math.PI / 2,
         grabbing: false,
         grabbedItem: null
@@ -366,18 +362,33 @@ const gameState = {
     // 行星碎片
     fragments: [],
     fragmentSpawnTimer: 0,
-    fragmentSpawnInterval: 2000
+    fragmentSpawnInterval: 2000,
+    
+    // 石头障碍物
+    rocks: []
 };
 
-// 碎片类型
+// 碎片类型（采用接流星游戏中的类型，质量梯度从月亮1.0到太阳8.0）
 const FRAGMENT_TYPES = [
-    { name: '小碎片', emoji: '🟤', score: 10, size: 15, weight: 1, chance: 0.30, color: '#8B4513' },
-    { name: '中碎片', emoji: '🟠', score: 25, size: 25, weight: 2, chance: 0.25, color: '#FF8C00' },
-    { name: '大碎片', emoji: '🟡', score: 50, size: 35, weight: 3, chance: 0.20, color: '#FFD700' },
-    { name: '金星碎片', emoji: '🟨', score: 100, size: 30, weight: 2, chance: 0.10, color: '#FFC107' },
-    { name: '火星碎片', emoji: '🔴', score: 150, size: 40, weight: 4, chance: 0.08, color: '#F44336' },
-    { name: '木星碎片', emoji: '🪐', score: 200, size: 45, weight: 5, chance: 0.05, color: '#9C27B0' },
-    { name: '太阳碎片', emoji: '☀️', score: 300, size: 50, weight: 6, chance: 0.02, color: '#FF9800' }
+    // 正向碎片（加分）- 质量梯度合理递增
+    { name: '月球', emoji: '🌙', score: 10, size: 20, weight: 1.0, chance: 0.30, type: 'good', color: '#C0C0C0' },
+    { name: '地球', emoji: '🌍', score: 15, size: 22, weight: 2.0, chance: 0.23, type: 'good', color: '#4A90E2' },
+    { name: '火星', emoji: '🔴', score: 20, size: 18, weight: 2.5, chance: 0.18, type: 'good', color: '#F44336' },
+    { name: '木星', emoji: '🪐', score: 30, size: 28, weight: 5.0, chance: 0.10, type: 'good', color: '#9C27B0' },
+    { name: '土星', emoji: '🪐', score: 35, size: 26, weight: 6.0, chance: 0.04, type: 'good', color: '#FF9800' },
+    { name: '太阳', emoji: '☀️', score: 50, size: 30, weight: 8.0, chance: 0.02, type: 'good', color: '#FFD700' },
+    // 负向碎片（扣分）
+    { name: '外星虫', emoji: '👾', score: -15, size: 22, weight: 1.5, chance: 0.08, type: 'bad', color: '#9C27B0' },
+    { name: '陨石怪', emoji: '☄️', score: -25, size: 24, weight: 3.0, chance: 0.04, type: 'bad', color: '#795548' },
+    { name: '黑洞', emoji: '🕳️', score: -50, size: 28, weight: 10.0, chance: 0.01, type: 'bad', color: '#000000' }
+];
+
+// 石头障碍物类型
+const ROCK_TYPES = [
+    { size: 20, chance: 0.40 },
+    { size: 35, chance: 0.30 },
+    { size: 50, chance: 0.20 },
+    { size: 70, chance: 0.10 }
 ];
 
 // 创建碎片
@@ -395,10 +406,86 @@ function createFragment() {
     }
     
     return {
-        x: Math.random() * (canvas.width - fragmentType.size * 2) + fragmentType.size,
-        y: Math.random() * (canvas.height - 300) + 150, // 避免在飞船附近生成
+        x: 0, // 将在生成时设置
+        y: 0, // 将在生成时设置
         ...fragmentType,
         id: Date.now() + Math.random()
+    };
+}
+
+// 创建石头障碍物
+function createRock() {
+    const rand = Math.random();
+    let cumulativeChance = 0;
+    let rockType = ROCK_TYPES[0];
+    
+    for (let type of ROCK_TYPES) {
+        cumulativeChance += type.chance;
+        if (rand < cumulativeChance) {
+            rockType = type;
+            break;
+        }
+    }
+    
+    return {
+        x: 0, // 将在生成时设置
+        y: 0, // 将在生成时设置
+        size: rockType.size,
+        id: Date.now() + Math.random() + 1000000 // 确保ID不冲突
+    };
+}
+
+// 检查位置是否与现有物体碰撞
+function checkPositionCollision(x, y, size, excludeId = null) {
+    const minDistance = 80; // 物体间最小距离
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const minDistanceFromShip = 100; // 距离飞船中心的最小距离
+    
+    // 检查与飞船的距离
+    if (Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2) < minDistanceFromShip) {
+        return true;
+    }
+    
+    // 检查与现有碎片的距离
+    for (let fragment of gameState.fragments) {
+        if (excludeId && fragment.id === excludeId) continue;
+        const dx = x - fragment.x;
+        const dy = y - fragment.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < (size + fragment.size + minDistance)) {
+            return true;
+        }
+    }
+    
+    // 检查与现有石头的距离
+    for (let rock of gameState.rocks) {
+        if (excludeId && rock.id === excludeId) continue;
+        const dx = x - rock.x;
+        const dy = y - rock.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < (size + rock.size + minDistance)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// 生成随机位置（避免碰撞）
+function generateRandomPosition(size) {
+    const maxAttempts = 50;
+    for (let i = 0; i < maxAttempts; i++) {
+        const x = Math.random() * (canvas.width - size * 2) + size;
+        const y = Math.random() * (canvas.height - size * 2) + size;
+        if (!checkPositionCollision(x, y, size)) {
+            return { x, y };
+        }
+    }
+    // 如果找不到合适位置，返回随机位置
+    return {
+        x: Math.random() * (canvas.width - size * 2) + size,
+        y: Math.random() * (canvas.height - size * 2) + size
     };
 }
 
@@ -411,20 +498,36 @@ function initGame() {
     gameState.timeLeft = 60;
     gameState.level = 1;
     gameState.caught = 0;
+    // 飞船位置在屏幕中央
     gameState.ship.x = canvas.width / 2;
-    gameState.ship.angle = -Math.PI / 2;
-    gameState.ship.currentSwingAngle = 0;
-    gameState.ship.swingDirection = 1;
+    gameState.ship.y = canvas.height / 2;
+    gameState.ship.angle = 0;
     gameState.claw.extended = false;
     gameState.claw.length = 0;
     gameState.claw.grabbing = false;
     gameState.claw.grabbedItem = null;
+    gameState.claw.angle = 0;
     gameState.fragments = [];
+    gameState.rocks = [];
     gameState.fragmentSpawnTimer = 0;
     
-    // 初始生成一些碎片
-    for (let i = 0; i < 8; i++) {
-        gameState.fragments.push(createFragment());
+    // 初始生成20个固定碎片
+    for (let i = 0; i < 20; i++) {
+        const fragment = createFragment();
+        const pos = generateRandomPosition(fragment.size);
+        fragment.x = pos.x;
+        fragment.y = pos.y;
+        gameState.fragments.push(fragment);
+    }
+    
+    // 随机生成一些石头障碍物（3-8个）
+    const rockCount = 3 + Math.floor(Math.random() * 6);
+    for (let i = 0; i < rockCount; i++) {
+        const rock = createRock();
+        const pos = generateRandomPosition(rock.size);
+        rock.x = pos.x;
+        rock.y = pos.y;
+        gameState.rocks.push(rock);
     }
     
     updateUI();
@@ -435,22 +538,35 @@ function drawShip() {
     const ship = gameState.ship;
     ctx.save();
     ctx.translate(ship.x, ship.y);
+    ctx.rotate(ship.angle); // 飞船也会旋转，朝向当前角度
     
-    // 飞船主体（矩形）
+    // 飞船主体（圆形，表示飞船中心）
     ctx.fillStyle = '#4A90E2';
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 20;
     ctx.shadowColor = '#64C8FF';
-    ctx.fillRect(-ship.width / 2, 0, ship.width, ship.height);
+    ctx.beginPath();
+    ctx.arc(0, 0, 30, 0, Math.PI * 2);
+    ctx.fill();
     
-    // 飞船装饰
+    // 飞船中心装饰
     ctx.fillStyle = '#64C8FF';
-    ctx.fillRect(-ship.width / 2 + 10, 5, 20, 10);
-    ctx.fillRect(ship.width / 2 - 30, 5, 20, 10);
+    ctx.beginPath();
+    ctx.arc(0, 0, 20, 0, Math.PI * 2);
+    ctx.fill();
     
-    // 机械手连接点
+    // 指示方向的小三角形（指向机械手发射方向，转180度）
     ctx.fillStyle = '#FFD700';
     ctx.beginPath();
-    ctx.arc(0, ship.height / 2, 5, 0, Math.PI * 2);
+    ctx.moveTo(0, 25);  // 改为向下（与发射方向一致）
+    ctx.lineTo(-8, 15);
+    ctx.lineTo(8, 15);
+    ctx.closePath();
+    ctx.fill();
+    
+    // 机械手连接点（在中心）
+    ctx.fillStyle = '#FF6B6B';
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
     ctx.fill();
     
     ctx.restore();
@@ -464,7 +580,8 @@ function drawClaw() {
     if (claw.length === 0 && !claw.extended) return;
     
     ctx.save();
-    ctx.translate(ship.x, ship.y + gameState.ship.height / 2);
+    // 从飞船中心开始绘制
+    ctx.translate(ship.x, ship.y);
     ctx.rotate(claw.angle);
     
     // 绘制绳索/机械臂
@@ -504,6 +621,33 @@ function drawClaw() {
     ctx.restore();
 }
 
+// 绘制石头障碍物
+function drawRocks() {
+    gameState.rocks.forEach(rock => {
+        ctx.save();
+        
+        // 石头外观（灰色石头）
+        ctx.fillStyle = '#666';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = '#333';
+        ctx.beginPath();
+        ctx.arc(rock.x, rock.y, rock.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 石头纹理
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.arc(rock.x - rock.size * 0.3, rock.y - rock.size * 0.3, rock.size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(rock.x + rock.size * 0.3, rock.y + rock.size * 0.3, rock.size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    });
+}
+
 // 绘制碎片
 function drawFragments() {
     gameState.fragments.forEach(fragment => {
@@ -512,10 +656,20 @@ function drawFragments() {
         // 碎片光晕
         if (fragment === gameState.claw.grabbedItem) {
             ctx.shadowBlur = 20;
-            ctx.shadowColor = '#64C8FF';
+            ctx.shadowColor = fragment.type === 'bad' ? '#FF0000' : '#64C8FF';
         } else {
             ctx.shadowBlur = 10;
             ctx.shadowColor = fragment.color;
+        }
+        
+        // 如果是负分碎片，添加红色警告边框
+        if (fragment.type === 'bad') {
+            const warningAlpha = Math.sin(Date.now() * 0.008) * 0.1 + 0.2;
+            ctx.strokeStyle = `rgba(255, 100, 100, ${warningAlpha})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(fragment.x, fragment.y, fragment.size * 1.2, 0, Math.PI * 2);
+            ctx.stroke();
         }
         
         // 绘制碎片（圆形）
@@ -537,17 +691,35 @@ function drawFragments() {
     });
 }
 
-// 检查碰撞
+// 检查机械手是否碰到石头（阻挡）
+function checkRockCollision(rock) {
+    const ship = gameState.ship;
+    const claw = gameState.claw;
+    
+    if (!claw.extended || claw.length === 0) return false;
+    
+    // 计算爪子当前位置（从飞船中心出发）
+    const clawX = ship.x + Math.sin(claw.angle) * claw.length;
+    const clawY = ship.y + Math.cos(claw.angle) * claw.length;
+    
+    // 检查爪子路径是否穿过石头（简化：检查爪子位置是否在石头内）
+    const dx = clawX - rock.x;
+    const dy = clawY - rock.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    return distance < rock.size + 8; // 8是爪子半径
+}
+
+// 检查碰撞（碎片）
 function checkCollision(fragment) {
     const ship = gameState.ship;
     const claw = gameState.claw;
     
     if (!claw.extended || claw.length === 0) return false;
     
-    // 计算爪子位置
-    const shipY = ship.y + ship.height / 2;
+    // 计算爪子位置（从飞船中心出发）
     const clawX = ship.x + Math.sin(claw.angle) * claw.length;
-    const clawY = shipY + Math.cos(claw.angle) * claw.length;
+    const clawY = ship.y + Math.cos(claw.angle) * claw.length;
     
     // 距离检测
     const dx = clawX - fragment.x;
@@ -564,24 +736,17 @@ function updateGame(deltaTime) {
     const ship = gameState.ship;
     const claw = gameState.claw;
     
-    // 自动摆动逻辑（只在机械手未伸出时摆动）
+    // 360度连续旋转（只在机械手未伸出时旋转）
     if (!claw.extended) {
-        // 更新摆动角度
-        ship.currentSwingAngle += ship.swingSpeed * ship.swingDirection * deltaTime;
-        
-        // 到达边界时改变方向
-        if (ship.currentSwingAngle >= ship.swingAngle) {
-            ship.currentSwingAngle = ship.swingAngle;
-            ship.swingDirection = -1;
-        } else if (ship.currentSwingAngle <= -ship.swingAngle) {
-            ship.currentSwingAngle = -ship.swingAngle;
-            ship.swingDirection = 1;
+        // 持续旋转
+        ship.angle += ship.rotationSpeed * deltaTime;
+        // 保持角度在0到2π之间
+        if (ship.angle >= Math.PI * 2) {
+            ship.angle -= Math.PI * 2;
         }
-        
-        // 计算最终角度（垂直向下 + 摆动角度）
-        ship.angle = -Math.PI / 2 + ship.currentSwingAngle;
-    } else {
-        // 机械手伸出时，保持当前角度不变
+        if (ship.angle < 0) {
+            ship.angle += Math.PI * 2;
+        }
     }
     
     // 同步爪子角度
@@ -590,39 +755,58 @@ function updateGame(deltaTime) {
     // 更新机械手
     if (claw.extended) {
         // 检查是否在伸出阶段
-        const isExtending = claw.length < claw.maxLength;
-        
-        if (isExtending) {
-            // 伸出阶段：增加长度
-            claw.length += claw.extendSpeed;
-            if (claw.length > claw.maxLength) {
+        if (claw.length < claw.maxLength) {
+            // 伸出阶段：增加长度（基于时间）
+            claw.length += claw.extendSpeed * deltaTime;
+            // 限制最大长度
+            if (claw.length >= claw.maxLength) {
                 claw.length = claw.maxLength;
             }
             
-            // 检查碰撞（在伸出过程中持续检查）
-            for (let fragment of gameState.fragments) {
-                if (checkCollision(fragment)) {
-                    claw.grabbing = true;
-                    claw.grabbedItem = fragment;
-                    break;
+            // 检查碰撞（在伸出过程中持续检查，只要还没抓到就检查）
+            if (!claw.grabbing) {
+                // 检查是否碰到石头（如果碰到石头，停止伸出并开始收回）
+                for (let rock of gameState.rocks) {
+                    if (checkRockCollision(rock)) {
+                        // 碰到石头，立即停止伸出并开始收回
+                        claw.length = claw.maxLength;
+                        break;
+                    }
+                }
+                
+                // 检查是否抓到碎片（如果还没碰到石头）
+                if (!claw.grabbing) {
+                    for (let fragment of gameState.fragments) {
+                        if (checkCollision(fragment)) {
+                            claw.grabbing = true;
+                            claw.grabbedItem = fragment;
+                            break;
+                        }
+                    }
                 }
             }
         } else {
-            // 已经到达最大长度，开始收回阶段
+            // 已经到达或超过最大长度，开始收回阶段（无论是否抓到都要收回）
             if (claw.grabbing && claw.grabbedItem) {
-                // 收回（带碎片）
-                const retractSpeed = claw.retractSpeed / claw.grabbedItem.weight;
+                // 收回（带碎片，速度受重量影响，重量越大收回越慢）
+                // 基础速度 / (1 + 重量*0.2)，这样重量越大速度越慢
+                const weightFactor = 1 + (claw.grabbedItem.weight * 0.2);
+                const retractSpeed = (claw.retractSpeed / weightFactor) * deltaTime;
                 claw.length -= retractSpeed;
                 
-                // 更新碎片位置（相对于飞船位置）
-                const shipY = ship.y + ship.height / 2;
+                // 更新碎片位置（从飞船中心计算）
                 const clawX = ship.x + Math.sin(claw.angle) * claw.length;
-                const clawY = shipY + Math.cos(claw.angle) * claw.length;
+                const clawY = ship.y + Math.cos(claw.angle) * claw.length;
                 claw.grabbedItem.x = clawX;
                 claw.grabbedItem.y = clawY;
             } else {
-                // 收回（空手）
-                claw.length -= claw.retractSpeed;
+                // 收回（空手）- 最快速度，使用基础速度的1.5倍
+                claw.length -= (claw.retractSpeed * 1.5) * deltaTime;
+            }
+            
+            // 确保长度不会小于0
+            if (claw.length < 0) {
+                claw.length = 0;
             }
             
             // 检查是否回到飞船
@@ -653,14 +837,8 @@ function updateGame(deltaTime) {
         }
     }
     
-    // 生成新碎片
-    gameState.fragmentSpawnTimer += deltaTime;
-    if (gameState.fragmentSpawnTimer >= gameState.fragmentSpawnInterval) {
-        if (gameState.fragments.length < 12) {
-            gameState.fragments.push(createFragment());
-        }
-        gameState.fragmentSpawnTimer = 0;
-    }
+    // 不再随机生成新碎片（每局固定20个）
+    // 石头也不会再生成（固定数量）
     
     // 更新时间
     gameState.timeLeft -= deltaTime / 1000;
@@ -698,6 +876,7 @@ function drawBackground() {
 // 绘制
 function draw() {
     drawBackground();
+    drawRocks(); // 先绘制石头（在碎片下方）
     drawFragments();
     drawClaw();
     drawShip();

@@ -52,6 +52,8 @@ class Kernel extends ConsoleKernel
         $schedule->job(new MaintainPluginState())->everyMinute();
         $schedule->job(new UpdateIsSeedBoxFromUserRecordsCache())->everySixHours();
         $schedule->job(new CheckCleanup())->everyFifteenMinutes();
+        // 执行 cleanup 来计算和发放魔力值
+        $schedule->command('cleanup:run')->everyFifteenMinutes();
 
     }
 
