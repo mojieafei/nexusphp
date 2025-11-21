@@ -181,16 +181,32 @@ class CalculateUserSeedBonus implements ShouldQueue
                 do_log("logFile: $logFile is not writeable!", 'error');
             }
         }
+        
+        // 检查是否有数据需要更新
+        if (empty($seedPointsUpdates) || empty($seedBonusUpdates)) {
+            do_log("$logPrefix, [WARNING], no data to update! seedPointsUpdates count: " . count($seedPointsUpdates) . ", seedBonusUpdates count: " . count($seedBonusUpdates));
+            return;
+        }
+        
         $nowStr = now()->toDateTimeString();
         $sql = sprintf(
             "update users set seed_points = case id %s end, seed_points_per_hour = case id %s end, seedbonus = case id %s end, seeding_torrent_count = case id %s end, seeding_torrent_size = case id %s end, seed_points_updated_at = '%s' where id in (%s)",
             implode(" ", $seedPointsUpdates), implode(" ", $seedPointsPerHourUpdates), implode(" ", $seedBonusUpdates), implode(" ", $seedingTorrentCountUpdates), implode(" ", $seedingTorrentSizeUpdates), $nowStr, $idStr
         );
+        do_log("$logPrefix, [SQL_BEFORE_EXECUTE], sql length: " . strlen($sql) . ", user count: " . count($seedPointsUpdates));
         $result = NexusDB::statement($sql);
         if ($result === false) {
-            do_log("$logPrefix, [ERROR], SQL execution failed! sql: $sql", "error");
+            $error = mysql_error();
+            $errno = mysql_errno();
+            do_log("$logPrefix, [SQL_ERROR], SQL execution failed! errno: $errno, error: $error, sql: $sql", "error");
         } else {
-            do_log("$logPrefix, [SQL_SUCCESS], affected rows or result: " . var_export($result, true));
+            $affectedRows = mysql_affected_rows();
+            do_log("$logPrefix, [SQL_SUCCESS], result: " . var_export($result, true) . ", affected rows: $affectedRows");
+            if ($affectedRows == 0) {
+                do_log("$logPrefix, [WARNING], SQL executed but affected rows is 0! This may indicate WHERE condition didn't match any rows. idStr: $idStr, sql: $sql", "error");
+            } else {
+                do_log("$logPrefix, [SQL_SUCCESS_DETAIL], successfully updated $affectedRows users");
+            }
         }
         if ($delIdRedisKey) {
             NexusDB::cache_del($this->idRedisKey);
