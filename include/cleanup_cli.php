@@ -27,20 +27,25 @@ $begin = time();
 if ($force) {
     $result = docleanup(1, true);
 } else {
-    // 修复并发问题：如果 autoclean 返回 false 且是并发导致的，也执行一次
     $result = autoclean(true);
+    // 如果 autoclean 返回 false，检查是否是并发问题
     if (!$result) {
-        // 检查是否是并发问题（时间间隔已到但 UPDATE 失败）
         global $autoclean_interval_one;
         $res = sql_query("SELECT value_u FROM avps WHERE arg = 'lastcleantime'");
         $row = mysql_fetch_array($res);
         if ($row) {
             $ts = $row['value_u'];
             $now = time();
-            // 如果时间间隔已到，说明是并发问题，强制执行
-            if ($ts + $autoclean_interval_one <= $now) {
-                do_log("$logPrefix, autoclean returned false but interval reached, likely concurrency issue, force execute");
+            $timeDiff = $now - $ts;
+            // 如果时间间隔已到（超过1小时），但 UPDATE 失败（可能是并发），强制执行一次
+            // 但要确保不会频繁执行（至少间隔50分钟）
+            if ($timeDiff >= $autoclean_interval_one && $timeDiff < $autoclean_interval_one + 300) {
+                do_log("$logPrefix, autoclean returned false but interval reached (diff: {$timeDiff}s), likely concurrency issue, force execute");
                 $result = docleanup(0, true);
+                // 强制执行后，更新 lastcleantime 避免重复执行
+                if ($result) {
+                    sql_query("UPDATE avps SET value_u=$now WHERE arg='lastcleantime'");
+                }
             }
         }
     }
