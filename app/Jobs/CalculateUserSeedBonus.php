@@ -187,6 +187,11 @@ class CalculateUserSeedBonus implements ShouldQueue
             implode(" ", $seedPointsUpdates), implode(" ", $seedPointsPerHourUpdates), implode(" ", $seedBonusUpdates), implode(" ", $seedingTorrentCountUpdates), implode(" ", $seedingTorrentSizeUpdates), $nowStr, $idStr
         );
         $result = NexusDB::statement($sql);
+        if ($result === false) {
+            do_log("$logPrefix, [ERROR], SQL execution failed! sql: $sql", "error");
+        } else {
+            do_log("$logPrefix, [SQL_SUCCESS], affected rows or result: " . var_export($result, true));
+        }
         if ($delIdRedisKey) {
             NexusDB::cache_del($this->idRedisKey);
         }
@@ -202,7 +207,7 @@ class CalculateUserSeedBonus implements ShouldQueue
             "$logPrefix, [DONE], update user count: %s, result: %s, cost time: %s seconds",
             count($seedPointsUpdates), var_export($result, true), $costTime
         ));
-        do_log("$logPrefix, sql: $sql", "debug");
+        do_log("$logPrefix, sql: $sql");
     }
 
     /**
