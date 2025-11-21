@@ -115,7 +115,8 @@ class CleanupRepository extends BaseRepository
             if (!empty($validFields)) {
                 $idStr = implode(",", $validFields);
                 $idRedisKey = self::IDS_KEY_PREFIX . Str::random();
-                NexusDB::cache_put($idRedisKey, $idStr);
+                // 增加 TTL 到 2 小时，避免任务延迟执行时 key 过期
+                NexusDB::cache_put($idRedisKey, $idStr, 7200);
                 $command = sprintf(
                     'cleanup --action=%s --begin_id=%s --end_id=%s --id_redis_key=%s --request_id=%s --delay=%s',
                     $batchKeyInfo['action'], 0, 0,  $idRedisKey, $requestId, $delay

@@ -77,14 +77,21 @@ class CalculateUserSeedBonus implements ShouldQueue
 
         $idStr = $this->idStr;
         $delIdRedisKey = false;
+        do_log("$logPrefix, [STEP1], idStr: " . ($idStr ?: 'empty') . ", idRedisKey: " . ($this->idRedisKey ?? 'empty'));
         if (empty($idStr) && !empty($this->idRedisKey)) {
             $delIdRedisKey = true;
             $idStr = NexusDB::cache_get($this->idRedisKey);
+            do_log("$logPrefix, [STEP2], get from Redis, idStr: " . ($idStr ?: 'empty'));
+            if (empty($idStr)) {
+                do_log("$logPrefix, [ERROR], Redis key expired or not found! idRedisKey: {$this->idRedisKey}, beginUid: {$this->beginUid}, endUid: {$this->endUid}", "error");
+                return;
+            }
         }
         if (empty($idStr)) {
-            do_log("$logPrefix, no idStr or idRedisKey", "error");
+            do_log("$logPrefix, [ERROR], no idStr or idRedisKey! beginUid: {$this->beginUid}, endUid: {$this->endUid}, idRedisKey: " . ($this->idRedisKey ?? 'empty'), "error");
             return;
         }
+        do_log("$logPrefix, [STEP3], got idStr, count: " . count(explode(',', $idStr)));
         $sql = sprintf("select %s from users where id in (%s)", implode(',', User::$commonFields), $idStr);
         $results = NexusDB::select($sql);
         if (empty($results)) {
