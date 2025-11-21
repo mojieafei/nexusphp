@@ -99,6 +99,8 @@ class CleanupRepository extends BaseRepository
         $it = NULL;
         $length = $redis->hLen($batch);
         $page = 0;
+        $totalExpiredCount = 0;
+        do_log(sprintf("$logPrefix, [START_SCAN], batch: $batch, length: $length, userSeedBonusDeadline: $userSeedBonusDeadline (%s)", date('Y-m-d H:i:s', $userSeedBonusDeadline)));
         /* Don't ever return an empty array until we're done iterating */
         $redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
         while($arr_keys = $redis->hScan($batch, $it, "*", self::$scanSize)) {
@@ -108,6 +110,7 @@ class CleanupRepository extends BaseRepository
                 if ($batchKey == self::USER_SEED_BONUS_BATCH_KEY && $value < $userSeedBonusDeadline) {
                     //dead, should remove
                     $toRemoveFields[] = $field;
+                    $totalExpiredCount++;
                 } else {
                     $validFields[] = $field;
                 }
@@ -115,19 +118,30 @@ class CleanupRepository extends BaseRepository
             if (!empty($validFields)) {
                 $idStr = implode(",", $validFields);
                 $idRedisKey = self::IDS_KEY_PREFIX . Str::random();
-                NexusDB::cache_put($idRedisKey, $idStr);
+                // 增加 TTL 到 2 小时，避免任务延迟执行时 key 过期
+                NexusDB::cache_put($idRedisKey, $idStr, 7200);
                 $command = sprintf(
                     'cleanup --action=%s --begin_id=%s --end_id=%s --id_redis_key=%s --request_id=%s --delay=%s',
                     $batchKeyInfo['action'], 0, 0,  $idRedisKey, $requestId, $delay
                 );
-                $output = executeCommand($command, 'string', true);
-                do_log(sprintf('output: %s', $output));
+                do_log(sprintf("$logPrefix, [DISPATCH_JOB], page: $page, validFields count: %d, command: %s", count($validFields), $command));
+                try {
+                    $output = executeCommand($command, 'string', true, false);
+                    do_log(sprintf("$logPrefix, [DISPATCH_JOB_SUCCESS], output: %s", $output));
+                } catch (\Exception $e) {
+                    do_log(sprintf("$logPrefix, [DISPATCH_JOB_ERROR], exception: %s", $e->getMessage()), 'error');
+                }
                 $count += count($validFields);
+            } else {
+                do_log(sprintf("$logPrefix, [PAGE_NO_VALID_FIELDS], page: $page, expired in this page: %d", count($toRemoveFields)));
             }
             if (!empty($toRemoveFields)) {
                 $redis->hDel($batch, ...$toRemoveFields);
             }
             $page++;
+        }
+        if ($totalExpiredCount > 0) {
+            do_log(sprintf("$logPrefix, [EXPIRED_USERS], total expired count: $totalExpiredCount"));
         }
 
         //remove this batch

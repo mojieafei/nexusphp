@@ -343,7 +343,11 @@ function docleanup($forceAll = 0, $printProgress = false) {
     $seedPointsUpdatedAtMin = $carbonNow->subSeconds(2*intval($autoclean_interval_one))->toDateTimeString();
     sql_query("update users set seed_points_per_hour = 0 where seed_points_updated_at < " . sqlesc($seedPointsUpdatedAtMin));
 
+	file_put_contents('/tmp/cleanup_debug.log', date('Y-m-d H:i:s') . " [BEFORE] runBatchJobCalculateUserSeedBonus, requestId: $requestId\n", FILE_APPEND);
+	do_log("BEFORE runBatchJobCalculateUserSeedBonus, requestId: $requestId");
 	\App\Repositories\CleanupRepository::runBatchJobCalculateUserSeedBonus($requestId);
+	file_put_contents('/tmp/cleanup_debug.log', date('Y-m-d H:i:s') . " [AFTER] runBatchJobCalculateUserSeedBonus, requestId: $requestId\n", FILE_APPEND);
+	do_log("AFTER runBatchJobCalculateUserSeedBonus, requestId: $requestId");
 
 	$log = 'calculate seeding bonus';
 	do_log($log);
