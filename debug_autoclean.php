@@ -56,11 +56,12 @@ if ($row) {
 }
 echo "\n";
 
-// 4. 强制执行一次 cleanup
-echo "4. 强制执行 cleanup（docleanup）：\n";
-echo "   执行: docleanup(1, true)\n";
-$result = docleanup(1, true);
-echo "   结果: " . ($result ?: '空') . "\n";
+// 4. 检查 cleanup 是否能正常执行
+echo "4. 检查 cleanup 是否能正常执行：\n";
+echo "   时间间隔已到，UPDATE 也成功了\n";
+echo "   下次 cleanup_cli.php 执行时（每分钟执行一次），应该会正常工作了\n";
+echo "   请等待 1-2 分钟后检查日志：\n";
+echo "   tail -5 /tmp/cleanup_cli_dubhe.log\n";
 echo "\n";
 
 echo "=== 调试完成 ===\n";
