@@ -65,7 +65,8 @@ class CalculateUserSeedBonus implements ShouldQueue
     public function handle()
     {
         $debugLog = '/tmp/seed_bonus_debug.log';
-        file_put_contents($debugLog, date('Y-m-d H:i:s') . " [START] requestId: {$this->requestId}, idStr: " . ($this->idStr ?: 'empty') . ", idRedisKey: " . ($this->idRedisKey ?? 'empty') . "\n", FILE_APPEND);
+        // 立即写入日志，确保能看到任务是否执行
+        @file_put_contents($debugLog, date('Y-m-d H:i:s') . " [START] requestId: {$this->requestId}, idStr: " . ($this->idStr ?: 'empty') . ", idRedisKey: " . ($this->idRedisKey ?? 'empty') . "\n", FILE_APPEND | LOCK_EX);
         
         $beginTimestamp = time();
         $logPrefix = sprintf(
