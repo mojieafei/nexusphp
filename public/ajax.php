@@ -609,6 +609,7 @@ if ($action === 'space_miner_submit') {
         $score = intval($data['score'] ?? 0);
         $caught = intval($data['caught'] ?? 0);
         $level = intval($data['level'] ?? 1);
+        $maxPossibleScore = intval($data['max_possible_score'] ?? 0); // 前端计算的理论最大分数
         $gameToken = $data['token'] ?? '';
         $ipAddress = getip();
         
@@ -626,29 +627,53 @@ if ($action === 'space_miner_submit') {
         }
         
         // 2. Token验证（防止简单的接口调用）
-        $expectedToken = md5($user->passhash . 'space_miner_token');
+        // Token包含：用户ID + 分数 + 抓取数量 + 关卡 + 理论最大分数 + 日期 + 密码哈希
+        $expectedToken = md5($userId . $score . $caught . $level . $maxPossibleScore . date('Y-m-d') . $user->passhash);
         if ($gameToken !== $expectedToken) {
-            write_log("宇宙碎片抓取游戏作弊尝试 - 用户ID: {$userId}, IP: {$ipAddress}, 分数: {$score}", 'mod');
+            write_log("宇宙碎片抓取游戏作弊尝试 - 用户ID: {$userId}, IP: {$ipAddress}, 分数: {$score}, 理论最大: {$maxPossibleScore}", 'mod');
             throw new \InvalidArgumentException('游戏数据验证失败');
         }
         
-        // 3. 分数范围检查
-        if ($score < 0 || $score > 50000) {
-            write_log("宇宙碎片抓取游戏作弊尝试 - 用户ID: {$userId}, 分数异常: {$score}", 'mod');
-            throw new \InvalidArgumentException('分数超出合理范围');
+        // 3. 分数范围检查（基于前端计算的理论最大分数）
+        $minTheoreticalScore = -1000; // 极端情况下负分最多-1000分
+        
+        // 如果提供了理论最大分数，使用它作为上限；否则使用保守的上限值
+        $maxTheoreticalScore = $maxPossibleScore > 0 ? ($maxPossibleScore + 100) : 2000; // 允许100分的容差
+        
+        if ($score < $minTheoreticalScore) {
+            write_log("宇宙碎片抓取游戏作弊尝试 - 用户ID: {$userId}, 分数异常: {$score} (最低: {$minTheoreticalScore})", 'mod');
+            throw new \InvalidArgumentException('分数低于合理范围（最低 -1000）');
         }
         
-        // 4. 抓取数量检查
-        if ($caught < 0 || $caught > 500) {
-            throw new \InvalidArgumentException('抓取数量异常');
+        if ($score > $maxTheoreticalScore) {
+            write_log("宇宙碎片抓取游戏作弊尝试 - 用户ID: {$userId}, 分数异常: {$score} (最高: {$maxTheoreticalScore}, 理论最大: {$maxPossibleScore})", 'mod');
+            throw new \InvalidArgumentException("分数超过合理范围（最高 {$maxTheoreticalScore}，本局理论最大 {$maxPossibleScore}）");
         }
         
-        // 5. 关卡检查
-        if ($level < 1 || $level > 100) {
-            throw new \InvalidArgumentException('关卡数据异常');
+        // 4. 抓取数量检查（正常一局20个天体+一些石头，最多50个）
+        if ($caught < 0 || $caught > 50) {
+            write_log("宇宙碎片抓取游戏作弊尝试 - 用户ID: {$userId}, 抓取数量异常: {$caught}", 'mod');
+            throw new \InvalidArgumentException('抓取数量异常（0 ~ 50）');
         }
         
-        // 6. 检查提交频率（30秒内只能提交一次）
+        // 5. 关卡检查（正常游戏最多几关）
+        if ($level < 1 || $level > 10) {
+            write_log("宇宙碎片抓取游戏作弊尝试 - 用户ID: {$userId}, 关卡异常: {$level}", 'mod');
+            throw new \InvalidArgumentException('关卡数据异常（1 ~ 10）');
+        }
+        
+        // 6. 分数与抓取数量的合理性检查
+        // 平均每个天体/石头约25-30分，如果分数过高但抓取数少，可能作弊
+        if ($caught > 0) {
+            $avgScorePerCaught = $score / $caught;
+            // 单个物体得分不应该超过100分（太阳最高50分左右，加上距离加成最多100分）
+            if ($avgScorePerCaught > 100) {
+                write_log("宇宙碎片抓取游戏作弊尝试 - 用户ID: {$userId}, 平均得分异常: {$avgScorePerCaught} (分数:{$score}, 抓取:{$caught})", 'mod');
+                throw new \InvalidArgumentException('得分率异常，请正常游戏');
+            }
+        }
+        
+        // 7. 检查提交频率（30秒内只能提交一次）
         $minIntervalSeconds = 30;
         $lastSubmit = \App\Models\SpaceMinerGameScore::where('user_id', $userId)
             ->where('created_at', '>=', now()->subSeconds($minIntervalSeconds))
@@ -658,7 +683,7 @@ if ($action === 'space_miner_submit') {
             throw new \InvalidArgumentException("提交过于频繁，请等待{$minIntervalSeconds}秒");
         }
         
-        // 7. 检查每日提交次数限制
+        // 8. 检查每日提交次数限制
         $maxDailySubmits = 5;
         $todaySubmitCount = \App\Models\SpaceMinerGameScore::where('user_id', $userId)
             ->whereDate('created_at', today())
@@ -666,6 +691,17 @@ if ($action === 'space_miner_submit') {
             
         if ($todaySubmitCount >= $maxDailySubmits) {
             throw new \InvalidArgumentException("今日提交次数已达上限（{$maxDailySubmits}次），明天再来吧！");
+        }
+        
+        // 9. 检查短时间内的异常高分（1小时内提交3次以上超高分视为异常）
+        $recentHighScores = \App\Models\SpaceMinerGameScore::where('user_id', $userId)
+            ->where('score', '>', 1500)
+            ->where('created_at', '>=', now()->subHour())
+            ->count();
+            
+        if ($recentHighScores >= 3) {
+            write_log("宇宙碎片抓取游戏作弊嫌疑 - 用户ID: {$userId}, 1小时内{$recentHighScores}次超高分", 'mod');
+            throw new \InvalidArgumentException('检测到异常游戏行为，请稍后再试');
         }
         
         // 使用事务，确保星尘发放的原子性
@@ -683,9 +719,9 @@ if ($action === 'space_miner_submit') {
                     'ip_address' => $ipAddress,
                 ]);
                 
-                // 计算星尘奖励（100积分 = 10星尘，只有正分才发放）
+                // 计算星尘奖励（10分 = 1星尘，只有正分才发放）
                 if ($score > 0) {
-                    $stardustReward = intval(floor($score / 10)); // 100分 = 10星尘
+                    $stardustReward = intval(floor($score / 10)); // 10分 = 1星尘
                     
                     // 使用星尘农场系统添加星尘（如果存在）
                     if (class_exists(\App\Models\StardustFarm::class)) {

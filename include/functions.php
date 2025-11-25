@@ -2315,6 +2315,12 @@ function menu ($selected = "home") {
 		$selected = "topten";
 	}elseif (preg_match("/stardust_leaderboard/i", $script_name)) {
 		$selected = "stardust_leaderboard";
+	}elseif (preg_match("/meteor_game/i", $script_name)) {
+		$selected = "meteor_game";
+	}elseif (preg_match("/space_miner_game/i", $script_name)) {
+		$selected = "space_miner_game";
+	}elseif (preg_match("/stardust_farm/i", $script_name)) {
+		$selected = "stardust_farm";
 	}elseif (preg_match("/log/i", $script_name)) {
 		$selected = "log";
 	}elseif (preg_match("/rules/i", $script_name)) {
@@ -2436,6 +2442,17 @@ function menu ($selected = "home") {
         if (user_can('topten')) {
             print ("<li" . ($selected == "topten" ? " class=\"selected\"" : "") . "><a href=\"topten.php\">".$lang_functions['text_top_ten']."</a></li>");
         }
+        // 小游戏下拉菜单
+        $isGamePage = preg_match("/meteor_game|space_miner_game|stardust_farm/i", $script_name);
+        print ("<li class=\"dropdown-menu" . ($isGamePage ? " selected" : "") . "\" id=\"games-dropdown\">");
+        print ("<a href=\"javascript:void(0);\" class=\"dropdown-toggle\" onclick=\"return false;\" style=\"color: #ff4444 !important;\">🎮 小游戏 ▼</a>");
+        print ("<ul class=\"dropdown-content\">");
+        print ("<li><a href=\"meteor_game.php\" target=\"_blank\">🌠 接流星</a></li>");
+        print ("<li><a href=\"space_miner_game.php\" target=\"_blank\">🪐 星际矿工</a></li>");
+        print ("<li><a href=\"stardust_farm.php\" target=\"_blank\">🌍 星尘农场</a></li>");
+        print ("</ul>");
+        print ("</li>");
+        
         // 农场排行榜
         print ("<li" . ($selected == "stardust_leaderboard" ? " class=\"selected\"" : "") . "><a href=\"stardust_leaderboard.php\">🏆 农场排行榜</a></li>");
         if (user_can('log')) {
@@ -2448,6 +2465,90 @@ function menu ($selected = "home") {
         }
         print ("<li" . ($selected == "contactstaff" ? " class=\"selected\"" : "") . "><a href=\"contactstaff.php\">".$lang_functions['text_contactstaff']."</a></li>");
         print ("</ul>");
+        
+        // 小游戏下拉菜单JS控制（点击触发）
+        print ("<script>
+        (function() {
+            var dropdown = document.getElementById('games-dropdown');
+            if (!dropdown) return;
+            var dropdownContent = dropdown.querySelector('.dropdown-content');
+            var dropdownToggle = dropdown.querySelector('.dropdown-toggle');
+            var isOpen = false;
+            
+            function updateDropdownPosition() {
+                var rect = dropdown.getBoundingClientRect();
+                dropdownContent.style.position = 'fixed';
+                dropdownContent.style.top = rect.bottom + 'px';
+                dropdownContent.style.left = rect.left + 'px';
+                dropdownContent.style.zIndex = '2147483646';
+            }
+            
+            function showDropdown() {
+                updateDropdownPosition();
+                dropdownContent.style.display = 'block';
+                isOpen = true;
+                dropdown.classList.add('active');
+            }
+            
+            function hideDropdown() {
+                dropdownContent.style.display = 'none';
+                isOpen = false;
+                dropdown.classList.remove('active');
+            }
+            
+            function toggleDropdown(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isOpen) {
+                    hideDropdown();
+                } else {
+                    showDropdown();
+                }
+            }
+            
+            // 点击按钮切换下拉菜单
+            dropdownToggle.addEventListener('click', toggleDropdown);
+            
+            // 点击外部区域关闭下拉菜单
+            document.addEventListener('click', function(e) {
+                if (isOpen && !dropdown.contains(e.target)) {
+                    hideDropdown();
+                }
+            });
+            
+            // 鼠标离开下拉菜单区域时关闭（可选，保持悬停关闭功能）
+            dropdown.addEventListener('mouseleave', function() {
+                if (isOpen) {
+                    setTimeout(function() {
+                        if (!dropdown.matches(':hover')) {
+                            hideDropdown();
+                        }
+                    }, 300);
+                }
+            });
+            
+            // 窗口滚动/调整大小时更新位置
+            window.addEventListener('scroll', function() {
+                if (isOpen) {
+                    updateDropdownPosition();
+                }
+            });
+            
+            window.addEventListener('resize', function() {
+                if (isOpen) {
+                    updateDropdownPosition();
+                }
+            });
+            
+            // 点击下拉菜单链接时关闭
+            var links = dropdown.querySelectorAll('.dropdown-content a');
+            links.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    hideDropdown();
+                });
+            });
+        })();
+        </script>");
     }
 	print ("</div>");
 	if ($CURUSER){

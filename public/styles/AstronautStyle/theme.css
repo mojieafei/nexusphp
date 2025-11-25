@@ -801,6 +801,18 @@ img.bar_end {
     padding-left: 22px;
 }
 
+/* 小游戏按钮红色字体样式 */
+#nav li#games-dropdown > a {
+    color: #ff4444 !important;
+    font-weight: 600;
+}
+
+#nav li#games-dropdown:hover > a,
+#nav li#games-dropdown.selected > a {
+    color: #ff6666 !important;
+    text-shadow: 0 0 8px rgba(255, 68, 68, 0.6);
+}
+
 /* 用户信息区域 - 降低z-index确保不遮挡下拉菜单 */
 #info_block,
 table#info_block,
