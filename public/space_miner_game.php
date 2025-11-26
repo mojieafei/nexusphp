@@ -1342,7 +1342,7 @@ function initGame() {
         gameState.fragments.push(rock); // 石头也作为fragments的一部分
     }
     
-    // 计算本局理论最大分数（所有正向碎片的基础分数之和 * 最大距离加成1.5）
+    // 计算本局理论最大分数（所有正向碎片的基础分数之和 * 最大距离加成1.5 + 集齐10个天体的1000分奖励）
     let maxBaseScore = 0;
     gameState.fragments.forEach(fragment => {
         // 只计算正向碎片（天体+石头），不考虑负分碎片
@@ -1351,8 +1351,9 @@ function initGame() {
         }
     });
     
-    // 理论最大分数 = 所有正向碎片基础分数之和 * 最大距离加成（1.5倍）
-    gameState.maxPossibleScore = Math.ceil(maxBaseScore * 1.5 * gameState.scoreMultiplier);
+    // 理论最大分数 = 所有正向碎片基础分数之和 * 最大距离加成（1.5倍）+ 集齐10个天体的1000分奖励
+    const collectionBonus = 1000 * gameState.scoreMultiplier; // 集齐10个天体的奖励
+    gameState.maxPossibleScore = Math.ceil(maxBaseScore * 1.5 * gameState.scoreMultiplier + collectionBonus);
     
     updateUI();
 }
@@ -2724,8 +2725,12 @@ function updateGame(deltaTime) {
                     gameState.score += finalScore;
                     
                     // 如果是天体（good类型且有planetClass），记录已收集
-                    if (claw.grabbedItem.type === 'good' && claw.grabbedItem.planetClass) {
-                        gameState.collectedPlanets.add(claw.grabbedItem.planetClass);
+                    if (claw.grabbedItem && claw.grabbedItem.type === 'good' && claw.grabbedItem.planetClass) {
+                        const planetClass = claw.grabbedItem.planetClass;
+                        gameState.collectedPlanets.add(planetClass);
+                        
+                        // 调试：输出已收集的天体
+                        console.log(`已收集天体: ${planetClass}, 当前总数: ${gameState.collectedPlanets.size}`);
                         
                         // 检查是否集齐10个天体
                         if (gameState.collectedPlanets.size === 10 && !gameState.collectionComplete) {
@@ -2733,12 +2738,16 @@ function updateGame(deltaTime) {
                             // 额外增加1000分
                             const bonusScore = Math.round(1000 * gameState.scoreMultiplier);
                             gameState.score += bonusScore;
+                            console.log(`🌟 集齐10个天体！奖励 ${bonusScore} 分！当前总分: ${gameState.score}`);
                             // 显示集齐特效
                             showCollectionCompleteEffect();
+                            
+                            // 集齐10个天体后，更新最大可能分数（因为已经包含了1000分奖励）
+                            // 不需要再次检查分数上限，因为maxPossibleScore已经包含了这个奖励
                         }
                     }
                     
-                    // 前端分数限制：不能超过理论最大分数
+                    // 前端分数限制：不能超过理论最大分数（但集齐10个天体的奖励已经包含在maxPossibleScore中）
                     if (gameState.score > gameState.maxPossibleScore) {
                         gameState.score = gameState.maxPossibleScore;
                     }
