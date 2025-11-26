@@ -727,7 +727,8 @@ body {
                     <button type="button" class="difficulty-btn" data-level="6" onclick="selectDifficulty(6)">Lv.6</button>
                 </div>
                 <p id="difficultyHint" style="margin-top: 10px; font-size: 14px; color: #e5e7eb;">
-                    难度越高：碎石数量 = (5-8)×难度，石头越大，所有得分倍率每级+0.2（Lv.6 = 2倍分值）。
+                    难度越高：碎石数量 = (5-8)×难度，石头越大，需要更多子弹，所有得分倍率每级+0.2（Lv.6 = 2倍分值）。<br>
+                    ⚠️ 碎石可抓取但得分极低（基础分数20%），建议用追踪弹炸碎获得更高分数（基础分数50%）。
                 </p>
             </div>
             <div class="game-rules">
@@ -737,11 +738,11 @@ body {
                     <li>🔄 自动旋转：机械臂会360度自动旋转，瞄准目标</li>
                     <li>🎯 发射机械手：点击鼠标或按空格键发射机械手</li>
                     <li>⬅️ 收回机制：机械手碰到物体或达到最远距离后自动收回</li>
-                    <li>🚀 追踪弹：抓取物体后再次按空格键即可无限发射追踪弹，瞬间炸毁目标</li>
+                    <li>🚀 追踪弹：抓取物体后再次按空格键即可无限发射追踪弹，可炸毁碎石和宇宙生物（正向天体不可被炸碎）</li>
                     <li>✅ 行星碎片加分：🌙月球(+10) 🌍地球(+15) 🔴火星(+20) 🪐木星(+30) 🪐土星(+35) ☀️太阳(+50)</li>
                     <li>❌ 宇宙生物扣分：👾外星虫(-30) ☄️陨石怪(-50) 🕳️黑洞(-100)</li>
                     <li>⚖️ 重量影响：碎片越重，收回速度越慢（太阳最重，月球最轻）</li>
-                    <li>🪨 障碍物：灰色石头会阻挡机械手，碰到后立即收回</li>
+                    <li>🪨 小行星：灰色石头可抓取但得分极低（基础分数20%），建议用追踪弹炸碎获得更高分数（基础分数50%）</li>
                     <li>🎯 关卡系统：达到目标分数后进入下一关，并获得时间奖励</li>
                     <li>⚠️ 注意：避开宇宙生物，优先收集高价值碎片！</li>
                 </ul>
@@ -1103,12 +1104,12 @@ function calculateRockMass(size) {
     return baseMass * DENSITY_MULTIPLIER;
 }
 
-// 计算石头得分（基于大小，但由于密度高，质量大，回收慢，所以得分适中）
+// 计算石头得分（基于大小，碎石得分较低）
 function calculateRockScore(size) {
-    // 石头虽然质量大，但容易抓（大小适中），得分基于大小
-    const baseScore = 15;
+    // 碎石基础分数降低（原来15，现在改为8）
+    const baseScore = 8;
     const sizeFactor = size / EARTH_BASE_SIZE;
-    // 得分 = 基础分 * 大小因子 * 2（分数翻倍），但不超过一定上限
+    // 得分 = 基础分 * 大小因子 * 2（分数翻倍）
     return Math.round(baseScore * (0.5 + sizeFactor * 0.5) * 2);
 }
 
@@ -1157,17 +1158,24 @@ function createRock(difficultyLevel = 1) {
         rand -= entry.weight;
     }
     
-    const size = rockType.size;
+    // 高难度时，石头尺寸增大（难度越高，石头越大）
+    // 难度1=原尺寸，难度6=原尺寸*1.3倍（每级+0.06）
+    const sizeMultiplier = 1 + (difficultyLevel - 1) * 0.06;
+    const size = Math.round(rockType.size * sizeMultiplier);
     const mass = calculateRockMass(size);
     const score = calculateRockScore(size);
     
-    // 根据石头大小线性计算所需子弹数
-    // 最小石头(size 20)需要1发，最大石头(size 70)需要6发
+    // 根据石头大小和难度线性计算所需子弹数
+    // 基础：最小石头(size 20)需要1发，最大石头(size 70)需要6发
+    // 难度加成：难度越高，所需子弹数增加（难度1=1.0倍，难度6=2.0倍，每级+0.2）
     const minSize = 20;
     const maxSize = 70;
     const minHits = 1;
     const maxHits = 6;
-    const hitsRequired = Math.max(1, Math.ceil(minHits + (size - minSize) / (maxSize - minSize) * (maxHits - minHits)));
+    const baseHits = Math.max(1, Math.ceil(minHits + (size - minSize) / (maxSize - minSize) * (maxHits - minHits)));
+    // 难度加成：难度1=1.0倍，难度6=2.0倍（每级+0.2）
+    const difficultyHitsMultiplier = 1 + (difficultyLevel - 1) * 0.2;
+    const hitsRequired = Math.max(1, Math.ceil(baseHits * difficultyHitsMultiplier));
     
     return {
         x: 0, // 将在生成时设置
@@ -2478,6 +2486,11 @@ function fireMissile() {
     const ship = gameState.ship;
     const target = gameState.claw.grabbedItem;
     
+    // 正向的10大天体不能被子弹打碎（只能抓取）
+    if (target.type === 'good' && target.planetClass) {
+        return; // 不发射追踪弹
+    }
+    
     // 从飞船左右两端各发射一发追踪弹
     const leftOffsetX = Math.cos(ship.angle - Math.PI / 2) * 25; // 左侧偏移
     const leftOffsetY = Math.sin(ship.angle - Math.PI / 2) * 25;
@@ -2529,6 +2542,12 @@ function updateGame(deltaTime) {
             // 命中目标，对物体造成伤害
             const targetFragment = gameState.fragments.find(f => f.id === missile.target.id);
             if (targetFragment) {
+                // 正向的10大天体不能被子弹打碎（只能抓取）
+                if (targetFragment.type === 'good' && targetFragment.planetClass) {
+                    // 正向天体不受伤害，追踪弹直接消失
+                    return false;
+                }
+                
                 // 初始化生命值系统（如果还没有）
                 if (targetFragment.hitsRequired === undefined) {
                     // 非石头物体默认1发即可摧毁
@@ -2542,10 +2561,11 @@ function updateGame(deltaTime) {
                 // 检查是否达到所需子弹数
                 if (targetFragment.currentHits >= targetFragment.hitsRequired) {
                     // 物体被摧毁
-                    // 如果是石头，获得分值
+                    // 如果是石头，获得分值（炸碎得分更高，为原来的50%）
                     if (targetFragment.type === 'rock' && targetFragment.score) {
                         const difficultyMultiplier = gameState.scoreMultiplier || 1;
-                        const rockScore = Math.round(targetFragment.score * difficultyMultiplier);
+                        // 炸碎碎石得分（为原来基础分数的50%，比抓取的20%高）
+                        const rockScore = Math.round(targetFragment.score * 0.5 * difficultyMultiplier);
                         gameState.score += rockScore;
                         
                         // 前端分数限制：不能超过理论最大分数
@@ -2626,22 +2646,22 @@ function updateGame(deltaTime) {
                 claw.retracting = true;
             }
             
-            // 检查碰撞：检查所有物体（包括碎片和石头）
+            // 检查碰撞：检查所有物体（包括碎石，碎石可抓但得分极低）
             if (!claw.retracting && claw.length < claw.maxLength) {
-                // 检查碎片（包括普通碎片和石头）
+                // 检查碎片（包括碎石）
                     for (let fragment of gameState.fragments) {
                         if (checkCollision(fragment)) {
-                        // 抓到物体，标记并停止伸出
-                        // 保持当前长度，从物体位置直接收回
+                            // 抓到物体，标记并停止伸出
+                            // 保持当前长度，从物体位置直接收回
                             claw.grabbing = true;
                             claw.grabbedItem = fragment;
-                        claw.retracting = true; // 标记为收回状态
-                        // 记录抓取时的距离（用于得分加成）
-                        claw.grabDistance = claw.length;
-                        // 更新物体位置到爪子当前位置
-                        const pos = getClawPosition();
-                        claw.grabbedItem.x = pos.x;
-                        claw.grabbedItem.y = pos.y;
+                            claw.retracting = true; // 标记为收回状态
+                            // 记录抓取时的距离（用于得分加成）
+                            claw.grabDistance = claw.length;
+                            // 更新物体位置到爪子当前位置
+                            const pos = getClawPosition();
+                            claw.grabbedItem.x = pos.x;
+                            claw.grabbedItem.y = pos.y;
                             break;
                     }
                 }
@@ -2689,6 +2709,11 @@ function updateGame(deltaTime) {
                 if (claw.grabbing && claw.grabbedItem) {
                     // 计算基础分数
                     let baseScore = claw.grabbedItem.score;
+                    
+                    // 如果是碎石，抓取时得分极低（只有基础分数的20%）
+                    if (claw.grabbedItem.type === 'rock') {
+                        baseScore = Math.round(baseScore * 0.2); // 碎石抓取得分极低
+                    }
                     
                     // 应用距离加成：距离越远，加成越高
                     const distanceBonus = calculateDistanceBonus(claw.grabDistance, claw.maxLength);
