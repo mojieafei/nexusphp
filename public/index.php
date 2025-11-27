@@ -354,55 +354,22 @@ if (get_setting('main.show_top_uploader') == "yes") {
     if($userStatResult->isNotEmpty())
     {
         \Nexus\Nexus::css('.tr-top-uploader-tab>td {cursor: pointer}', 'footer', false);
+        $toggleTimeRangeJs = <<<JS
+jQuery(".tr-top-uploader-tab").on("click", "td", function () {
+    let _this = jQuery(this)
+    if (_this.hasClass("colhead")) {
+        return
+    }
+    _this.parent().children().removeClass("colhead")
+    _this.addClass("colhead")
+    jQuery(".top-uploader").hide()
+    jQuery("." + _this.attr("data-table")).fadeIn()
+
+})
+JS;
+        \Nexus\Nexus::js($toggleTimeRangeJs, "footer", false);
         print ("<h2>".$lang_index['top_uploader_title']."</h2>");
         print("<table width='100%'><tr class='tr-top-uploader-tab' title='{$lang_index['top_uploader_toggle_time_range_tab']}'><td class='colhead' align='center' data-table='top-uploader-recently'>{$lang_index['top_uploader_toggle_time_range_recently']}</td><td align='center' data-table='top-uploader-all'>{$lang_index['top_uploader_toggle_time_range_all']}</td></tr></table>");
-        print("<script type='text/javascript'>");
-        print("(function() {");
-        print("    function initTopUploaderTab() {");
-        print("        var tabs = document.querySelectorAll('.tr-top-uploader-tab td');");
-        print("        if (tabs.length === 0) {");
-        print("            return;");
-        print("        }");
-        print("        tabs.forEach(function(tab) {");
-        print("            // 移除旧的事件监听器（如果存在）");
-        print("            var newTab = tab.cloneNode(true);");
-        print("            tab.parentNode.replaceChild(newTab, tab);");
-        print("            newTab.addEventListener('click', function() {");
-        print("                var targetTable = this.getAttribute('data-table');");
-        print("                if (!targetTable) {");
-        print("                    return;");
-        print("                }");
-        print("                // 更新tab样式");
-        print("                var parent = this.parentElement;");
-        print("                var siblings = parent.querySelectorAll('td');");
-        print("                siblings.forEach(function(sibling) {");
-        print("                    sibling.classList.remove('colhead');");
-        print("                });");
-        print("                this.classList.add('colhead');");
-        print("                // 隐藏所有表格");
-        print("                var allTables = document.querySelectorAll('.top-uploader');");
-        print("                allTables.forEach(function(table) {");
-        print("                    table.style.display = 'none';");
-        print("                });");
-        print("                // 显示目标表格");
-        print("                var targetTables = document.querySelectorAll('.' + targetTable);");
-        print("                targetTables.forEach(function(table) {");
-        print("                    table.style.display = 'table';");
-        print("                });");
-        print("            });");
-        print("        });");
-        print("    }");
-        print("    if (document.readyState === 'loading') {");
-        print("        document.addEventListener('DOMContentLoaded', initTopUploaderTab);");
-        print("    } else {");
-        print("        initTopUploaderTab();");
-        print("    }");
-        print("    // 监听PJAX事件，确保页面局部刷新后重新初始化");
-        print("    if (typeof jQuery !== 'undefined') {");
-        print("        jQuery(document).on('pjax:complete', initTopUploaderTab);");
-        print("    }");
-        print("})();");
-        print("</script>");
 
         $userTorrentCounts = $userStatResult->pluck('counts', 'owner');
         $uidArr = $userStatResult->pluck('owner')->toArray();
