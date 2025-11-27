@@ -322,81 +322,6 @@ if ($showlastxforumposts_main == "yes" && $CURUSER)
 }
 
 // ------------- end: latest forum posts ------------------//
-// ------------- start: latest torrents ------------------//
-
-if ($showlastxtorrents_main == "yes") {
-		$result = sql_query("SELECT id,name,small_descr,leechers,seeders FROM torrents where visible='yes' ORDER BY id DESC LIMIT 5") or sqlerr(__FILE__, __LINE__);
-		if(mysql_num_rows($result) != 0 )
-		{
-			print ("<h2>".$lang_index['text_last_five_torrent']."</h2>");
-			print ("<table width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"5\"><tr><td class=\"colhead\" width=\"100%\">".$lang_index['col_name']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_seeder']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_leecher']."</td></tr>");
-
-			while( $row = mysql_fetch_assoc($result) )
-			{
-				print ("<tr><a href=\"details.php?id=". $row['id'] ."&amp;hit=1\"><td><a href=\"details.php?id=". $row['id'] ."&amp;hit=1\"><b>" . htmlspecialchars($row['name']) . "</b><br/>" . htmlspecialchars($row['small_descr']) ."</td></a><td align=\"center\">" . $row['seeders'] . "</td><td align=\"center\">" . $row['leechers'] . "</td></tr>");
-			}
-			print ("</table>");
-		}
-}
-// ------------- end: latest torrents ------------------//
-
-// ------------- start: top uploader ------------------//
-
-if (get_setting('main.show_top_uploader') == "yes") {
-    $topUploaderBaseQuery = \App\Models\Torrent::query()
-        ->selectRaw("owner, count(*) as counts")
-        ->groupBy('owner')
-        ->orderBy("counts", "desc")
-        ->take(10);
-    $userStatResult = \Nexus\Database\NexusDB::remember("index_top_uploader_all", 60, function () use ($topUploaderBaseQuery) {
-        return (clone $topUploaderBaseQuery)->get();
-    });
-    if($userStatResult->isNotEmpty())
-    {
-        \Nexus\Nexus::css('.tr-top-uploader-tab>td {cursor: pointer}', 'footer', false);
-        $toggleTimeRangeJs = <<<JS
-jQuery(".tr-top-uploader-tab").on("click", "td", function () {
-    let _this = jQuery(this)
-    if (_this.hasClass("colhead")) {
-        return
-    }
-    _this.parent().children().removeClass("colhead")
-    _this.addClass("colhead")
-    jQuery(".top-uploader").hide()
-    jQuery("." + _this.attr("data-table")).fadeIn()
-
-})
-JS;
-        \Nexus\Nexus::js($toggleTimeRangeJs, "footer", false);
-        print ("<h2>".$lang_index['top_uploader_title']."</h2>");
-        print("<table width='100%'><tr class='tr-top-uploader-tab' title='{$lang_index['top_uploader_toggle_time_range_tab']}'><td class='colhead' align='center' data-table='top-uploader-recently'>{$lang_index['top_uploader_toggle_time_range_recently']}</td><td align='center' data-table='top-uploader-all'>{$lang_index['top_uploader_toggle_time_range_all']}</td></tr></table>");
-
-        $userTorrentCounts = $userStatResult->pluck('counts', 'owner');
-        $uidArr = $userStatResult->pluck('owner')->toArray();
-        $result = \App\Models\User::query()->whereIn('id', $uidArr)->orderByRaw(sprintf("field(id,%s)", implode(',', $uidArr)))->get(['id', 'username']);
-        print ("<table class='top-uploader top-uploader-all' width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"5\" style='display: none'><tr><td class=\"colhead\" width=\"\">".$lang_index['col_author']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_counts']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_ranking']."</td></tr>");
-        foreach ($result as $ranking => $row)
-        {
-            print ("<tr><td>" . get_username($row->id) . "</td><td align=\"center\">" . $userTorrentCounts->get($row->id, 0) . "</td><td align=\"center\">" . ($ranking + 1) . "</td></tr>");
-        }
-        print ("</table>");
-
-        $userStatResult = \Nexus\Database\NexusDB::remember("index_top_uploader_recently", 60, function () use ($topUploaderBaseQuery) {
-            return (clone $topUploaderBaseQuery)->where('added', '>=', \Carbon\Carbon::today()->subDays(30))->get();
-        });
-        $userTorrentCounts = $userStatResult->pluck('counts', 'owner');
-        $uidArr = $userStatResult->pluck('owner')->toArray() ?: [0];
-        $result = \App\Models\User::query()->whereIn('id', $uidArr)->orderByRaw(sprintf("field(id,%s)", implode(',', $uidArr)))->get(['id', 'username']);
-        print ("<table class='top-uploader top-uploader-recently' width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"5\"><tr><td class=\"colhead\" width=\"\">".$lang_index['col_author']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_counts']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_ranking']."</td></tr>");
-        foreach ($result as $ranking => $row)
-        {
-            print ("<tr><td>" . get_username($row->id) . "</td><td align=\"center\">" . $userTorrentCounts->get($row->id, 0) . "</td><td align=\"center\">" . ($ranking + 1) . "</td></tr>");
-        }
-        print ("</table>");
-    }
-}
-// ------------- end: top uploader ------------------//
-
 // ------------- start: polls ------------------//
 if ($CURUSER && $showpolls_main == "yes")
 {
@@ -541,6 +466,78 @@ if ($CURUSER && $showpolls_main == "yes")
 		}
 }
 // ------------- end: polls ------------------//
+// ------------- start: latest torrents ------------------//
+
+if ($showlastxtorrents_main == "yes") {
+		$result = sql_query("SELECT id,name,small_descr,leechers,seeders FROM torrents where visible='yes' ORDER BY id DESC LIMIT 5") or sqlerr(__FILE__, __LINE__);
+		if(mysql_num_rows($result) != 0 )
+		{
+			print ("<h2>".$lang_index['text_last_five_torrent']."</h2>");
+			print ("<table width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"5\"><tr><td class=\"colhead\" width=\"100%\">".$lang_index['col_name']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_seeder']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_leecher']."</td></tr>");
+
+			while( $row = mysql_fetch_assoc($result) )
+			{
+				print ("<tr><a href=\"details.php?id=". $row['id'] ."&amp;hit=1\"><td><a href=\"details.php?id=". $row['id'] ."&amp;hit=1\"><b>" . htmlspecialchars($row['name']) . "</b><br/>" . htmlspecialchars($row['small_descr']) ."</td></a><td align=\"center\">" . $row['seeders'] . "</td><td align=\"center\">" . $row['leechers'] . "</td></tr>");
+			}
+			print ("</table>");
+		}
+}
+// ------------- end: latest torrents ------------------//
+
+// ------------- start: top uploader ------------------//
+
+if (get_setting('main.show_top_uploader') == "yes") {
+    $topUploaderBaseQuery = \App\Models\Torrent::query()
+        ->selectRaw("owner, count(*) as counts")
+        ->groupBy('owner')
+        ->orderBy("counts", "desc")
+        ->take(10);
+    $userStatResult = \Nexus\Database\NexusDB::remember("index_top_uploader_all", 60, function () use ($topUploaderBaseQuery) {
+        return (clone $topUploaderBaseQuery)->get();
+    });
+    if($userStatResult->isNotEmpty())
+    {
+        print ("<h2>".$lang_index['top_uploader_title']."</h2>");
+        print("<table width='100%' cellspacing='0' cellpadding='0'><tr>");
+        
+        // 左侧：最近30天
+        print("<td width='50%' valign='top' style='padding-right: 10px;'>");
+        print("<h3>".$lang_index['top_uploader_toggle_time_range_recently']."</h3>");
+        $userStatResult = \Nexus\Database\NexusDB::remember("index_top_uploader_recently", 60, function () use ($topUploaderBaseQuery) {
+            return (clone $topUploaderBaseQuery)->where('added', '>=', \Carbon\Carbon::today()->subDays(30))->get();
+        });
+        $userTorrentCounts = $userStatResult->pluck('counts', 'owner');
+        $uidArr = $userStatResult->pluck('owner')->toArray() ?: [0];
+        $result = \App\Models\User::query()->whereIn('id', $uidArr)->orderByRaw(sprintf("field(id,%s)", implode(',', $uidArr)))->get(['id', 'username']);
+        print ("<table width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"5\"><tr><td class=\"colhead\" width=\"\">".$lang_index['col_author']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_counts']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_ranking']."</td></tr>");
+        foreach ($result as $ranking => $row)
+        {
+            print ("<tr><td>" . get_username($row->id) . "</td><td align=\"center\">" . $userTorrentCounts->get($row->id, 0) . "</td><td align=\"center\">" . ($ranking + 1) . "</td></tr>");
+        }
+        print ("</table>");
+        print("</td>");
+        
+        // 右侧：全部时间
+        print("<td width='50%' valign='top' style='padding-left: 10px;'>");
+        print("<h3>".$lang_index['top_uploader_toggle_time_range_all']."</h3>");
+        $userStatResultAll = \Nexus\Database\NexusDB::remember("index_top_uploader_all", 60, function () use ($topUploaderBaseQuery) {
+            return (clone $topUploaderBaseQuery)->get();
+        });
+        $userTorrentCountsAll = $userStatResultAll->pluck('counts', 'owner');
+        $uidArrAll = $userStatResultAll->pluck('owner')->toArray();
+        $resultAll = \App\Models\User::query()->whereIn('id', $uidArrAll)->orderByRaw(sprintf("field(id,%s)", implode(',', $uidArrAll)))->get(['id', 'username']);
+        print ("<table width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"5\"><tr><td class=\"colhead\" width=\"\">".$lang_index['col_author']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_counts']."</td><td class=\"colhead\" align=\"center\">".$lang_index['col_ranking']."</td></tr>");
+        foreach ($resultAll as $ranking => $row)
+        {
+            print ("<tr><td>" . get_username($row->id) . "</td><td align=\"center\">" . $userTorrentCountsAll->get($row->id, 0) . "</td><td align=\"center\">" . ($ranking + 1) . "</td></tr>");
+        }
+        print ("</table>");
+        print("</td>");
+        
+        print("</tr></table>");
+    }
+}
+// ------------- end: top uploader ------------------//
 // ------------- start: stats ------------------//
 if ($showstats_main == "yes")
 {
