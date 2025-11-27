@@ -36,7 +36,7 @@ else
 	stdhead($lang_donate['head_donation']);
 	begin_main_frame();
 	print("<h2>".$lang_donate['text_donate']."</h2>");
-	print("<p align=\"center\"><img src=\"img/zhifubao.jpg\" alt=\"支付宝\" width=\"126\" height=\"196\" /></p>");
+	print("<p align=\"left\"><img src=\"img/zhifubao.jpg\" alt=\"支付宝\" width=\"126\" height=\"196\" /></p>");
 	print("<table width=100%>");
 	print("<tr><td colspan=2 class=text align=left>".$lang_donate['text_donation_note']."</td></tr>");
 	if ($custom) {
