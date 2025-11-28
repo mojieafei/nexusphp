@@ -5120,6 +5120,63 @@ function get_username($id, $big = false, $link = true, $bold = true, $target = f
 //        $username = ($underline == true ? "<u>" . $arr['username'] . "</u>" : $arr['username']);
 //        $username = ($bold == true ? "<b>" . $username . "</b>" : $username);
 
+        //role icons - 在用户名左边显示角色图标（非普通用户）
+        $roleIconsHtml = '';
+        $roles = $arr['roles'] ?? [];
+        $defaultIcon = '🔷'; // 默认占位图标
+        
+        if (!empty($roles)) {
+            $roleIcons = [];
+            $roleNames = [];
+            foreach ($roles as $role) {
+                // 确保 role 是数组格式
+                if (is_object($role)) {
+                    $role = $role->toArray();
+                }
+                
+                if (isset($role['display_name']) && isset($role['name']) && $role['name'] != \App\Models\Role::NAME_NORMAL_USER) {
+                    $roleNames[] = htmlspecialchars($role['display_name']);
+                    // 处理图标：如果有配置则使用配置的，否则使用默认占位图标
+                    $icon = !empty($role['icon']) ? $role['icon'] : $defaultIcon;
+                    if (preg_match('/\.(jpg|jpeg|png|gif|svg|webp)$/i', $icon)) {
+                        // 图片路径
+                        $roleIcons[] = sprintf(
+                            '<img src="%s" title="%s" style="max-height: %s;max-width: %s;vertical-align: middle;margin-right: 2px;" />',
+                            htmlspecialchars($icon),
+                            htmlspecialchars($role['display_name']),
+                            $medalSize,
+                            $medalSize
+                        );
+                    } else {
+                        // emoji（包括默认占位图标）
+                        $roleIcons[] = sprintf(
+                            '<span title="%s" style="font-size: %s;vertical-align: middle;margin-right: 2px;">%s</span>',
+                            htmlspecialchars($role['display_name']),
+                            $medalSize,
+                            htmlspecialchars($icon)
+                        );
+                    }
+                }
+            }
+            if (!empty($roleIcons)) {
+                $roleIconsHtml = implode('', $roleIcons);
+            }
+        }
+
+        //role - 获取非普通用户的角色名称（用于文字显示）
+        $roleHtml = '';
+        if (!empty($roles)) {
+            $roleNames = [];
+            foreach ($roles as $role) {
+                if (isset($role['display_name']) && $role['name'] != \App\Models\Role::NAME_NORMAL_USER) {
+                    $roleNames[] = htmlspecialchars($role['display_name']);
+                }
+            }
+            if (!empty($roleNames)) {
+                $roleHtml = ' | ' . implode('、', $roleNames);
+            }
+        }
+
         //medal
         $medalHtml = '';
 		foreach ($arr['wearing_medals'] ?? [] as $medal) {
@@ -5132,7 +5189,9 @@ function get_username($id, $big = false, $link = true, $bold = true, $target = f
 		$href = getSchemeAndHttpHost() . "/userdetails.php?id=$id";
 		$username = ($link == true ? "<a ". $link_ext . " href=\"" . $href . "\"" . ($target == true ? " target=\"_blank\"" : "") . " class='". get_user_class_name($arr['class'],true, false, false) . "_Name'>" . $username . "</a>" : $username) . $pics . ($withtitle == true ? " (" . ($arr['title'] == "" ?  get_user_class_name($arr['class'],false,true,true, ['with_alias' => true]) : "<span class='".get_user_class_name($arr['class'],true, false, false) . "_Name'><b>".htmlspecialchars($arr['title'])) . "</b></span>)" : "");
 
-		$username = "<span class=\"nowrap\">" . ( $bracket == true ? "(" . $username . ")" : $username) . "$medalHtml</span>";
+		// 组合显示：角色图标 + 用户名 | 角色名称(如果有) | 勋章
+		$separator = (!empty($roleHtml) && !empty($medalHtml)) ? ' | ' : '';
+		$username = "<span class=\"nowrap\">" . $roleIconsHtml . ( $bracket == true ? "(" . $username . ")" : $username) . "$roleHtml" . ($roleHtml && $medalHtml ? ' | ' : '') . "$medalHtml</span>";
 	}
 	else
 	{

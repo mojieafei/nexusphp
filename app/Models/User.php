@@ -18,7 +18,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Nexus\Database\NexusDB;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;
-use NexusPlugin\Permission\Models\Role;
+use App\Models\Role;
 use NexusPlugin\Permission\Models\UserPermission;
 
 class User extends Authenticatable implements FilamentUser, HasName

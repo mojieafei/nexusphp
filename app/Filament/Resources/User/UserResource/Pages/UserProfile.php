@@ -65,6 +65,7 @@ class UserProfile extends ViewRecord
     {
         $actions = [];
         if ($this->canEditUser()) {
+            $actions[] = $this->buildManageRolesAction();
             $actions[] = $this->buildGrantPropsAction();
             $actions[] = $this->buildGrantMedalAction();
             $actions[] = $this->buildAssignExamAction();
@@ -289,6 +290,45 @@ class UserProfile extends ViewRecord
                 try {
                     $userRep->updateDownloadPrivileges(Auth::user(), $this->record->id, $this->record->downloadpos == 'yes' ? 'no' : 'yes');
                     $this->sendSuccessNotification();
+                } catch (\Exception $exception) {
+                    $this->sendFailNotification($exception->getMessage());
+                }
+            });
+    }
+
+    private function buildManageRolesAction()
+    {
+        return Actions\Action::make('管理角色')
+            ->label('管理角色')
+            ->modalHeading('管理用户角色')
+            ->form([
+                Forms\Components\CheckboxList::make('roles')
+                    ->label('角色')
+                    ->options(\App\Models\Role::query()->orderBy('id')->pluck('display_name', 'id')->toArray())
+                    ->default(fn () => $this->record->roles()->pluck('roles.id')->toArray())
+                    ->columns(2)
+                    ->helperText('选择用户拥有的角色（可多选）'),
+            ])
+            ->action(function ($data) {
+                try {
+                    // 同步用户角色
+                    $roleIds = $data['roles'] ?? [];
+                    $this->record->roles()->sync($roleIds);
+                    
+                    // 清除用户相关缓存，确保前端立即看到更新
+                    $uid = $this->record->id;
+                    try {
+                        \Nexus\Database\NexusDB::cache_del("user_{$uid}_content");
+                        \Nexus\Database\NexusDB::cache_del("user_{$uid}_roles");
+                        \Nexus\Database\NexusDB::cache_del(\App\Models\Setting::DIRECT_PERMISSION_CACHE_KEY_PREFIX . $uid);
+                        \Nexus\Database\NexusDB::cache_del("user_role_ids:$uid");
+                        \Nexus\Database\NexusDB::cache_del("direct_permissions:$uid");
+                    } catch (\Exception $e) {
+                        // 缓存清除失败不影响主流程，只记录日志
+                        do_log("Clear cache failed for user $uid: " . $e->getMessage(), 'error');
+                    }
+                    
+                    $this->sendSuccessNotification('角色更新成功！');
                 } catch (\Exception $exception) {
                     $this->sendFailNotification($exception->getMessage());
                 }

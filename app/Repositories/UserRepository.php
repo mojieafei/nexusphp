@@ -168,6 +168,13 @@ class UserRepository extends BaseRepository
             $user->provider_id = $params['provider_id'];
         }
         $user->save();
+        
+        // 为新用户分配默认角色（普通用户）
+        $defaultRole = \App\Models\Role::where('is_default', true)->first();
+        if ($defaultRole) {
+            $user->roles()->attach($defaultRole->id);
+        }
+        
         fire_event("user_created", $user);
         return $user;
     }

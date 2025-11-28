@@ -66,6 +66,32 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         do_action('nexus_boot');
+        
+        // 注册角色权限过滤器
+        $this->registerRolePermissionFilter();
+    }
+    
+    /**
+     * 注册角色权限过滤器
+     */
+    private function registerRolePermissionFilter(): void
+    {
+        add_filter('user_role_permissions', function($permissions, $uid) {
+            $user = \App\Models\User::find($uid);
+            if (!$user) {
+                return $permissions;
+            }
+            
+            // 获取用户的所有角色
+            $roles = $user->roles;
+            foreach ($roles as $role) {
+                // 获取角色关联的权限
+                $rolePerms = $role->permissions()->pluck('permission')->toArray();
+                $permissions = array_merge($permissions, $rolePerms);
+            }
+            
+            return array_unique($permissions);
+        }, 10, 2);
     }
 
     private function customScheduleTask(): void

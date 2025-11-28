@@ -84,6 +84,11 @@ class UserResource extends Resource
                 Forms\Components\TextInput::make('password_confirmation')->password()->required()->same('password')->visibleOn(Pages\CreateUser::class),
                 Forms\Components\TextInput::make('id')->integer(),
                 Forms\Components\Select::make('class')->options(User::listClass(User::CLASS_PEASANT, Auth::user()->class - 1)),
+                Forms\Components\CheckboxList::make('roles')
+                    ->label('角色')
+                    ->relationship('roles', 'display_name', fn ($query) => $query->orderBy('id'))
+                    ->columns(2)
+                    ->helperText('选择用户拥有的角色'),
             ]);
     }
 

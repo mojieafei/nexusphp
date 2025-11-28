@@ -785,6 +785,10 @@ function get_user_row($id)
                 $query->orderBy('user_medals.priority', 'desc')
                     ->orderBy('user_medals.id', 'desc')
                     ->limit(get_setting('system.maximum_number_of_medals_can_be_worn', 3));
+            },
+            'roles' => function ($query) {
+                $query->where('name', '!=', \App\Models\Role::NAME_NORMAL_USER)
+                      ->select('id', 'name', 'display_name', 'icon', 'description');
             }
         ])->find($id, $neededColumns);
         if (!$user) {

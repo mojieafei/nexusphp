@@ -399,6 +399,36 @@ class Update extends Install
             $this->runMigrate("database/migrations/2025_11_08_000002_create_stardust_broadcasts_table.php");
             $this->doLog("[STARDUST_FARM_BROADCAST] Broadcasts table created!");
         }
+
+        /**
+         * 角色权限系统 - 初始化
+         * @since 1.9.x
+         */
+        if (!Schema::hasTable("roles")) {
+            $this->doLog("[ROLE_SYSTEM] Creating role tables...");
+            $this->runMigrate("database/migrations/2025_01_20_000001_create_roles_table.php");
+            $this->runMigrate("database/migrations/2025_01_20_000002_create_role_permissions_table.php");
+            $this->runMigrate("database/migrations/2025_01_20_000003_create_user_roles_table.php");
+            $this->doLog("[ROLE_SYSTEM] Role tables created!");
+            
+            // 初始化默认角色数据
+            $this->doLog("[ROLE_SYSTEM] Initializing default roles...");
+            Artisan::call("db:seed", ["--class" => "RoleSeeder", "--force" => true]);
+            $this->doLog("[ROLE_SYSTEM] Default roles initialized!");
+            $this->doLog("[ROLE_SYSTEM] Role system installation completed! 👥");
+        } else {
+            // 如果表已存在，检查是否需要添加 icon 字段
+            if (!Schema::hasColumn("roles", "icon")) {
+                $this->doLog("[ROLE_SYSTEM] Adding icon column to roles table...");
+                $this->runMigrate("database/migrations/2025_01_20_000004_add_icon_to_roles_table.php");
+                $this->doLog("[ROLE_SYSTEM] Icon column added!");
+                
+                // 更新现有角色的图标
+                $this->doLog("[ROLE_SYSTEM] Updating existing roles with icons...");
+                Artisan::call("db:seed", ["--class" => "RoleSeeder", "--force" => true]);
+                $this->doLog("[ROLE_SYSTEM] Roles updated with icons!");
+            }
+        }
     }
 
     public function runExtraMigrate()
