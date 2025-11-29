@@ -9,6 +9,7 @@ use App\Models\StardustInventory;
 use App\Models\StardustInteraction;
 use App\Models\StardustTransactionLog;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class StardustFarmRepository extends BaseRepository
 {
@@ -377,50 +378,73 @@ class StardustFarmRepository extends BaseRepository
             throw new \InvalidArgumentException('不能访问自己');
         }
 
-        // 检查今天访问次数
-        $todayVisits = StardustInteraction::getTodayVisitCount($userId);
-        if ($todayVisits >= 5) {
-            throw new \InvalidArgumentException('今天访问次数已用完（最多5次）');
-        }
+        // 使用数据库事务和锁来防止并发问题
+        return DB::transaction(function () use ($userId, $targetUserId) {
+            // 先锁定用户农场记录，防止并发修改
+            $myFarm = StardustFarm::where('user_id', $userId)->lockForUpdate()->first();
+            if (!$myFarm) {
+                $myFarm = StardustFarm::getOrCreateForUser($userId);
+            }
 
-        // 检查是否已访问过该好友
-        if (StardustInteraction::hasActionToday($userId, $targetUserId, 'visit')) {
-            throw new \InvalidArgumentException('今天已访问过该好友');
-        }
+            // 检查今天访问次数（在事务内检查，避免并发问题）
+            $todayVisits = StardustInteraction::where('from_user_id', $userId)
+                ->where('action', 'visit')
+                ->whereDate('created_at', today())
+                ->count();
+            
+            if ($todayVisits >= 5) {
+                throw new \InvalidArgumentException('今天访问次数已用完（最多5次）');
+            }
 
-        // 获取目标农场数据
-        $targetFarmData = $this->getUserFarmData($targetUserId);
+            // 检查是否已访问过该好友
+            $hasVisited = StardustInteraction::where('from_user_id', $userId)
+                ->where('to_user_id', $targetUserId)
+                ->where('action', 'visit')
+                ->whereDate('created_at', today())
+                ->exists();
+            
+            if ($hasVisited) {
+                throw new \InvalidArgumentException('今天已访问过该好友');
+            }
 
-        // 记录访问并奖励
-        $reward = 10;
-        $alreadyRewarded = StardustTransactionLog::where('user_id', $userId)
-            ->where('source', 'visit')
-            ->whereDate('created_at', today())
-            ->exists();
-        if ($alreadyRewarded) {
-            $reward = 0;
-        }
-        StardustInteraction::record(
-            $userId,
-            $targetUserId,
-            'visit',
-            null,
-            $reward,
-            '访问好友农场'
-        );
+            // 检查今天是否已经获得过访问奖励（锁定相关记录防止并发）
+            $rewardLog = StardustTransactionLog::where('user_id', $userId)
+                ->where('source', 'visit')
+                ->where('type', 'earn')
+                ->where('amount', '>', 0)
+                ->whereDate('created_at', today())
+                ->lockForUpdate()
+                ->first();
+            
+            $alreadyRewarded = $rewardLog !== null;
 
-        if ($reward > 0) {
-            $myFarm = StardustFarm::getOrCreateForUser($userId);
-            $myFarm->addStardust($reward, 'visit', '访问好友农场');
-        }
+            // 获取目标农场数据
+            $targetFarmData = $this->getUserFarmData($targetUserId);
 
-        return [
-            'success' => true,
-            'message' => $reward > 0 ? "访问成功！获得{$reward}星尘" : '访问成功！今日奖励已领取',
-            'reward' => $reward,
-            'target_farm' => $targetFarmData,
-            'remaining_visits' => 5 - $todayVisits - 1,
-        ];
+            // 记录访问（无论是否有奖励都要记录）
+            $reward = $alreadyRewarded ? 0 : 10;
+            StardustInteraction::record(
+                $userId,
+                $targetUserId,
+                'visit',
+                null,
+                $reward,
+                '访问好友农场'
+            );
+
+            // 只有在今天还没有获得过奖励时才发放奖励
+            if ($reward > 0 && !$alreadyRewarded) {
+                $myFarm->addStardust($reward, 'visit', '访问好友农场');
+            }
+
+            return [
+                'success' => true,
+                'message' => $reward > 0 ? "访问成功！获得{$reward}星尘" : '访问成功！今日奖励已领取',
+                'reward' => $reward,
+                'target_farm' => $targetFarmData,
+                'remaining_visits' => 5 - $todayVisits - 1,
+            ];
+        });
     }
 
     /**
