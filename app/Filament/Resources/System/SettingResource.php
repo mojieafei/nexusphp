@@ -64,6 +64,11 @@ class SettingResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('autoload')->options(self::$yesOrNo),
+                Tables\Filters\Filter::make('role_salary')
+                    ->label('Role salary settings')
+                    ->query(function (Builder $query) {
+                        $query->where('name', 'like', 'role_salary.%');
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

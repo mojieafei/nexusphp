@@ -42,6 +42,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('hr:update_status')->everyTenMinutes();
         $schedule->command('hr:update_status --ignore_time=1')->hourly();
         $schedule->command('user:delete_expired_token')->dailyAt('04:00');
+        // 每月 1 号凌晨 1 点结算角色工资（魔力 / 邀请），具体逻辑在 RoleSalaryRepository 中按角色拆分
+        $schedule->command('role:salary_settle')->monthlyOn(1, '1:00');
         $schedule->command('claim:settle')->hourly()->when(function () {
             return Carbon::now()->format('d') == '01';
         });

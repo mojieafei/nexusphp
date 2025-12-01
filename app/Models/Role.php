@@ -30,6 +30,7 @@ class Role extends Model
     const NAME_TORRENT_REVIEWER = 'torrent_reviewer';
     const NAME_UPLOADER = 'uploader';
     const NAME_SEEDER = 'seeder';
+    const NAME_REUPLOADER = 're_uploader';
 
     /**
      * 获取拥有此角色的用户
