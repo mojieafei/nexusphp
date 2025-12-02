@@ -53,6 +53,18 @@ class RoleSeeder extends Seeder
                 'is_default' => false,
                 'permissions' => [],
             ],
+            [
+                'name' => Role::NAME_REUPLOADER,
+                'display_name' => '转载员',
+                'description' => '负责转载发布种子的角色',
+                'icon' => '📥',
+                'is_default' => false,
+                // 权限与发布员类似，允许上传
+                'permissions' => [
+                    'upload',
+                    'uploadspecial',
+                ],
+            ],
         ];
 
         foreach ($roles as $roleData) {

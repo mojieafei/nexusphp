@@ -705,10 +705,26 @@ class RoleSalaryRepository extends BaseRepository
         if ($users->isEmpty()) {
             return [];
         }
-
         $start = $month->copy()->startOfMonth();
         $end = $month->copy()->addMonthNoOverflow()->startOfMonth();
         $userIds = $users->pluck('id')->all();
+
+        // 只有同时拥有「发布员」和「转载员」两个角色的用户，才需要做岗位优先决策
+        // 否则：
+        // - 只有发布员 → 一律按发布员发
+        // - 只有转载员 → 一律按转载员发
+        $uploaderRole = Role::query()->where('name', Role::NAME_UPLOADER)->first();
+        $reuploaderRole = Role::query()->where('name', Role::NAME_REUPLOADER)->first();
+
+        if (!$uploaderRole || !$reuploaderRole) {
+            // 没有任一角色定义时，不做决策，默认按各自角色发
+            return [];
+        }
+
+        $uploaderUserIds = $uploaderRole->users()->whereIn('users.id', $userIds)->pluck('users.id')->all();
+        $reuploaderUserIds = $reuploaderRole->users()->whereIn('users.id', $userIds)->pluck('users.id')->all();
+        $bothRoleUserIds = array_values(array_intersect($uploaderUserIds, $reuploaderUserIds));
+        $bothRoleUserIdsMap = array_flip($bothRoleUserIds);
 
         $officialTagId = Setting::get('bonus.official_tag') ?? Tag::DEFAULTS[2]['id'] ?? 3;
 
@@ -738,11 +754,19 @@ class RoleSalaryRepository extends BaseRepository
         $decision = [];
         foreach ($users as $user) {
             $uid = $user->id;
+
+            // 只有同时具备两个角色的用户才进行岗位选择，否则保持 null 让各自角色逻辑照常执行
+            if (!isset($bothRoleUserIdsMap[$uid])) {
+                $decision[$uid] = null;
+                continue;
+            }
+
             $total = (int)($totals->get($uid)->total_count ?? 0);
             if ($total <= 0) {
                 $decision[$uid] = null;
                 continue;
             }
+
             $official = (int)($officialCounts->get($uid)->official_count ?? 0);
             $ratio = $official / $total;
             if ($ratio >= 0.5) {

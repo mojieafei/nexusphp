@@ -3,7 +3,7 @@
 return [
     'score' => [
         'min' => -10000,
-        'max' => 10000,
+        'max' => 20000,
     ],
     'duration' => [
         'expected_seconds' => 60,
@@ -12,7 +12,7 @@ return [
         'allowed_delta_seconds' => 2.5,
     ],
     'combo' => [
-        'max' => 80,
+        'max' => 160,
         'lenient_check_threshold' => 1,
     ],
     'frequency' => [

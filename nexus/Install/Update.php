@@ -428,6 +428,11 @@ class Update extends Install
                 Artisan::call("db:seed", ["--class" => "RoleSeeder", "--force" => true]);
                 $this->doLog("[ROLE_SYSTEM] Roles updated with icons!");
             }
+
+            // 无论是否新增 icon，都重新跑一次 RoleSeeder，确保新增的角色（如 re_uploader）被自动补全
+            $this->doLog("[ROLE_SYSTEM] Ensuring latest roles (e.g. re_uploader) are seeded...");
+            Artisan::call("db:seed", ["--class" => "RoleSeeder", "--force" => true]);
+            $this->doLog("[ROLE_SYSTEM] Roles seeder re-run completed!");
         }
     }
 
