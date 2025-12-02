@@ -1098,7 +1098,7 @@ body {
                         <h4 style="color: #FFD700; margin-bottom: 10px;">🏞️ 购买土地</h4>
                         <ul style="list-style: none; padding-left: 0;">
                             <li style="padding: 5px 0;">• 初始赠送：<strong>3块地</strong></li>
-                            <li style="padding: 5px 0;">• 等级要求：<strong>Veteran User</strong>以上</li>
+                            <li style="padding: 5px 0;">• 等级要求：<strong>Power User</strong>以上</li>
                             <li style="padding: 5px 0;">• 价格递增：
                                 <ul style="list-style: none; padding-left: 15px; font-size: 12px; color: #aaa;">
                                     <li>第4块：500⭐</li>
