@@ -39,7 +39,7 @@ class RoleSalarySettings extends Page implements HasForms
     public static function canAccess(): bool
     {
         $user = auth()->user();
-        return $user && $user->class >= \App\Models\User::CLASS_SYSOP;
+        return $user && $user->class >= \App\Models\User::CLASS_ADMINISTRATOR;
     }
 
     public function mount(): void

@@ -74,6 +74,7 @@ class AppPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
                 \App\Http\Middleware\Locale::class,
+                \App\Http\Middleware\AdminOperationLogger::class,
             ])
             ->authMiddleware([
                 \App\Http\Middleware\Filament::class,

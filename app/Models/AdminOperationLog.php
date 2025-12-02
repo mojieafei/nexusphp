@@ -10,6 +10,8 @@ class AdminOperationLog extends NexusModel
 
     protected $connection = NexusDB::ELOQUENT_CONNECTION_NAME;
 
+    public $timestamps = true;
+
     protected $fillable = [
         'user_id',
         'path',
@@ -28,6 +30,8 @@ class AdminOperationLog extends NexusModel
         'request_body' => 'array',
         'old_values' => 'array',
         'new_values' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function user()
