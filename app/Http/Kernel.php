@@ -50,6 +50,7 @@ class Kernel extends HttpKernel
         ],
         'filament' => [
             \Illuminate\Session\Middleware\StartSession::class,
+            \App\Http\Middleware\AdminOperationLogger::class,
 //            \Filament\Http\Middleware\Authenticate::class,
             Filament::class,
         ],
