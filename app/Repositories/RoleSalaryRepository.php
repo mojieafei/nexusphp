@@ -111,9 +111,9 @@ class RoleSalaryRepository extends BaseRepository
      * - 达标条件：
      *   - N >= role_salary.uploader.min_torrents（默认 10）
      *   - X >= role_salary.uploader.min_volume_gb（默认 30 GB）
-     * - 达标则发放：
-     *   - seedbonus += role_salary.uploader.bonus（默认 1000）
-     *   - invites  += role_salary.uploader.invites（默认 1）
+     * - 达标则发放（多劳多得）：
+     *   - seedbonus += N × role_salary.uploader.bonus（每个种子默认 1000）
+     *   - invites  += role_salary.uploader.invites（固定值，默认 1）
      * - 幂等：
      *   - 表 role_work_salaries 上 user_id + role_id + month 唯一
      *   - 已存在记录则跳过（但仍在返回结果中标记为 skipped）
@@ -174,13 +174,16 @@ class RoleSalaryRepository extends BaseRepository
 
             $meetThreshold = $isUploaderPreferred && $torrentsCount >= $minTorrents && $volumeGb >= $minVolumeGb;
 
+            // 发布员工资：达到最低要求后，按种子数量 × 工资魔力值计算（多劳多得）
+            $bonusValue = $meetThreshold ? $torrentsCount * $bonusPerUser : 0;
+
             $item = [
                 'user_id' => $uid,
                 'username' => $user->username,
                 'torrents_count' => $torrentsCount,
                 'volume_gb' => round($volumeGb, 4),
                 'meet_threshold' => $meetThreshold,
-                'bonus' => $meetThreshold ? $bonusPerUser : 0,
+                'bonus' => $bonusValue,
                 'invites' => $meetThreshold ? $invitesPerUser : 0,
                 'skipped' => false,
                 'reason' => '',
@@ -216,7 +219,7 @@ class RoleSalaryRepository extends BaseRepository
 
             // 实际发放：包一层事务，保证用户余额和日志表同步
             try {
-                DB::transaction(function () use ($uid, $role, $monthKey, $item, $bonusPerUser, $invitesPerUser, $torrentsCount, $volumeGb, $minTorrents, $minVolumeGb) {
+                DB::transaction(function () use ($uid, $role, $monthKey, $item, $bonusValue, $invitesPerUser, $torrentsCount, $volumeGb, $minTorrents, $minVolumeGb, $bonusPerUser) {
                     /** @var User $userForUpdate */
                     $userForUpdate = User::query()->where('id', $uid)->lockForUpdate()->first();
                     if (!$userForUpdate) {
@@ -224,7 +227,7 @@ class RoleSalaryRepository extends BaseRepository
                     }
 
                     $oldBonus = (float)$userForUpdate->seedbonus;
-                    $newBonus = $oldBonus + $bonusPerUser;
+                    $newBonus = $oldBonus + $bonusValue;
 
                     // 更新用户魔力与邀请
                     $userForUpdate->seedbonus = $newBonus;
@@ -236,11 +239,12 @@ class RoleSalaryRepository extends BaseRepository
                         'user_id' => $uid,
                         'role_id' => $role->id,
                         'month' => $monthKey,
-                        'bonus' => $bonusPerUser,
+                        'bonus' => $bonusValue,
                         'invites' => $invitesPerUser,
                         'stats' => json_encode([
                             'torrents_count' => $torrentsCount,
                             'volume_gb' => $volumeGb,
+                            'bonus_per_torrent' => $bonusPerUser,
                             'thresholds' => [
                                 'min_torrents' => $minTorrents,
                                 'min_volume_gb' => $minVolumeGb,
@@ -250,15 +254,16 @@ class RoleSalaryRepository extends BaseRepository
 
                     // 记录 BonusLogs
                     $comment = sprintf(
-                        'Uploader monthly salary, month=%s, torrents=%d, volume_gb=%.4f',
+                        'Uploader monthly salary, month=%s, torrents=%d, volume_gb=%.4f, bonus_per_torrent=%d',
                         $monthKey,
                         $torrentsCount,
-                        $volumeGb
+                        $volumeGb,
+                        $bonusPerUser
                     );
                     BonusLogs::add(
                         $uid,
                         $oldBonus,
-                        $bonusPerUser,
+                        $bonusValue,
                         $newBonus,
                         $comment,
                         BonusLogs::BUSINESS_TYPE_ROLE_WORK_SALARY

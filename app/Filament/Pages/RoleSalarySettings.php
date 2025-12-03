@@ -67,10 +67,11 @@ class RoleSalarySettings extends Page implements HasForms
                                 ->default(30)
                                 ->helperText('本月所有有效种子的总体积下限（单位 GB）。'),
                             TextInput::make('uploader_bonus')
-                                ->label('工资魔力值')
+                                ->label('每个种子魔力值')
                                 ->numeric()
                                 ->minValue(0)
-                                ->default(1000),
+                                ->default(1000)
+                                ->helperText('达到最低要求后，按种子数量 × 此值计算工资（多劳多得）。'),
                             TextInput::make('uploader_invites')
                                 ->label('工资邀请数量')
                                 ->numeric()
