@@ -215,7 +215,10 @@ JS;
                         $options[] = "<option" . (($row["pos_state"] == $key) ? " selected=\"selected\"" : "" ) . " value=\"" . $key . "\">".$value['text']."</option>";
                     }
                     $pickcontent .= "<b>".$lang_edit['row_torrent_position'].":&nbsp;</b>"."<select name=\"pos_state\" style=\"width: 100px;\">" . implode('', $options) . "</select>&nbsp;&nbsp;&nbsp;";
+                    $pickcontent .= "<span id=\"deadline-wrapper\">";
+                    $pickcontent .= "<label>天数:&nbsp;</label><input type=\"number\" id=\"deadline-days\" value=\"3\" min=\"1\" style=\"width: 60px;\" />&nbsp;&nbsp;";
                     $pickcontent .= datetimepicker_input('pos_state_until', '', nexus_trans('label.deadline') . ":&nbsp;", ['require_files' => true]);
+                    $pickcontent .= "</span>";
                 }
                 if(user_can('torrentmanage') && ($CURUSER["picker"] == 'yes' || get_user_class() >= \App\Models\User::CLASS_SYSOP))
                 {
@@ -255,4 +258,81 @@ jQuery("#compose").on("change", "select[name=type]", function () {
 jQuery("tr[relation]").hide();
 JS;
 \Nexus\Nexus::js($customFieldJs, 'footer', false);
+
+// 截止时间自动计算功能
+$deadlineCalcJs = <<<JS
+(function() {
+    let deadlineDaysInput = jQuery("#deadline-days");
+    let deadlineInput = jQuery("#datetime-picker-pos_state_until");
+    let isManualEdit = false;
+    let isCalculating = false; // 标记是否正在计算中，避免误判为手动编辑
+    
+    // 计算截止时间的函数
+    function calculateDeadline() {
+        if (isManualEdit) {
+            return; // 如果已经手动编辑过，不再自动更新
+        }
+        
+        let days = parseInt(deadlineDaysInput.val()) || 3;
+        if (days < 1) {
+            days = 3;
+            deadlineDaysInput.val(3);
+        }
+        
+        // 获取当前时间并加上天数
+        let now = new Date();
+        now.setDate(now.getDate() + days);
+        
+        // 格式化为 Y-m-d H:i 格式
+        let year = now.getFullYear();
+        let month = String(now.getMonth() + 1).padStart(2, '0');
+        let day = String(now.getDate()).padStart(2, '0');
+        let hours = String(now.getHours()).padStart(2, '0');
+        let minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        let deadlineValue = year + "-" + month + "-" + day + " " + hours + ":" + minutes;
+        
+        // 标记正在计算中
+        isCalculating = true;
+        
+        // 更新输入框值，datetimepicker 会自动同步
+        deadlineInput.val(deadlineValue);
+        
+        // 重置计算标记
+        setTimeout(function() {
+            isCalculating = false;
+        }, 100);
+    }
+    
+    // 监听天数输入框的变化
+    deadlineDaysInput.on('input change', function() {
+        calculateDeadline();
+    });
+    
+    // 监听截止时间输入框的手动编辑
+    deadlineInput.on('change', function() {
+        // 如果不是正在计算中，则认为是手动编辑
+        if (!isCalculating) {
+            isManualEdit = true;
+        }
+    });
+    
+    // 监听 datetimepicker 的关闭事件（用户选择日期后）
+    deadlineInput.on('close', function() {
+        // 如果不是正在计算中，则认为是手动编辑
+        if (!isCalculating) {
+            isManualEdit = true;
+        }
+    });
+    
+    // 页面加载时初始化计算一次
+    if (deadlineDaysInput.length && deadlineInput.length) {
+        // 等待 datetimepicker 初始化完成后再计算
+        setTimeout(function() {
+            calculateDeadline();
+        }, 500);
+    }
+})();
+JS;
+\Nexus\Nexus::js($deadlineCalcJs, 'footer', false);
 stdfoot();
