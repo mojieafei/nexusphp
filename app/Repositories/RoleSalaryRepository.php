@@ -169,6 +169,7 @@ class RoleSalaryRepository extends BaseRepository
             $volumeGb = $totalSizeBytes > 0 ? $totalSizeBytes / (1024 * 1024 * 1024) : 0.0;
 
             $decision = $uploaderDecision[$uid] ?? null;
+            // 如果 decision 为 null，说明用户只有发布员角色（没有转载员角色），直接按发布员处理
             $isUploaderPreferred = $decision === Role::NAME_UPLOADER || $decision === null;
 
             $meetThreshold = $isUploaderPreferred && $torrentsCount >= $minTorrents && $volumeGb >= $minVolumeGb;
@@ -316,7 +317,8 @@ class RoleSalaryRepository extends BaseRepository
         foreach ($users as $user) {
             $uid = $user->id;
             $decision = $uploaderDecision[$uid] ?? null;
-            $isReuploaderPreferred = $decision === Role::NAME_REUPLOADER;
+            // 如果 decision 为 null，说明用户只有转载员角色（没有发布员角色），直接按转载员处理
+            $isReuploaderPreferred = $decision === Role::NAME_REUPLOADER || $decision === null;
 
             $torrentsCount = $stats->get($uid)->torrents_count ?? 0;
             $meetThreshold = $isReuploaderPreferred && $torrentsCount >= $minTorrents;
@@ -335,7 +337,8 @@ class RoleSalaryRepository extends BaseRepository
             if (!$meetThreshold) {
                 $item['skipped'] = true;
                 if (!$isReuploaderPreferred) {
-                    $item['reason'] = $decision === null ? 'PREFERS_UPLOADER_OR_NONE' : 'PREFERS_UPLOADER';
+                    // 如果 decision 是 UPLOADER，说明用户同时有两个角色，但被判定为更适合发布员
+                    $item['reason'] = 'PREFERS_UPLOADER';
                 } else {
                     $item['reason'] = 'NOT_MEET_THRESHOLD';
                 }
