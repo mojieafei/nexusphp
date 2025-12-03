@@ -5163,20 +5163,6 @@ function get_username($id, $big = false, $link = true, $bold = true, $target = f
             }
         }
 
-        //role - 获取非普通用户的角色名称（用于文字显示）
-        $roleHtml = '';
-        if (!empty($roles)) {
-            $roleNames = [];
-            foreach ($roles as $role) {
-                if (isset($role['display_name']) && $role['name'] != \App\Models\Role::NAME_NORMAL_USER) {
-                    $roleNames[] = htmlspecialchars($role['display_name']);
-                }
-            }
-            if (!empty($roleNames)) {
-                $roleHtml = ' | ' . implode('、', $roleNames);
-            }
-        }
-
         //medal
         $medalHtml = '';
 		foreach ($arr['wearing_medals'] ?? [] as $medal) {
@@ -5187,11 +5173,10 @@ function get_username($id, $big = false, $link = true, $bold = true, $target = f
         }
 
 		$href = getSchemeAndHttpHost() . "/userdetails.php?id=$id";
-		$username = ($link == true ? "<a ". $link_ext . " href=\"" . $href . "\"" . ($target == true ? " target=\"_blank\"" : "") . " class='". get_user_class_name($arr['class'],true, false, false) . "_Name'>" . $username . "</a>" : $username) . $pics . ($withtitle == true ? " (" . ($arr['title'] == "" ?  get_user_class_name($arr['class'],false,true,true, ['with_alias' => true]) : "<span class='".get_user_class_name($arr['class'],true, false, false) . "_Name'><b>".htmlspecialchars($arr['title'])) . "</b></span>)" : "");
+		$username = ($link == true ? "<a ". $link_ext . " href=\"" . $href . "\"" . ($target == true ? " target=\"_blank\"" : "") . " class='". get_user_class_name($arr['class'],true, false, false) . "_Name'>" . $username . "</a>" : $username) . $pics . ($withtitle == true ? " " . ($arr['title'] == "" ?  get_user_class_name($arr['class'],false,true,true, ['with_alias' => true]) : "<span class='".get_user_class_name($arr['class'],true, false, false) . "_Name'><b>".htmlspecialchars($arr['title'])) . "</b></span>" : "");
 
-		// 组合显示：角色图标 + 用户名 | 角色名称(如果有) | 勋章
-		$separator = (!empty($roleHtml) && !empty($medalHtml)) ? ' | ' : '';
-		$username = "<span class=\"nowrap\">" . $roleIconsHtml . ( $bracket == true ? "(" . $username . ")" : $username) . "$roleHtml" . ($roleHtml && $medalHtml ? ' | ' : '') . "$medalHtml</span>";
+		// 组合显示：角色图标 + 用户名 + 勋章（已移除所有分隔符 |）
+		$username = "<span class=\"nowrap\">" . $roleIconsHtml . ( $bracket == true ? "(" . $username . ")" : $username) . "$medalHtml</span>";
 	}
 	else
 	{
