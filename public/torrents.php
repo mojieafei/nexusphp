@@ -87,12 +87,12 @@ if (isset($_GET['sort']) && $_GET['sort'] && isset($_GET['type']) && $_GET['type
 		default: $ascdesc = "DESC"; $linkascdesc = "desc"; break;
 	}
 
-	if($column == "owner")
-	{
+	// 如果是流星页面，按断种开始时间排序（断种时间越久的在前）
+	if ($isMeteorPage) {
+		$orderby = "ORDER BY pos_state DESC, zero_seeder_torrents.zero_seeder_start_time ASC, torrents.id DESC";
+	} elseif ($column == "owner") {
 		$orderby = "ORDER BY pos_state DESC, torrents.anonymous, users.username " . $ascdesc;
-	}
-	else
-	{
+	} else {
 		$orderby = "ORDER BY pos_state DESC, torrents." . $column . " " . $ascdesc;
 	}
 
@@ -920,6 +920,20 @@ if (!empty($whereothera)) {
 $tagFilter = "";
 $tagId = intval($_REQUEST['tag_id'] ?? 0);
 $officialType = isset($_GET['official_type']) ? $_GET['official_type'] : '';
+
+// 检查是否是"流星"页面（做种人=0）
+$isMeteorPage = isset($_GET['seeders_begin']) && intval($_GET['seeders_begin']) == 0 && 
+                isset($_GET['seeders_end']) && intval($_GET['seeders_end']) == 0 && 
+                (!isset($_GET['tag_id']) || intval($_GET['tag_id']) != 3);
+
+$meteorFilter = "";
+if ($isMeteorPage) {
+    // 使用 zero_seeder_torrents 表来筛选，优先显示断种时间长的种子
+    $meteorFilter = " INNER JOIN zero_seeder_torrents ON torrents.id = zero_seeder_torrents.torrent_id AND zero_seeder_torrents.rewarded = 0 ";
+    // 添加排序字段，按断种开始时间倒序（断种最久的在前）
+    // 这个会在后面的SQL中使用
+}
+
 // 默认排除官种（tag_id=3），除非明确选择了官方资源
 if ($tagId > 0) {
     $tagFilter = " inner join torrent_tags on torrents.id = torrent_tags.torrent_id and torrent_tags.tag_id = $tagId ";
@@ -939,7 +953,7 @@ if ($allsec == 1 || $enablespecial != 'yes')
 	if ($where != "")
 		$where = "WHERE $where ";
 	else $where = "";
-	$sql = "SELECT COUNT(*) FROM torrents " . ($search_area == 3 || $column == "owner" ? "LEFT JOIN users ON torrents.owner = users.id " : "") . $tagFilter . $torrentExtraFilter . $where;
+	$sql = "SELECT COUNT(*) FROM torrents " . ($search_area == 3 || $column == "owner" ? "LEFT JOIN users ON torrents.owner = users.id " : "") . $tagFilter . $torrentExtraFilter . $meteorFilter . $where;
 }
 else
 {
@@ -951,7 +965,7 @@ else
         $where = "WHERE $where";
     else $where = "";
 //	$sql = "SELECT COUNT(*), categories.mode FROM torrents LEFT JOIN categories ON category = categories.id " . ($search_area == 3 || $column == "owner" ? "LEFT JOIN users ON torrents.owner = users.id " : "") . $tagFilter . $where . " GROUP BY categories.mode";
-	$sql = "SELECT COUNT(*) FROM torrents " . ($search_area == 3 || $column == "owner" ? "LEFT JOIN users ON torrents.owner = users.id " : "") . $tagFilter . $torrentExtraFilter . $where;
+	$sql = "SELECT COUNT(*) FROM torrents " . ($search_area == 3 || $column == "owner" ? "LEFT JOIN users ON torrents.owner = users.id " : "") . $tagFilter . $torrentExtraFilter . $meteorFilter . $where;
 }
 
 if ($shouldUseMeili) {
@@ -1012,7 +1026,7 @@ if ($count)
 //        $query = "SELECT $fieldsStr FROM torrents ".($search_area == 3 || $column == "owner" ? "LEFT JOIN users ON torrents.owner = users.id " : "")." $tagFilter $where $orderby $limit";
 //    } else {
 //        $query = "SELECT $fieldsStr, categories.mode as search_box_id FROM torrents ".($search_area == 3 || $column == "owner" ? "LEFT JOIN users ON torrents.owner = users.id " : "")." LEFT JOIN categories ON torrents.category=categories.id $tagFilter $where $orderby $limit";
-        $query = "SELECT $fieldsStr, $sectiontype as search_box_id FROM torrents ".($search_area == 3 || $column == "owner" ? "LEFT JOIN users ON torrents.owner = users.id " : "")."$tagFilter $torrentExtraFilter $where $orderby $limit";
+        $query = "SELECT $fieldsStr, $sectiontype as search_box_id FROM torrents ".($search_area == 3 || $column == "owner" ? "LEFT JOIN users ON torrents.owner = users.id " : "")."$tagFilter $torrentExtraFilter $meteorFilter $where $orderby $limit";
 //    }
 
     if (!$shouldUseMeili) {
@@ -1030,6 +1044,34 @@ elseif ($sectiontype == $browsecatmode)
 	stdhead($lang_torrents['head_torrents']);
 else stdhead($lang_torrents['head_special']);
 print("<table width=\"97%\" class=\"main\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td class=\"embedded\">");
+
+// 流星页面号召标语
+if (!empty($isMeteorPage) && $isMeteorPage) {
+    ?>
+    <div style="
+        margin: 15px 0;
+        padding: 14px 18px;
+        border-radius: 8px;
+        background: linear-gradient(90deg, rgba(255, 196, 0, 0.16), rgba(0, 162, 255, 0.16));
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 0 12px rgba(0, 0, 0, 0.35);
+        color: #ffe9b8;
+        font-size: 13px;
+        line-height: 1.8;
+    ">
+        <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px; color: #ffd37b;">
+            🌠 流星召集令：拯救那些即将熄灭的星光！
+        </div>
+        <div>
+            这里的每一颗 <strong>流星</strong> 都是做种人数为 0 的种子，正漂浮在星河边缘，随时可能永远消失。<br/>
+            只要你愿意伸出援手，为这些种子重新点亮做种之光：<br/>
+            · 你是在帮更多站友补档、找回记忆中的资源；<br/>
+            · 你也在为自己积累长期的做种记录和潜在的活动奖励。<br/>
+            <span style="color:#ffdd88;">让流星回归星源，重新汇入星河——从你现在开始的每一次辅种。</span>
+        </div>
+    </div>
+    <?php
+}
 
 displayHotAndClassic();
 $searchBoxRightTdStyle = 'padding: 1px;padding-left: 10px;white-space: nowrap';
@@ -1169,7 +1211,7 @@ if ($allsec != 1 || $enablespecial != 'yes'){ //do not print searchbox if showin
                     </tr>
                     <tr>
                         <td class="bottom" style="<?php echo $searchBoxRightTdStyle ?>">
-                            <input type="number" min="1" name="seeders_begin" style="width: <?php echo $filterInputWidth?>px" value="<?php echo htmlspecialchars($_GET['seeders_begin'] ?? '') ?>"/> ~ <input type="number" min="1" name="seeders_end" style="width: <?php echo $filterInputWidth?>px" value="<?php echo htmlspecialchars($_GET['seeders_end'] ?? '') ?>"/>
+                            <input type="number" min="0" name="seeders_begin" style="width: <?php echo $filterInputWidth?>px" value="<?php echo htmlspecialchars($_GET['seeders_begin'] ?? '') ?>"/> ~ <input type="number" min="0" name="seeders_end" style="width: <?php echo $filterInputWidth?>px" value="<?php echo htmlspecialchars($_GET['seeders_end'] ?? '') ?>"/>
                         </td>
                     </tr>
 

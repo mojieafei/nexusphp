@@ -2293,8 +2293,12 @@ function menu ($selected = "home") {
 	}elseif (preg_match("/forums/i", $script_name)) {
 		$selected = "forums";
 	}elseif (preg_match("/torrents/i", $script_name)) {
-		// 检查是否是官媒页面（tag_id=3）
-		if (isset($_REQUEST['tag_id']) && intval($_REQUEST['tag_id']) == 3) {
+		// 检查是否是流星页面（做种人=0且非官方）
+		if (isset($_REQUEST['seeders_begin']) && intval($_REQUEST['seeders_begin']) == 0 && 
+		    isset($_REQUEST['seeders_end']) && intval($_REQUEST['seeders_end']) == 0 && 
+		    (!isset($_REQUEST['tag_id']) || intval($_REQUEST['tag_id']) != 3)) {
+			$selected = "meteor";
+		} elseif (isset($_REQUEST['tag_id']) && intval($_REQUEST['tag_id']) == 3) {
 			$selected = "official_media";
 		} else {
 			$selected = "torrents";
@@ -2317,6 +2321,8 @@ function menu ($selected = "home") {
 		$selected = "stardust_leaderboard";
 	}elseif (preg_match("/meteor_game/i", $script_name)) {
 		$selected = "meteor_game";
+	}elseif (preg_match("/torrents/i", $script_name) && isset($_REQUEST['seeders_end']) && intval($_REQUEST['seeders_end']) == 2 && (!isset($_REQUEST['tag_id']) || intval($_REQUEST['tag_id']) != 3)) {
+		$selected = "meteor";
 	}elseif (preg_match("/space_miner_game/i", $script_name)) {
 		$selected = "space_miner_game";
 	}elseif (preg_match("/stardust_farm/i", $script_name)) {
@@ -2329,7 +2335,7 @@ function menu ($selected = "home") {
 		$selected = "faq";
     }elseif (preg_match("/contactstaff/i", $script_name)) {
         $selected = "contactstaff";
-    }elseif (preg_match("/staff/i", $script_name)) {
+    }elseif (preg_match("/staff\.php/i", $script_name) && !preg_match("/contactstaff/i", $script_name)) {
         $selected = "staff";
 	}else
 	$selected = "";
@@ -2342,13 +2348,26 @@ function menu ($selected = "home") {
         $normalSectionName = get_searchbox_value(get_setting('main.browsecat'), 'section_name');
         $specialSectionName = get_searchbox_value(get_setting('main.specialcat'), 'section_name');
         print ("<ul id=\"mainmenu\" class=\"menu\">");
-        print ("<li" . ($selected == "home" ? " class=\"selected\"" : "") . "><a href=\"index.php\">" . $lang_functions['text_home'] . "</a></li>");
+        $homeText = str_replace('&nbsp;', '', $lang_functions['text_home']);
+        $homeText = str_replace(' ', '', $homeText);
+        print ("<li" . ($selected == "home" ? " class=\"selected\"" : "") . "><a href=\"index.php\">" . $homeText . "</a></li>");
+        $forumsText = str_replace('&nbsp;', '', $lang_functions['text_forums']);
+        $forumsText = str_replace(' ', '', $forumsText);
         if ($enableextforum != 'yes')
-            print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"forums.php\">".$lang_functions['text_forums']."</a></li>");
+            print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"forums.php\">".$forumsText."</a></li>");
         else
-            print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"" . $extforumurl."\" target=\"_blank\">".$lang_functions['text_forums']."</a></li>");
-        print ("<li" . ($selected == "official_media" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?tag_id=3\" rel='sub-menu'>".$lang_functions['text_official_media']."</a></li>");
-        print ("<li" . ($selected == "torrents" ? " class=\"selected\"" : "") . "><a href=\"torrents.php\" rel='sub-menu'>".($normalSectionName[$lang] ?? $lang_functions['text_torrents'])."</a></li>");
+            print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"" . $extforumurl."\" target=\"_blank\">".$forumsText."</a></li>");
+        $officialMediaText = $lang_functions['text_official_media'];
+        $officialMediaText = str_replace('&nbsp;', '', $officialMediaText);
+        $officialMediaText = str_replace(' ', '', $officialMediaText);
+        print ("<li" . ($selected == "official_media" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?tag_id=3\" rel='sub-menu'>".$officialMediaText."</a></li>");
+        $torrentsText = $normalSectionName[$lang] ?? $lang_functions['text_torrents'];
+        $torrentsText = str_replace('种', '星', $torrentsText);
+        $torrentsText = str_replace('子', '源', $torrentsText);
+        $torrentsText = str_replace('&nbsp;', '', $torrentsText);
+        $torrentsText = str_replace(' ', '', $torrentsText);
+        print ("<li" . ($selected == "torrents" ? " class=\"selected\"" : "") . "><a href=\"torrents.php\" rel='sub-menu'>⭐".$torrentsText."</a></li>");
+        print ("<li" . ($selected == "meteor" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?seeders_begin=0&seeders_end=0\" class=\"meteor-tooltip-trigger\">🌠流星<span class=\"meteor-tooltip\">💫 拯救即将熄灭的星光<br/>帮助断种种子重新点亮<br/>让流星回归星河 ✨</span></a></li>");
         // 官方资源下拉菜单 - 临时隐藏，下个版本优化
         /* 
         print ("<li class=\"dropdown-menu" . ($selected == "official" ? " selected" : "") . "\" id=\"official-dropdown\">");
@@ -2430,22 +2449,25 @@ function menu ($selected = "home") {
         })();
         </script>");
         */
-        if ($enablespecial == 'yes' && user_can('view_special_torrent'))
-            print ("<li" . ($selected == "special" ? " class=\"selected\"" : "") . "><a href=\"special.php\">".($specialSectionName[$lang] ?? $lang_functions['text_special'])."</a></li>");
-        if ($enableoffer == 'yes')
-            print ("<li" . ($selected == "offers" ? " class=\"selected\"" : "") . "><a href=\"offers.php\">".$lang_functions['text_offers']."</a></li>");
-        if ($enablerequest == 'yes')
-            print ("<li" . ($selected == "requests" ? " class=\"selected\"" : "") . "><a href=\"viewrequests.php\">".$lang_functions['text_request']."</a></li>");
-        print ("<li" . ($selected == "upload" ? " class=\"selected\"" : "") . "><a href=\"upload.php\">".$lang_functions['text_upload']."</a></li>");
-        print ("<li" . ($selected == "subtitles" ? " class=\"selected\"" : "") . "><a href=\"subtitles.php\">".$lang_functions['text_subtitles']."</a></li>");
-        //	print ("<li" . ($selected == "usercp" ? " class=\"selected\"" : "") . "><a href=\"usercp.php\">".$lang_functions['text_user_cp']."</a></li>");
-        if (user_can('topten')) {
-            print ("<li" . ($selected == "topten" ? " class=\"selected\"" : "") . "><a href=\"topten.php\">".$lang_functions['text_top_ten']."</a></li>");
+        if ($enablespecial == 'yes' && user_can('view_special_torrent')) {
+            $specialText = $specialSectionName[$lang] ?? $lang_functions['text_special'];
+            $specialText = str_replace('&nbsp;', '', $specialText);
+            $specialText = str_replace(' ', '', $specialText);
+            print ("<li" . ($selected == "special" ? " class=\"selected\"" : "") . "><a href=\"special.php\">".$specialText."</a></li>");
         }
+        if ($enableoffer == 'yes') {
+            $offersText = str_replace('&nbsp;', '', $lang_functions['text_offers']);
+            $offersText = str_replace(' ', '', $offersText);
+            print ("<li" . ($selected == "offers" ? " class=\"selected\"" : "") . "><a href=\"offers.php\">".$offersText."</a></li>");
+        }
+        $uploadText = str_replace('&nbsp;', '', $lang_functions['text_upload']);
+        $uploadText = str_replace(' ', '', $uploadText);
+        print ("<li" . ($selected == "upload" ? " class=\"selected\"" : "") . "><a href=\"upload.php\">".$uploadText."</a></li>");
+        //	print ("<li" . ($selected == "usercp" ? " class=\"selected\"" : "") . "><a href=\"usercp.php\">".$lang_functions['text_user_cp']."</a></li>");
         // 小游戏下拉菜单
         $isGamePage = preg_match("/meteor_game|space_miner_game|stardust_farm/i", $script_name);
         print ("<li class=\"dropdown-menu" . ($isGamePage ? " selected" : "") . "\" id=\"games-dropdown\">");
-        print ("<a href=\"javascript:void(0);\" class=\"dropdown-toggle\" onclick=\"return false;\" style=\"color: #ff4444 !important;\">🎮 小游戏 ▼</a>");
+        print ("<a href=\"javascript:void(0);\" class=\"dropdown-toggle\" onclick=\"return false;\" style=\"color: #ff4444 !important;\">🎮小游戏▼</a>");
         print ("<ul class=\"dropdown-content\">");
         print ("<li><a href=\"meteor_game.php\" target=\"_blank\">🌠 接流星</a></li>");
         print ("<li><a href=\"space_miner_game.php\" target=\"_blank\">🪐 星际矿工</a></li>");
@@ -2453,17 +2475,60 @@ function menu ($selected = "home") {
         print ("</ul>");
         print ("</li>");
         
+        // 排行榜
+        if (user_can('topten')) {
+            $toptenText = $lang_functions['text_top_ten'];
+            $toptenText = str_replace('&nbsp;', '', $toptenText);
+            $toptenText = str_replace(' ', '', $toptenText);
+            print ("<li" . ($selected == "topten" ? " class=\"selected\"" : "") . "><a href=\"topten.php\">".$toptenText."</a></li>");
+        }
+        
         // 农场排行榜
-        print ("<li" . ($selected == "stardust_leaderboard" ? " class=\"selected\"" : "") . "><a href=\"stardust_leaderboard.php\">🏆 农场排行榜</a></li>");
+        print ("<li" . ($selected == "stardust_leaderboard" ? " class=\"selected\"" : "") . "><a href=\"stardust_leaderboard.php\">🏆农场排行榜</a></li>");
+        
+        // 星际法则下拉菜单（规则、常见问题）
+        $isNoticePage = preg_match("/rules|faq/i", $script_name);
+        print ("<li class=\"dropdown-menu" . ($isNoticePage ? " selected" : "") . "\" id=\"notice-dropdown\">");
+        print ("<a href=\"javascript:void(0);\" class=\"dropdown-toggle\" onclick=\"return false;\">星际法则▼</a>");
+        print ("<ul class=\"dropdown-content\">");
+        $rulesText = str_replace('&nbsp;', '', $lang_functions['text_rules']);
+        $rulesText = str_replace(' ', '', $rulesText);
+        $faqText = str_replace('&nbsp;', '', $lang_functions['text_faq']);
+        $faqText = str_replace(' ', '', $faqText);
+        print ("<li" . ($selected == "rules" ? " class=\"selected\"" : "") . "><a href=\"rules.php\">".$rulesText."</a></li>");
+        print ("<li" . ($selected == "faq" ? " class=\"selected\"" : "") . "><a href=\"faq.php\">".$faqText."</a></li>");
+        print ("</ul>");
+        print ("</li>");
+        
+        // 宇宙深处下拉菜单（求种、字幕、日志、管理组）
+        $isMorePage = preg_match("/requests|subtitles|log\.php|staff\.php/i", $script_name) && !preg_match("/contactstaff/i", $script_name);
+        print ("<li class=\"dropdown-menu" . ($isMorePage ? " selected" : "") . "\" id=\"more-dropdown\">");
+        print ("<a href=\"javascript:void(0);\" class=\"dropdown-toggle\" onclick=\"return false;\">宇宙深处▼</a>");
+        print ("<ul class=\"dropdown-content\">");
+        if ($enablerequest == 'yes') {
+            $requestText = str_replace('&nbsp;', '', $lang_functions['text_request']);
+            $requestText = str_replace(' ', '', $requestText);
+            print ("<li" . ($selected == "requests" ? " class=\"selected\"" : "") . "><a href=\"viewrequests.php\">".$requestText."</a></li>");
+        }
+        $subtitlesText = str_replace('&nbsp;', '', $lang_functions['text_subtitles']);
+        $subtitlesText = str_replace(' ', '', $subtitlesText);
+        print ("<li" . ($selected == "subtitles" ? " class=\"selected\"" : "") . "><a href=\"subtitles.php\">".$subtitlesText."</a></li>");
         if (user_can('log')) {
-            print ("<li" . ($selected == "log" ? " class=\"selected\"" : "") . "><a href=\"log.php\">".$lang_functions['text_log']."</a></li>");
+            $logText = str_replace('&nbsp;', '', $lang_functions['text_log']);
+            $logText = str_replace(' ', '', $logText);
+            print ("<li" . ($selected == "log" ? " class=\"selected\"" : "") . "><a href=\"log.php\">".$logText."</a></li>");
         }
-        print ("<li" . ($selected == "rules" ? " class=\"selected\"" : "") . "><a href=\"rules.php\">".$lang_functions['text_rules']."</a></li>");
-        print ("<li" . ($selected == "faq" ? " class=\"selected\"" : "") . "><a href=\"faq.php\">".$lang_functions['text_faq']."</a></li>");
         if (user_can('staffmem')) {
-            print ("<li" . ($selected == "staff" ? " class=\"selected\"" : "") . "><a href=\"staff.php\">".$lang_functions['text_staff']."</a></li>");
+            $staffText = str_replace('&nbsp;', '', $lang_functions['text_staff']);
+            $staffText = str_replace(' ', '', $staffText);
+            print ("<li" . ($selected == "staff" ? " class=\"selected\"" : "") . "><a href=\"staff.php\">".$staffText."</a></li>");
         }
-        print ("<li" . ($selected == "contactstaff" ? " class=\"selected\"" : "") . "><a href=\"contactstaff.php\">".$lang_functions['text_contactstaff']."</a></li>");
+        print ("</ul>");
+        print ("</li>");
+        
+        $contactStaffText = str_replace('&nbsp;', '', $lang_functions['text_contactstaff']);
+        $contactStaffText = str_replace(' ', '', $contactStaffText);
+        print ("<li" . ($selected == "contactstaff" ? " class=\"selected\"" : "") . "><a href=\"contactstaff.php\">".$contactStaffText."</a></li>");
         print ("</ul>");
         
         // 小游戏下拉菜单JS控制（点击触发）
@@ -2545,6 +2610,214 @@ function menu ($selected = "home") {
             links.forEach(function(link) {
                 link.addEventListener('click', function() {
                     hideDropdown();
+                });
+            });
+        })();
+        </script>");
+        
+        // 注意事项下拉菜单JS控制
+        print ("<script>
+        (function() {
+            var dropdown = document.getElementById('notice-dropdown');
+            if (!dropdown) return;
+            var dropdownContent = dropdown.querySelector('.dropdown-content');
+            var dropdownToggle = dropdown.querySelector('.dropdown-toggle');
+            var isOpen = false;
+            
+            function updateDropdownPosition() {
+                var rect = dropdown.getBoundingClientRect();
+                dropdownContent.style.position = 'fixed';
+                dropdownContent.style.top = rect.bottom + 'px';
+                dropdownContent.style.left = rect.left + 'px';
+                dropdownContent.style.zIndex = '2147483646';
+            }
+            
+            function showDropdown() {
+                updateDropdownPosition();
+                dropdownContent.style.display = 'block';
+                isOpen = true;
+                dropdown.classList.add('active');
+            }
+            
+            function hideDropdown() {
+                dropdownContent.style.display = 'none';
+                isOpen = false;
+                dropdown.classList.remove('active');
+            }
+            
+            function toggleDropdown(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isOpen) {
+                    hideDropdown();
+                } else {
+                    showDropdown();
+                }
+            }
+            
+            dropdownToggle.addEventListener('click', toggleDropdown);
+            
+            document.addEventListener('click', function(e) {
+                if (isOpen && !dropdown.contains(e.target)) {
+                    hideDropdown();
+                }
+            });
+            
+            dropdown.addEventListener('mouseleave', function() {
+                if (isOpen) {
+                    setTimeout(function() {
+                        if (!dropdown.matches(':hover')) {
+                            hideDropdown();
+                        }
+                    }, 300);
+                }
+            });
+            
+            window.addEventListener('scroll', function() {
+                if (isOpen) {
+                    updateDropdownPosition();
+                }
+            });
+            
+            window.addEventListener('resize', function() {
+                if (isOpen) {
+                    updateDropdownPosition();
+                }
+            });
+            
+            var links = dropdown.querySelectorAll('.dropdown-content a');
+            links.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    hideDropdown();
+                });
+            });
+        })();
+        </script>");
+        
+        // 更多下拉菜单JS控制
+        print ("<script>
+        (function() {
+            var dropdown = document.getElementById('more-dropdown');
+            if (!dropdown) return;
+            var dropdownContent = dropdown.querySelector('.dropdown-content');
+            var dropdownToggle = dropdown.querySelector('.dropdown-toggle');
+            var isOpen = false;
+            
+            function updateDropdownPosition() {
+                var rect = dropdown.getBoundingClientRect();
+                dropdownContent.style.position = 'fixed';
+                dropdownContent.style.top = rect.bottom + 'px';
+                dropdownContent.style.left = rect.left + 'px';
+                dropdownContent.style.zIndex = '2147483646';
+            }
+            
+            function showDropdown() {
+                updateDropdownPosition();
+                dropdownContent.style.display = 'block';
+                isOpen = true;
+                dropdown.classList.add('active');
+            }
+            
+            function hideDropdown() {
+                dropdownContent.style.display = 'none';
+                isOpen = false;
+                dropdown.classList.remove('active');
+            }
+            
+            function toggleDropdown(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isOpen) {
+                    hideDropdown();
+                } else {
+                    showDropdown();
+                }
+            }
+            
+            dropdownToggle.addEventListener('click', toggleDropdown);
+            
+            document.addEventListener('click', function(e) {
+                if (isOpen && !dropdown.contains(e.target)) {
+                    hideDropdown();
+                }
+            });
+            
+            dropdown.addEventListener('mouseleave', function() {
+                if (isOpen) {
+                    setTimeout(function() {
+                        if (!dropdown.matches(':hover')) {
+                            hideDropdown();
+                        }
+                    }, 300);
+                }
+            });
+            
+            window.addEventListener('scroll', function() {
+                if (isOpen) {
+                    updateDropdownPosition();
+                }
+            });
+            
+            window.addEventListener('resize', function() {
+                if (isOpen) {
+                    updateDropdownPosition();
+                }
+            });
+            
+            var links = dropdown.querySelectorAll('.dropdown-content a');
+            links.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    hideDropdown();
+                });
+            });
+        })();
+        </script>");
+        
+        // 流星tooltip位置计算
+        print ("<script>
+        (function() {
+            var triggers = document.querySelectorAll('.meteor-tooltip-trigger');
+            triggers.forEach(function(trigger) {
+                var tooltip = trigger.querySelector('.meteor-tooltip');
+                if (!tooltip) return;
+                
+                trigger.addEventListener('mouseenter', function(e) {
+                    var rect = trigger.getBoundingClientRect();
+                    var tooltipRect = tooltip.getBoundingClientRect();
+                    
+                    // 计算tooltip位置：在触发元素上方居中
+                    var left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                    var top = rect.top - tooltipRect.height - 10;
+                    
+                    // 确保不超出屏幕左边界
+                    if (left < 10) {
+                        left = 10;
+                    }
+                    // 确保不超出屏幕右边界
+                    if (left + tooltipRect.width > window.innerWidth - 10) {
+                        left = window.innerWidth - tooltipRect.width - 10;
+                    }
+                    
+                    tooltip.style.left = left + 'px';
+                    tooltip.style.top = top + 'px';
+                });
+                
+                // 滚动时更新位置
+                window.addEventListener('scroll', function() {
+                    if (tooltip.style.visibility === 'visible' || tooltip.style.opacity === '1') {
+                        var rect = trigger.getBoundingClientRect();
+                        var tooltipRect = tooltip.getBoundingClientRect();
+                        var left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                        var top = rect.top - tooltipRect.height - 10;
+                        
+                        if (left < 10) left = 10;
+                        if (left + tooltipRect.width > window.innerWidth - 10) {
+                            left = window.innerWidth - tooltipRect.width - 10;
+                        }
+                        
+                        tooltip.style.left = left + 'px';
+                        tooltip.style.top = top + 'px';
+                    }
                 });
             });
         })();
