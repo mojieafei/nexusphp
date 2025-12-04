@@ -2293,7 +2293,7 @@ function menu ($selected = "home") {
 	}elseif (preg_match("/forums/i", $script_name)) {
 		$selected = "forums";
 	}elseif (preg_match("/torrents/i", $script_name)) {
-		// 检查是否是流星页面（做种人=0且非官方）
+		// 检查是否是黑洞页面（做种人=0且非官方）
 		if (isset($_REQUEST['seeders_begin']) && intval($_REQUEST['seeders_begin']) == 0 && 
 		    isset($_REQUEST['seeders_end']) && intval($_REQUEST['seeders_end']) == 0 && 
 		    (!isset($_REQUEST['tag_id']) || intval($_REQUEST['tag_id']) != 3)) {
@@ -2363,11 +2363,11 @@ function menu ($selected = "home") {
         print ("<li" . ($selected == "official_media" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?tag_id=3\" rel='sub-menu'>".$officialMediaText."</a></li>");
         $torrentsText = $normalSectionName[$lang] ?? $lang_functions['text_torrents'];
         $torrentsText = str_replace('种', '星', $torrentsText);
-        $torrentsText = str_replace('子', '源', $torrentsText);
+        $torrentsText = str_replace('子', '河', $torrentsText);
         $torrentsText = str_replace('&nbsp;', '', $torrentsText);
         $torrentsText = str_replace(' ', '', $torrentsText);
         print ("<li" . ($selected == "torrents" ? " class=\"selected\"" : "") . "><a href=\"torrents.php\" rel='sub-menu'>⭐".$torrentsText."</a></li>");
-        print ("<li" . ($selected == "meteor" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?seeders_begin=0&seeders_end=0\" class=\"meteor-tooltip-trigger\">🌠流星<span class=\"meteor-tooltip\">💫 拯救即将熄灭的星光<br/>帮助断种种子重新点亮<br/>让流星回归星河 ✨</span></a></li>");
+        print ("<li" . ($selected == "meteor" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?seeders_begin=0&seeders_end=0\" class=\"meteor-tooltip-trigger\">🕳️黑洞<span class=\"meteor-tooltip\">💫 拯救即将消失的资源<br/>帮助断种种子重新点亮<br/>让黑洞回归星河 ✨</span></a></li>");
         // 官方资源下拉菜单 - 临时隐藏，下个版本优化
         /* 
         print ("<li class=\"dropdown-menu" . ($selected == "official" ? " selected" : "") . "\" id=\"official-dropdown\">");

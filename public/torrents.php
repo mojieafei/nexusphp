@@ -87,7 +87,7 @@ if (isset($_GET['sort']) && $_GET['sort'] && isset($_GET['type']) && $_GET['type
 		default: $ascdesc = "DESC"; $linkascdesc = "desc"; break;
 	}
 
-	// 如果是流星页面，按断种开始时间排序（断种时间越久的在前）
+	// 如果是黑洞页面，按断种开始时间排序（断种时间越久的在前）
 	if ($isMeteorPage) {
 		$orderby = "ORDER BY pos_state DESC, zero_seeder_torrents.zero_seeder_start_time ASC, torrents.id DESC";
 	} elseif ($column == "owner") {
@@ -921,7 +921,7 @@ $tagFilter = "";
 $tagId = intval($_REQUEST['tag_id'] ?? 0);
 $officialType = isset($_GET['official_type']) ? $_GET['official_type'] : '';
 
-// 检查是否是"流星"页面（做种人=0）
+// 检查是否是"黑洞"页面（做种人=0）
 $isMeteorPage = isset($_GET['seeders_begin']) && intval($_GET['seeders_begin']) == 0 && 
                 isset($_GET['seeders_end']) && intval($_GET['seeders_end']) == 0 && 
                 (!isset($_GET['tag_id']) || intval($_GET['tag_id']) != 3);
@@ -1045,7 +1045,7 @@ elseif ($sectiontype == $browsecatmode)
 else stdhead($lang_torrents['head_special']);
 print("<table width=\"97%\" class=\"main\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td class=\"embedded\">");
 
-// 流星页面号召标语
+// 黑洞页面号召标语
 if (!empty($isMeteorPage) && $isMeteorPage) {
     ?>
     <div style="
@@ -1060,14 +1060,14 @@ if (!empty($isMeteorPage) && $isMeteorPage) {
         line-height: 1.8;
     ">
         <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px; color: #ffd37b;">
-            🌠 流星召集令：拯救那些即将熄灭的星光！
+            🕳️ 黑洞拯救计划：拯救那些即将消失的资源！
         </div>
         <div>
-            这里的每一颗 <strong>流星</strong> 都是做种人数为 0 的种子，正漂浮在星河边缘，随时可能永远消失。<br/>
+            这里的每一个 <strong>黑洞</strong> 都是做种人数为 0 的种子，正漂浮在星河边缘，随时可能永远消失。<br/>
             只要你愿意伸出援手，为这些种子重新点亮做种之光：<br/>
             · 你是在帮更多站友补档、找回记忆中的资源；<br/>
             · 你也在为自己积累长期的做种记录和潜在的活动奖励。<br/>
-            <span style="color:#ffdd88;">让流星回归星源，重新汇入星河——从你现在开始的每一次辅种。</span>
+            <span style="color:#ffdd88;">让黑洞回归星河，重新汇入星流——从你现在开始的每一次辅种。</span>
         </div>
     </div>
     <?php
