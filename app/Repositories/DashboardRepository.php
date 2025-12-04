@@ -212,7 +212,7 @@ class DashboardRepository extends BaseRepository
         $result[$name] = [
             'name' => $name,
             'text' => nexus_trans("dashboard.torrent.$name"),
-            'value' => number_format(Torrent::query()->where('visible', '=', Torrent::VISIBLE_NO)->count()),
+            'value' => number_format(Torrent::query()->where('visible', '=', Torrent::VISIBLE_YES)->where('banned', '=', 'no')->where('seeders', '=', 0)->count()),
         ];
 
         $seeders = Peer::query()->where('seeder', 'yes')->count();

@@ -602,7 +602,7 @@ if ($showstats_main == "yes")
 	if (!$Cache->get_page()){
 	$Cache->add_whole_row();
 	$torrents = number_format(get_row_count("torrents"));
-	$dead = number_format(get_row_count("torrents", "WHERE visible='no'"));
+	$dead = number_format(get_row_count("torrents", "WHERE visible='yes' AND banned='no' AND seeders=0"));
 	$seeders = get_row_count("peers", "WHERE seeder='yes'");
 	$leechers = get_row_count("peers", "WHERE seeder='no'");
 	if ($leechers == 0)

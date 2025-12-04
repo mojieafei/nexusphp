@@ -928,8 +928,10 @@ $isMeteorPage = isset($_GET['seeders_begin']) && intval($_GET['seeders_begin']) 
 
 $meteorFilter = "";
 if ($isMeteorPage) {
-    // 使用 zero_seeder_torrents 表来筛选，优先显示断种时间长的种子
-    $meteorFilter = " INNER JOIN zero_seeder_torrents ON torrents.id = zero_seeder_torrents.torrent_id AND zero_seeder_torrents.rewarded = 0 ";
+    // 使用 zero_seeder_torrents 表来筛选，只显示断种7天以上的种子
+    // 计算7天前的时间
+    $sevenDaysAgo = date("Y-m-d H:i:s", strtotime("-7 days"));
+    $meteorFilter = " INNER JOIN zero_seeder_torrents ON torrents.id = zero_seeder_torrents.torrent_id AND zero_seeder_torrents.rewarded = 0 AND zero_seeder_torrents.zero_seeder_start_time <= " . sqlesc($sevenDaysAgo) . " ";
     // 添加排序字段，按断种开始时间倒序（断种最久的在前）
     // 这个会在后面的SQL中使用
 }
@@ -1060,14 +1062,14 @@ if (!empty($isMeteorPage) && $isMeteorPage) {
         line-height: 1.8;
     ">
         <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px; color: #ffd37b;">
-            🕳️ 黑洞拯救计划：拯救那些即将消失的资源！
+            🕳️ 黑洞拯救计划：拯救那些即将熄灭的星光！
         </div>
         <div>
-            这里的每一个 <strong>黑洞</strong> 都是做种人数为 0 的种子，正漂浮在星河边缘，随时可能永远消失。<br/>
+            这里的每一缕 <strong>星光</strong> 都正在被 <strong>黑洞</strong> 吞噬：做种人数为 0，正漂浮在星河边缘，随时可能永远消失。<br/>
             只要你愿意伸出援手，为这些种子重新点亮做种之光：<br/>
-            · 你是在帮更多站友补档、找回记忆中的资源；<br/>
+            · 你是在帮更多站友补档、找回记忆中的星光；<br/>
             · 你也在为自己积累长期的做种记录和潜在的活动奖励。<br/>
-            <span style="color:#ffdd88;">让黑洞回归星河，重新汇入星流——从你现在开始的每一次辅种。</span>
+            <span style="color:#ffdd88;">从黑洞边缘拯救每一缕星光，让它们回归星河，重新汇入星流——从你现在开始的每一次辅种。</span>
         </div>
     </div>
     <?php

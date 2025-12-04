@@ -21,7 +21,7 @@ class RewardZeroSeederRescuers extends Command
     protected $signature = 'reward:zero-seeder-rescuers 
                             {--days=7 : 做种人数为0持续天数，默认7天}
                             {--bonus=1000 : 每个种子奖励的魔力值，默认1000}
-                            {--min-seed-hours=24 : 用户对每个种子的最低做种时间要求（小时），默认24小时}
+                            {--min-seed-hours=168 : 用户对每个种子的最低做种时间要求（小时），默认168小时（7天）}
                             {--dry-run : 仅预览，不实际发放奖励}
                             {--update-track : 更新零做种种子追踪表}
                             {--only-update-track : 只更新追踪表，不执行奖励流程}';
@@ -57,7 +57,7 @@ class RewardZeroSeederRescuers extends Command
 
         $this->info("开始处理：做种人数=0持续{$days}天的种子奖励");
         $this->info("每个种子奖励：{$bonusAmount}魔力值");
-        $this->info("最低做种时间要求：{$minSeedHours}小时");
+        $this->info("最低做种时间要求：{$minSeedHours}小时（" . round($minSeedHours / 24, 1) . "天）");
         
         if ($dryRun) {
             $this->warn("⚠️  当前为预览模式，不会实际发放奖励");
@@ -242,7 +242,7 @@ class RewardZeroSeederRescuers extends Command
     /**
      * 获取需要奖励的用户列表
      */
-    protected function getUsersToReward(array $torrentIds, int $minSeedHours = 24)
+    protected function getUsersToReward(array $torrentIds, int $minSeedHours = 168)
     {
         if (empty($torrentIds)) {
             return [];

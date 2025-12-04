@@ -2367,7 +2367,7 @@ function menu ($selected = "home") {
         $torrentsText = str_replace('&nbsp;', '', $torrentsText);
         $torrentsText = str_replace(' ', '', $torrentsText);
         print ("<li" . ($selected == "torrents" ? " class=\"selected\"" : "") . "><a href=\"torrents.php\" rel='sub-menu'>⭐".$torrentsText."</a></li>");
-        print ("<li" . ($selected == "meteor" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?seeders_begin=0&seeders_end=0\" class=\"meteor-tooltip-trigger\">🕳️黑洞<span class=\"meteor-tooltip\">💫 拯救即将消失的资源<br/>帮助断种种子重新点亮<br/>让黑洞回归星河 ✨</span></a></li>");
+        print ("<li" . ($selected == "meteor" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?seeders_begin=0&seeders_end=0\" class=\"meteor-tooltip-trigger\">🕳️黑洞<span class=\"meteor-tooltip\">💫 拯救即将熄灭的星光<br/>帮助断种种子重新点亮<br/>让每一缕星光从黑洞回归星河 ✨</span></a></li>");
         // 官方资源下拉菜单 - 临时隐藏，下个版本优化
         /* 
         print ("<li class=\"dropdown-menu" . ($selected == "official" ? " selected" : "") . "\" id=\"official-dropdown\">");
