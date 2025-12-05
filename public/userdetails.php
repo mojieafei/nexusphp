@@ -651,27 +651,63 @@ $claimJs = '';
 if ($userInfo->id == $CURUSER['id'] && has_role_work_seeding($userInfo->id)) {
     $claimJs = <<<JS
 jQuery("body").on("click", "#claim-all-seeding", function (e) {
-    layer.confirm("$claimAllSeedingConfirmation", {}, function () {
-        jQuery.post('/plugin/claim_all_seeding', {"action": "claimAllSeeding"}, function (response) {
-            if (response.ret == 0) {
-                window.location.reload()
-            } else {
-                layer.alert(response.msg)
-            }
-        }, 'json')
-    })
+    if (typeof window.nexusConfirm === 'function') {
+        window.nexusConfirm("$claimAllSeedingConfirmation", function () {
+            jQuery.post('/plugin/claim_all_seeding', {"action": "claimAllSeeding"}, function (response) {
+                if (response.ret == 0) {
+                    window.location.reload()
+                } else {
+                    if (typeof window.nexusAlert === 'function') {
+                        window.nexusAlert(response.msg)
+                    } else if (typeof layer !== 'undefined') {
+                        layer.alert(response.msg)
+                    } else {
+                        alert(response.msg)
+                    }
+                }
+            }, 'json')
+        })
+    } else if (typeof layer !== 'undefined') {
+        layer.confirm("$claimAllSeedingConfirmation", {}, function () {
+            jQuery.post('/plugin/claim_all_seeding', {"action": "claimAllSeeding"}, function (response) {
+                if (response.ret == 0) {
+                    window.location.reload()
+                } else {
+                    layer.alert(response.msg)
+                }
+            }, 'json')
+        })
+    } else {
+        if (confirm("$claimAllSeedingConfirmation")) {
+            jQuery.post('/plugin/claim_all_seeding', {"action": "claimAllSeeding"}, function (response) {
+                if (response.ret == 0) {
+                    window.location.reload()
+                } else {
+                    alert(response.msg)
+                }
+            }, 'json')
+        }
+    }
 })
 JS;
 }
 $paginationJs = <<<JS
-jQuery("body").on("click", ".nexus-pagination a", function (e) {
+jQuery(document).off('click.userdetails-pagination', '.nexus-pagination a').on('click.userdetails-pagination', '.nexus-pagination a', function (e) {
     e.preventDefault()
+    e.stopImmediatePropagation()
+    e.stopPropagation()
     let _this = jQuery(this)
-    let box = _this.closest("[data-type]")
-    let type = box.attr("data-type");
-    let url = _this.attr("href") + "&userid={$user['id']}&type=" + type;
-    let result = ajax.gets(url);
-    box.html(result)
+    let container = _this.closest("[data-type]")
+    if (!container.length) return false
+    let url = _this.attr("href")
+    if (!url) return false
+    container.html('<div style="text-align:center;padding:20px;">加载中...</div>')
+    jQuery.get(url, function(result) {
+        container.html(result)
+    }).fail(function() {
+        container.html('<div style="text-align:center;padding:20px;color:red;">加载失败，请重试</div>')
+    })
+    return false
 })
 $claimJs
 JS;

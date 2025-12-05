@@ -5,6 +5,7 @@ namespace App\Filament\Resources\System;
 use App\Filament\Resources\System\AdminOperationLogResource\Pages;
 use App\Models\AdminOperationLog;
 use App\Models\User;
+use Filament\Forms;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
@@ -64,13 +65,90 @@ class AdminOperationLogResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('method')
+                    ->label('请求方法')
                     ->options([
-                        'GET' => 'GET',
-                        'POST' => 'POST',
-                        'PUT' => 'PUT',
-                        'PATCH' => 'PATCH',
-                        'DELETE' => 'DELETE',
-                    ]),
+                        'GET' => 'GET (通常为获取数据)',
+                        'POST' => 'POST (通常为创建/提交)',
+                        'PUT' => 'PUT (通常为更新)',
+                        'PATCH' => 'PATCH (通常为部分更新)',
+                        'DELETE' => 'DELETE (删除操作)',
+                    ])
+                    ->multiple(),
+                Tables\Filters\Filter::make('path')
+                    ->label('请求路径')
+                    ->form([
+                        Forms\Components\TextInput::make('path')
+                            ->label('路径包含')
+                            ->placeholder('例如: /nexusphp/system/medals')
+                            ->helperText('支持模糊匹配，留空则不筛选'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['path'],
+                            fn (Builder $query, $value): Builder => $query->where('path', 'like', "%{$value}%")
+                        );
+                    }),
+                Tables\Filters\Filter::make('ip')
+                    ->label('IP地址')
+                    ->form([
+                        Forms\Components\TextInput::make('ip')
+                            ->label('IP地址')
+                            ->placeholder('例如: 192.168.1.1')
+                            ->helperText('支持完整匹配或部分匹配'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['ip'],
+                            fn (Builder $query, $value): Builder => $query->where('ip', 'like', "%{$value}%")
+                        );
+                    }),
+                Tables\Filters\Filter::make('user_id')
+                    ->label('操作用户')
+                    ->form([
+                        Forms\Components\TextInput::make('user_id')
+                            ->label('用户ID')
+                            ->numeric()
+                            ->placeholder('输入用户ID'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['user_id'],
+                            fn (Builder $query, $value): Builder => $query->where('user_id', $value)
+                        );
+                    }),
+                Tables\Filters\Filter::make('exclude_livewire')
+                    ->label('排除 Livewire 请求')
+                    ->query(function (Builder $query): Builder {
+                        return $query->where('path', '!=', 'livewire/update');
+                    })
+                    ->toggle()
+                    ->helperText('注意：Livewire 请求可能包含实际业务操作，请谨慎排除'),
+                Tables\Filters\Filter::make('only_get_method')
+                    ->label('仅显示 GET 请求')
+                    ->query(function (Builder $query): Builder {
+                        return $query->where('method', 'GET');
+                    })
+                    ->toggle()
+                    ->helperText('用于查看哪些 GET 请求可能执行了操作（通常 GET 只用于获取数据）'),
+                Tables\Filters\Filter::make('created_at')
+                    ->label('操作时间')
+                    ->form([
+                        Forms\Components\DatePicker::make('created_from')
+                            ->label('开始日期'),
+                        Forms\Components\DatePicker::make('created_until')
+                            ->label('结束日期'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    }),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

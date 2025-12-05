@@ -1148,7 +1148,9 @@ jQuery(document).on('click', '.medal-card-actions input.buy', function (e) {
     var medalId = btn.attr('data-id');
     if (!medalId) {
         console.error('购买按钮：勋章ID缺失');
-        if (typeof layer !== 'undefined') {
+        if (typeof window.nexusAlert === 'function') {
+            window.nexusAlert('勋章ID缺失');
+        } else if (typeof layer !== 'undefined') {
             layer.alert('勋章ID缺失');
         } else {
             alert('勋章ID缺失');
@@ -1169,14 +1171,20 @@ jQuery(document).on('click', '.medal-card-actions input.buy', function (e) {
             btn.prop('disabled', false);
             if (response.ret != 0) {
                 var msg = response.msg || '购买失败';
-                if (typeof layer !== 'undefined') {
+                if (typeof window.nexusAlert === 'function') {
+                    window.nexusAlert(msg);
+                } else if (typeof layer !== 'undefined') {
                     layer.alert(msg);
                 } else {
                     alert(msg);
                 }
                 return;
             }
-            if (typeof layer !== 'undefined') {
+            if (typeof window.nexusMsg === 'function') {
+                window.nexusMsg('购买成功', 1500, function() {
+                    window.location.reload();
+                });
+            } else if (typeof layer !== 'undefined') {
                 layer.msg('购买成功', {time: 1500}, function() {
                     window.location.reload();
                 });
@@ -1196,15 +1204,16 @@ jQuery(document).on('click', '.medal-card-actions input.buy', function (e) {
             } else {
                 alert(errorMsg);
             }
+            restoreUrl();
         });
     };
     
-    if (typeof layer === 'undefined') {
-        console.warn('layer未加载，使用confirm');
-        if (confirm('确认购买勋章 ID: ' + medalId + '?')) {
+    // 使用自定义确认弹窗，不操作历史记录
+    if (typeof window.nexusConfirm === 'function') {
+        window.nexusConfirm({$confirmBuyMsg}, function() {
             confirmCallback();
-        }
-    } else {
+        });
+    } else if (typeof layer !== 'undefined') {
         layer.confirm({$confirmBuyMsg}, {
             btn: ['确认', '取消']
         }, function (index) {
@@ -1213,6 +1222,10 @@ jQuery(document).on('click', '.medal-card-actions input.buy', function (e) {
         }, function (index) {
             layer.close(index);
         });
+    } else {
+        if (confirm('确认购买勋章 ID: ' + medalId + '?')) {
+            confirmCallback();
+        }
     }
     
     return false;
@@ -1234,7 +1247,9 @@ jQuery(document).on('click', '.medal-card-gift-row input.gift', function (e) {
     var medalId = btn.attr('data-id');
     if (!medalId) {
         console.error('赠送按钮：勋章ID缺失');
-        if (typeof layer !== 'undefined') {
+        if (typeof window.nexusAlert === 'function') {
+            window.nexusAlert('勋章ID缺失');
+        } else if (typeof layer !== 'undefined') {
             layer.alert('勋章ID缺失');
         } else {
             alert('勋章ID缺失');
@@ -1246,7 +1261,9 @@ jQuery(document).on('click', '.medal-card-gift-row input.gift', function (e) {
     var uid = uidInput.val();
     if (!uid || uid.trim() === '') {
         var msg = '请输入用户ID';
-        if (typeof layer !== 'undefined') {
+        if (typeof window.nexusAlert === 'function') {
+            window.nexusAlert(msg);
+        } else if (typeof layer !== 'undefined') {
             layer.alert(msg);
         } else {
             alert(msg);
@@ -1268,14 +1285,20 @@ jQuery(document).on('click', '.medal-card-gift-row input.gift', function (e) {
             btn.prop('disabled', false);
             if (response.ret != 0) {
                 var msg = response.msg || '赠送失败';
-                if (typeof layer !== 'undefined') {
+                if (typeof window.nexusAlert === 'function') {
+                    window.nexusAlert(msg);
+                } else if (typeof layer !== 'undefined') {
                     layer.alert(msg);
                 } else {
                     alert(msg);
                 }
                 return;
             }
-            if (typeof layer !== 'undefined') {
+            if (typeof window.nexusMsg === 'function') {
+                window.nexusMsg('赠送成功', 1500, function() {
+                    window.location.reload();
+                });
+            } else if (typeof layer !== 'undefined') {
                 layer.msg('赠送成功', {time: 1500}, function() {
                     window.location.reload();
                 });
@@ -1295,16 +1318,18 @@ jQuery(document).on('click', '.medal-card-gift-row input.gift', function (e) {
             } else {
                 alert(errorMsg);
             }
+            restoreUrl();
         });
     };
     
-    if (typeof layer === 'undefined') {
-        console.warn('layer未加载，使用confirm');
-        if (confirm('确认赠送勋章 ID: ' + medalId + ' 给用户 ' + uid + '?')) {
+    // 使用自定义确认弹窗，不操作历史记录
+    var giftConfirmMsg = {$confirmGiftMsg} + " 给用户 " + uid + " ?";
+    if (typeof window.nexusConfirm === 'function') {
+        window.nexusConfirm(giftConfirmMsg, function() {
             confirmCallback();
-        }
-    } else {
-        layer.confirm({$confirmGiftMsg} + " 给用户 " + uid + " ?", {
+        });
+    } else if (typeof layer !== 'undefined') {
+        layer.confirm(giftConfirmMsg, {
             btn: ['确认', '取消']
         }, function (index) {
             layer.close(index);
@@ -1312,6 +1337,10 @@ jQuery(document).on('click', '.medal-card-gift-row input.gift', function (e) {
         }, function (index) {
             layer.close(index);
         });
+    } else {
+        if (confirm('确认赠送勋章 ID: ' + medalId + ' 给用户 ' + uid + '?')) {
+            confirmCallback();
+        }
     }
     
     return false;
@@ -1330,17 +1359,38 @@ jQuery(document).on('click', '.series-claim-btn', function (e) {
     btn.prop('disabled', true);
     jQuery.post('ajax.php', {action: 'medal_series_claim', series_id: seriesId}, function(response) {
         if (response.success) {
-            layer.msg(response.message || {$claimSuccess}, {time: 1500}, function () {
+            if (typeof window.nexusMsg === 'function') {
+                window.nexusMsg(response.message || {$claimSuccess}, 1500, function () {
+                    window.location.reload();
+                });
+            } else if (typeof layer !== 'undefined') {
+                layer.msg(response.message || {$claimSuccess}, {time: 1500}, function () {
+                    window.location.reload();
+                });
+            } else {
+                alert(response.message || {$claimSuccess});
                 window.location.reload();
-            });
+            }
         } else {
             btn.prop('disabled', false);
-            layer.alert(response.message || {$claimFailed});
+            if (typeof window.nexusAlert === 'function') {
+                window.nexusAlert(response.message || {$claimFailed});
+            } else if (typeof layer !== 'undefined') {
+                layer.alert(response.message || {$claimFailed});
+            } else {
+                alert(response.message || {$claimFailed});
+            }
         }
     }, 'json').fail(function(xhr) {
         btn.prop('disabled', false);
         var errorMsg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : {$claimFailed};
-        layer.alert(errorMsg);
+        if (typeof window.nexusAlert === 'function') {
+            window.nexusAlert(errorMsg);
+        } else if (typeof layer !== 'undefined') {
+            layer.alert(errorMsg);
+        } else {
+            alert(errorMsg);
+        }
     });
 });
 

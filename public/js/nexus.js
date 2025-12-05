@@ -177,14 +177,161 @@ jQuery(document).ready(function () {
         imgList.forEach(img => io.observe(img))
     }
 
+    // 通用确认弹窗组件（不操作历史记录，避免浏览器回退）
+    window.nexusConfirm = function(message, onConfirm, onCancel) {
+        // 创建弹窗元素
+        var modal = document.createElement('div');
+        modal.id = 'nexus-confirm-modal';
+        modal.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:10000;';
+        modal.style.display = 'none';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.innerHTML = `
+            <div style="background:#1a2642; border-radius:12px; padding:30px; width:90%; max-width:500px; box-shadow:0 0 30px rgba(0,212,255,0.3); border:1px solid rgba(0,212,255,0.5);">
+                <h2 style="color:#00d4ff; margin-top:0; text-align:center; font-size:20px;">确认</h2>
+                <p id="nexus-confirm-message" style="color:#b8d4ff; text-align:center; margin:20px 0 30px; font-size:16px; line-height:1.6;"></p>
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button id="nexus-confirm-ok" style="padding:12px 30px; background:linear-gradient(135deg, #00d4ff, #a855f7); border:none; border-radius:6px; color:#fff; font-weight:bold; cursor:pointer; font-size:16px;">确认</button>
+                    <button id="nexus-confirm-cancel" style="padding:12px 30px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; cursor:pointer; font-size:16px;">取消</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // 设置消息
+        document.getElementById('nexus-confirm-message').textContent = message;
+        
+        // 显示弹窗
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // 确认按钮
+        document.getElementById('nexus-confirm-ok').onclick = function() {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            document.body.removeChild(modal);
+            if (typeof onConfirm === 'function') {
+                onConfirm();
+            }
+        };
+        
+        // 取消按钮
+        document.getElementById('nexus-confirm-cancel').onclick = function() {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            document.body.removeChild(modal);
+            if (typeof onCancel === 'function') {
+                onCancel();
+            }
+        };
+        
+        // 点击背景关闭
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+                document.body.removeChild(modal);
+                if (typeof onCancel === 'function') {
+                    onCancel();
+                }
+            }
+        };
+    };
+
+    // 通用提示弹窗组件（不操作历史记录，避免浏览器回退）
+    window.nexusAlert = function(message, onClose) {
+        // 创建弹窗元素
+        var modal = document.createElement('div');
+        modal.id = 'nexus-alert-modal';
+        modal.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:10000;';
+        modal.style.display = 'none';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.innerHTML = `
+            <div style="background:#1a2642; border-radius:12px; padding:30px; width:90%; max-width:500px; box-shadow:0 0 30px rgba(0,212,255,0.3); border:1px solid rgba(0,212,255,0.5);">
+                <h2 style="color:#00d4ff; margin-top:0; text-align:center; font-size:20px;">信息</h2>
+                <p id="nexus-alert-message" style="color:#b8d4ff; text-align:center; margin:20px 0 30px; font-size:16px; line-height:1.6;"></p>
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button id="nexus-alert-ok" style="padding:12px 30px; background:linear-gradient(135deg, #00d4ff, #a855f7); border:none; border-radius:6px; color:#fff; font-weight:bold; cursor:pointer; font-size:16px;">确定</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // 设置消息
+        document.getElementById('nexus-alert-message').textContent = message;
+        
+        // 显示弹窗
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // 确定按钮
+        document.getElementById('nexus-alert-ok').onclick = function() {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            document.body.removeChild(modal);
+            if (typeof onClose === 'function') {
+                onClose();
+            }
+        };
+        
+        // 点击背景关闭
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+                document.body.removeChild(modal);
+                if (typeof onClose === 'function') {
+                    onClose();
+                }
+            }
+        };
+    };
+
+    // 通用消息提示组件（不操作历史记录，自动关闭）
+    window.nexusMsg = function(message, time, onClose) {
+        time = time || 1500;
+        // 创建消息元素容器
+        var container = document.createElement('div');
+        container.id = 'nexus-msg-container';
+        container.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; z-index:10001; display:flex; align-items:center; justify-content:center; pointer-events:none;';
+        
+        // 创建消息元素
+        var msg = document.createElement('div');
+        msg.id = 'nexus-msg';
+        msg.style.cssText = 'background:rgba(0,0,0,0.8); color:#fff; padding:15px 30px; border-radius:8px; font-size:16px; box-shadow:0 0 20px rgba(0,212,255,0.3); border:1px solid rgba(0,212,255,0.5); white-space:nowrap; pointer-events:auto;';
+        msg.textContent = message;
+        
+        container.appendChild(msg);
+        document.body.appendChild(container);
+        
+        // 自动关闭
+        setTimeout(function() {
+            if (container.parentNode) {
+                container.parentNode.removeChild(container);
+            }
+            if (typeof onClose === 'function') {
+                onClose();
+            }
+        }, time);
+    };
+
     //claim
-    jQuery("body").on("click", "[data-claim_id]", function () {
+    jQuery("body").on("click", "[data-claim_id]", function (e) {
+        e.preventDefault()
+        e.stopPropagation()
+        e.stopImmediatePropagation()
         let _this = jQuery(this)
         let box = _this.closest('td')
+        if (!box.length) {
+            e.preventDefault()
+            e.stopImmediatePropagation()
+            return false
+        }
         let claimId = _this.attr("data-claim_id")
         let torrentId = _this.attr("data-torrent_id")
         let action = _this.attr("data-action")
-        let reload = _this.attr("data-reload")
+        let reload = parseInt(_this.attr("data-reload") || "0")
         let confirmText = _this.attr("data-confirm")
         let showStyle = "width: max-content;display: flex;align-items: center";
         let hideStyle = "width: max-content;display: none;align-items: center";
@@ -194,18 +341,25 @@ jQuery(document).ready(function () {
         } else {
             params.torrent_id = torrentId
         }
-        let modalConfig = {title: "Info", btn: ['OK', 'Cancel'], btnAlign: 'c'}
-        layer.confirm(confirmText, modalConfig, function (confirmIndex) {
+        // 使用自定义确认弹窗，不操作历史记录
+        window.nexusConfirm(confirmText, function() {
+            // 确认回调：发送AJAX请求
             jQuery.post("ajax.php", {"action": action, params: params}, function (response) {
-                console.log(response)
+                console.log("Claim AJAX response:", response)
                 if (response.ret != 0) {
-                    layer.alert(response.msg, modalConfig)
+                    if (typeof layer !== 'undefined') {
+                        layer.alert(response.msg, {title: "Info", btn: ['OK'], btnAlign: 'c'})
+                    } else {
+                        alert(response.msg)
+                    }
                     return
                 }
+                // 只有在明确设置了 reload > 0 时才刷新页面，否则只更新按钮状态
                 if (reload > 0) {
                     window.location.reload();
                     return;
                 }
+                // 局部更新按钮状态
                 if (claimId > 0) {
                     //do remove, show add
                     box.find("[data-action=addClaim]").attr("style", showStyle).attr("data-claim_id", 0)
@@ -215,9 +369,16 @@ jQuery(document).ready(function () {
                     box.find("[data-action=addClaim]").attr("style", hideStyle)
                     box.find("[data-action=removeClaim]").attr("style", showStyle).attr("data-claim_id", response.data.id)
                 }
-                layer.close(confirmIndex)
-            }, "json")
+            }, "json").fail(function(xhr, textStatus, errorThrown) {
+                console.error("Claim AJAX failed:", textStatus, errorThrown)
+                if (typeof layer !== 'undefined') {
+                    layer.alert("请求失败: " + (errorThrown || textStatus), {title: "Info", btn: ['OK'], btnAlign: 'c'})
+                } else {
+                    alert("请求失败: " + (errorThrown || textStatus))
+                }
+            })
         })
+        return false
     })
 
 })

@@ -1005,9 +1005,12 @@ if ($action == "viewtopic")
 		// 创建打赏输入弹窗
 		tipModal = document.createElement('div');
 		tipModal.id = 'tipModal';
-		tipModal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:10000;';
+		tipModal.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:10000;';
+		tipModal.style.display = 'none';
+		tipModal.style.alignItems = 'center';
+		tipModal.style.justifyContent = 'center';
 		tipModal.innerHTML = `
-			<div id="tipModalContent" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#1a2642; border-radius:12px; padding:30px; width:90%; max-width:500px; box-shadow:0 0 30px rgba(0,212,255,0.3); border:1px solid rgba(0,212,255,0.5);">
+			<div id="tipModalContent" style="background:#1a2642; border-radius:12px; padding:30px; width:90%; max-width:500px; box-shadow:0 0 30px rgba(0,212,255,0.3); border:1px solid rgba(0,212,255,0.5);">
 				<h2 style="color:#00d4ff; margin-top:0; text-align:center;">💫 打赏</h2>
 				<p style="color:#b8d4ff; text-align:center; margin-bottom:20px;">打赏给 <span id="tipUsername" style="color:#00d4ff; font-weight:bold;"></span></p>
 
@@ -1032,9 +1035,12 @@ if ($action == "viewtopic")
 		// 创建结果弹窗
 		tipResultModal = document.createElement('div');
 		tipResultModal.id = 'tipResultModal';
-		tipResultModal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); z-index:10001;';
+		tipResultModal.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); z-index:10001;';
+		tipResultModal.style.display = 'none';
+		tipResultModal.style.alignItems = 'center';
+		tipResultModal.style.justifyContent = 'center';
 		tipResultModal.innerHTML = `
-			<div id="tipResultCard" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:linear-gradient(160deg, #0f1b33, #132846); border-radius:16px; padding:32px 28px; width:90%; max-width:420px; box-shadow:0 20px 60px rgba(0,212,255,0.25); border:1px solid rgba(0,212,255,0.35); text-align:center;">
+			<div id="tipResultCard" style="background:linear-gradient(160deg, #0f1b33, #132846); border-radius:16px; padding:32px 28px; width:90%; max-width:420px; box-shadow:0 20px 60px rgba(0,212,255,0.25); border:1px solid rgba(0,212,255,0.35); text-align:center;">
 				<div id="tipResultIcon" style="display:flex; justify-content:center; align-items:center; width:68px; height:68px; margin:0 auto 20px; border-radius:50%; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.35); color:#6ee7b7; font-size:30px;">&#10003;</div>
 				<h3 id="tipResultTitle" style="color:#6ee7b7; margin:0 0 12px; font-size:22px;">打赏成功</h3>
 				<p id="tipResultMessage" style="color:#cbd5f5; margin:0 0 24px; font-size:15px; line-height:1.6;">感谢你的支持，帖子作者已收到你的打赏。</p>
@@ -1065,7 +1071,7 @@ if ($action == "viewtopic")
 		document.getElementById('tipMessage').value = '';
 
 		if (tipModal) {
-			tipModal.style.display = 'block';
+			tipModal.style.display = 'flex';
 			document.body.style.overflow = 'hidden';
 		}
 	}
@@ -1246,7 +1252,7 @@ if ($action == "viewtopic")
 			tipResultButton.textContent = type === 'success' ? '知道了' : '关闭';
 		}
 
-		tipResultModal.style.display = 'block';
+		tipResultModal.style.display = 'flex';
 		document.body.style.overflow = 'hidden';
 	}
 

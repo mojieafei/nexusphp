@@ -241,7 +241,7 @@ function maketable($res, $mode = 'seeding')
         ) {
             $claim = $claimData->get($arr['torrent']);
 		    if ($CURUSER['id'] == $arr['userid']) {
-                $claimButton = $claimRep->buildActionButtons($arr['torrent'], $claim);
+                $claimButton = $claimRep->buildActionButtons($arr['torrent'], $claim, 0);
             } else {
 		        if ($claim) {
 		            $claimText = nexus_trans('claim.already_claimed');
@@ -336,7 +336,8 @@ if (isset($tableWhere)) {
 if ($count > 0 && isset($tableWhere, $fields, $order))
 {
     $pageSize = 100;
-    list($pagertop, $pagerbottom, $limit) = pager($pageSize, $count, "getusertorrentlistajax.php?");
+    $pagerBaseUrl = "getusertorrentlistajax.php?userid=$id&type=$type&";
+    list($pagertop, $pagerbottom, $limit) = pager($pageSize, $count, $pagerBaseUrl);
     $sql = "select $fields from $tableWhere order by $order $limit";
     do_log("count: $count, list sql: $sql");
     $res = sql_query($sql);

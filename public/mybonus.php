@@ -493,7 +493,11 @@ try {
     
     // 重置所有表单和按钮状态
     jQuery('form').each(function() {
-        this.dataset.submitting = '';
+        if (this.dataset) {
+            this.dataset.submitting = '';
+        } else {
+            this.setAttribute('data-submitting', '');
+        }
     });
     jQuery('input[type="submit"], button[type="submit"]').each(function() {
         var originalText = jQuery(this).data('original-text');
@@ -528,7 +532,11 @@ jQuery(function ($) {
 
     function resetForms() {
         $wrapper.find('form').each(function () {
-            this.dataset.submitting = '';
+            if (this.dataset) {
+                this.dataset.submitting = '';
+            } else {
+                this.setAttribute('data-submitting', '');
+            }
             var $buttons = $(this).find('input[type="submit"], button[type="submit"]');
             $buttons.each(function () {
                 var $btn = $(this);
@@ -580,38 +588,189 @@ jQuery(function ($) {
         resetForms();
     });
 
-    $wrapper.on('submit', 'form', function () {
+    // 拦截表单提交，使用 AJAX
+    $wrapper.on('submit', 'form', function (e) {
+        console.log('表单提交被拦截');
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
         var form = this;
         var $form = $(form);
-        if (form.dataset.submitting === '1') {
-            startLoading();
-            scheduleCleanup();
-            return;
+        
+        // 防止重复提交
+        var submitting = form.dataset ? form.dataset.submitting : form.getAttribute('data-submitting');
+        if (submitting === '1') {
+            console.log('表单正在提交中，忽略');
+            return false;
         }
 
         var $button = $form.find('input[type="submit"], button[type="submit"]').filter(':enabled').first();
-        if ($button.length) {
-            if ($button.data('loading')) {
-                return false;
-            }
-            var originalText = $button.val();
-            $button.data('original-text', originalText);
-            $button.data('loading', true);
-            if (typeof originalText === 'string' && originalText.indexOf('…') === -1) {
-                $button.val(originalText + '…');
-            }
-            $button.prop('disabled', true);
+        if ($button.length && $button.data('loading')) {
+            console.log('按钮正在加载中，忽略');
+            return false;
         }
-
-        form.dataset.submitting = '1';
-        startLoading();
-        scheduleCleanup();
+        
+        // 获取表单数据
+        var option = $form.find('input[name="option"]').val();
+        var titleValue = $form.find('input[name="title"]').val();
+        var title = titleValue ? titleValue : '';
+        console.log('准备交换，option:', option, 'title:', title);
+        
+        // 显示确认弹窗
+        var confirmMsg = '确认要交换吗？';
+        
+        // 等待 nexusConfirm 加载（最多等待2秒）
+        var tryCount = 0;
+        var maxTries = 20;
+        var tryConfirm = function() {
+            tryCount++;
+            if (typeof window.nexusConfirm === 'function') {
+                console.log('显示确认弹窗');
+                window.nexusConfirm(confirmMsg, function() {
+                    // 确认后提交
+                    if (form.dataset) {
+                        form.dataset.submitting = '1';
+                    } else {
+                        form.setAttribute('data-submitting', '1');
+                    }
+                    if ($button.length) {
+                        var originalText = $button.val();
+                        $button.data('original-text', originalText);
+                        $button.data('loading', true);
+                        if (typeof originalText === 'string' && originalText.indexOf('…') === -1) {
+                            $button.val(originalText + '…');
+                        }
+                        $button.prop('disabled', true);
+                    }
+                    
+                    // 准备 AJAX 数据
+                    var ajaxData = {};
+                    ajaxData['action'] = 'exchangeBonus';
+                    ajaxData['option'] = option;
+                    if (title) {
+                        ajaxData['title'] = title;
+                    }
+                    
+                    // 发送 AJAX 请求
+                    jQuery.post('ajax.php', ajaxData, function(response) {
+                        if (form.dataset) {
+                            form.dataset.submitting = '';
+                        } else {
+                            form.setAttribute('data-submitting', '');
+                        }
+                        if ($button.length) {
+                            var originalText = $button.data('original-text');
+                            if (originalText !== undefined) {
+                                $button.val(originalText);
+                            }
+                            $button.prop('disabled', false).data('loading', false);
+                        }
+                        
+                        if (response.ret == 0) {
+                            // 成功：显示成功消息并更新魔力值
+                            if (typeof window.nexusAlert === 'function') {
+                                window.nexusAlert(response.msg, function() {
+                                    // 更新当前魔力值显示
+                                    if (response.data) {
+                                        if (response.data.new_bonus) {
+                                            jQuery('#current-bonus').text(response.data.new_bonus);
+                                        }
+                                    }
+                                });
+                            } else {
+                                alert(response.msg);
+                                if (response.data) {
+                                    if (response.data.new_bonus) {
+                                        jQuery('#current-bonus').text(response.data.new_bonus);
+                                    }
+                                }
+                            }
+                        } else {
+                            // 失败：显示错误消息
+                            if (typeof window.nexusAlert === 'function') {
+                                window.nexusAlert(response.msg);
+                            } else {
+                                alert(response.msg);
+                            }
+                        }
+                    }, 'json').fail(function(xhr, textStatus, errorThrown) {
+                        if (form.dataset) {
+                            form.dataset.submitting = '';
+                        } else {
+                            form.setAttribute('data-submitting', '');
+                        }
+                        if ($button.length) {
+                            var originalText = $button.data('original-text');
+                            if (originalText !== undefined) {
+                                $button.val(originalText);
+                            }
+                            $button.prop('disabled', false).data('loading', false);
+                        }
+                        
+                        var errorMsg = '请求失败，请重试';
+                        try {
+                            var jsonResponse = JSON.parse(xhr.responseText);
+                            if (jsonResponse && jsonResponse.msg) {
+                                errorMsg = jsonResponse.msg;
+                            }
+                        } catch(err) {
+                            if (xhr.responseJSON && xhr.responseJSON.msg) {
+                                errorMsg = xhr.responseJSON.msg;
+                            }
+                        }
+                        if (typeof window.nexusAlert === 'function') {
+                            window.nexusAlert(errorMsg);
+                        } else {
+                            alert(errorMsg);
+                        }
+                    });
+                });
+            } else {
+                // 如果 nexusConfirm 还没加载，等待一下再试
+                if (tryCount < maxTries) {
+                    console.log('等待 nexusConfirm 加载...', tryCount);
+                    setTimeout(tryConfirm, 100);
+                } else {
+                    // 超时后使用传统方式
+                    console.log('nexusConfirm 加载超时，使用传统提交');
+                    if (confirm(confirmMsg)) {
+                        if (form.dataset) {
+                            form.dataset.submitting = '1';
+                        } else {
+                            form.setAttribute('data-submitting', '1');
+                        }
+                        startLoading();
+                        scheduleCleanup();
+                        form.submit();
+                    }
+                }
+            }
+        };
+        
+        tryConfirm();
+        
+        return false;
     });
 
+    // 拦截按钮点击，阻止默认表单提交
     $wrapper.on('click', 'input[type="submit"], button[type="submit"]', function (event) {
         var form = this.form;
-        if (form && form.dataset.submitting === '1') {
+        if (form) {
+            var submitting = form.dataset ? form.dataset.submitting : form.getAttribute('data-submitting');
+            if (submitting === '1') {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+                return false;
+            }
+        }
+        
+        // 如果按钮被禁用，阻止点击
+        if ($(this).prop('disabled')) {
             event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
             return false;
         }
     });

@@ -812,6 +812,282 @@ if ($action === 'space_miner_remaining') {
     }
 }
 
+// 魔力值交换
+if ($action === 'exchangeBonus') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+        
+        require_once(get_langfile_path());
+        
+        // 包含必要的函数和变量
+        require_once('../include/functions.php');
+        
+        // 定义 bonusarray 函数（从 mybonus.php 复制）
+        if (!function_exists('bonusarray')) {
+            function bonusarray($option = 0){
+                global $onegbupload_bonus,$fivegbupload_bonus,$tengbupload_bonus,$oneinvite_bonus,$customtitle_bonus,$vipstatus_bonus, $basictax_bonus, $taxpercentage_bonus, $bonusnoadpoint_advertisement, $bonusnoadtime_advertisement;
+                global $lang_mybonus;
+                
+                // 如果变量未定义，从设置中获取
+                if (!isset($onegbupload_bonus)) {
+                    $onegbupload_bonus = get_setting('bonus.onegbupload');
+                }
+                if (!isset($fivegbupload_bonus)) {
+                    $fivegbupload_bonus = get_setting('bonus.fivegbupload');
+                }
+                if (!isset($tengbupload_bonus)) {
+                    $tengbupload_bonus = get_setting('bonus.tengbupload');
+                }
+                if (!isset($oneinvite_bonus)) {
+                    $oneinvite_bonus = get_setting('bonus.oneinvite');
+                }
+                if (!isset($customtitle_bonus)) {
+                    $customtitle_bonus = get_setting('bonus.customtitle');
+                }
+                if (!isset($vipstatus_bonus)) {
+                    $vipstatus_bonus = get_setting('bonus.vipstatus');
+                }
+                if (!isset($basictax_bonus)) {
+                    $basictax_bonus = get_setting('bonus.basictax');
+                }
+                if (!isset($taxpercentage_bonus)) {
+                    $taxpercentage_bonus = get_setting('bonus.taxpercentage');
+                }
+                if (!isset($bonusnoadpoint_advertisement)) {
+                    $bonusnoadpoint_advertisement = get_setting('advertisement.bonusnoadpoint');
+                }
+                if (!isset($bonusnoadtime_advertisement)) {
+                    $bonusnoadtime_advertisement = get_setting('advertisement.bonusnoadtime');
+                }
+
+                $results = [];
+                //1.0 GB Uploaded
+                $bonus = array();
+                $bonus['points'] = $onegbupload_bonus;
+                $bonus['art'] = 'traffic';
+                $bonus['menge'] = 1073741824;
+                $bonus['name'] = $lang_mybonus['text_uploaded_one'];
+                $bonus['description'] = $lang_mybonus['text_uploaded_note'];
+                $results[] = $bonus;
+
+                //5.0 GB Uploaded
+                $bonus = array();
+                $bonus['points'] = $fivegbupload_bonus;
+                $bonus['art'] = 'traffic';
+                $bonus['menge'] = 5368709120;
+                $bonus['name'] = $lang_mybonus['text_uploaded_two'];
+                $bonus['description'] = $lang_mybonus['text_uploaded_note'];
+                $results[] = $bonus;
+
+                //10.0 GB Uploaded
+                $bonus = array();
+                $bonus['points'] = $tengbupload_bonus;
+                $bonus['art'] = 'traffic';
+                $bonus['menge'] = 10737418240;
+                $bonus['name'] = $lang_mybonus['text_uploaded_three'];
+                $bonus['description'] = $lang_mybonus['text_uploaded_note'];
+                $results[] = $bonus;
+
+                //100.0 GB Uploaded
+                $bonus = array();
+                $bonus['points'] = get_setting('bonus.hundredgbupload');
+                $bonus['art'] = 'traffic';
+                $bonus['menge'] = 107374182400;
+                $bonus['name'] = $lang_mybonus['text_uploaded_four'];
+                $bonus['description'] = $lang_mybonus['text_uploaded_note'];
+                $results[] = $bonus;
+
+                //10.0 GB Downloaded
+                $bonus = array();
+                $bonus['points'] = get_setting('bonus.tengbdownload');
+                $bonus['art'] = 'traffic_downloaded';
+                $bonus['menge'] = 10737418240;
+                $bonus['name'] = $lang_mybonus['text_downloaded_ten_gb'];
+                $bonus['description'] = $lang_mybonus['text_download_note'];
+                $results[] = $bonus;
+
+                //100.0 GB Downloaded
+                $bonus = array();
+                $bonus['points'] = get_setting('bonus.hundredgbdownload');
+                $bonus['art'] = 'traffic_downloaded';
+                $bonus['menge'] = 107374182400;
+                $bonus['name'] = $lang_mybonus['text_downloaded_hundred_gb'];
+                $bonus['description'] = $lang_mybonus['text_download_note'];
+                $results[] = $bonus;
+
+                //Invite
+                if ($oneinvite_bonus > 0){
+                    $bonus = array();
+                    $bonus['points'] = $oneinvite_bonus;
+                    $bonus['art'] = 'invite';
+                    $bonus['menge'] = 1;
+                    $bonus['name'] = $lang_mybonus['text_buy_invite'];
+                    $bonus['description'] = $lang_mybonus['text_buy_invite_note'];
+                    $results[] = $bonus;
+                }
+
+                //Tmp Invite
+                $tmpInviteBonus = \App\Models\BonusLogs::getBonusForBuyTemporaryInvite();
+                if ($tmpInviteBonus > 0) {
+                    $bonus = array();
+                    $bonus['points'] = $tmpInviteBonus;
+                    $bonus['art'] = 'tmp_invite';
+                    $bonus['menge'] = 1;
+                    $bonus['name'] = $lang_mybonus['text_buy_tmp_invite'];
+                    $bonus['description'] = $lang_mybonus['text_buy_tmp_invite_note'];
+                    $results[] = $bonus;
+                }
+
+                //Custom Title
+                $bonus = array();
+                $bonus['points'] = $customtitle_bonus;
+                $bonus['art'] = 'title';
+                $bonus['menge'] = 0;
+                $bonus['name'] = $lang_mybonus['text_custom_title'];
+                $bonus['description'] = $lang_mybonus['text_custom_title_note'];
+                $results[] = $bonus;
+
+                //VIP Status
+                $bonus = array();
+                $bonus['points'] = $vipstatus_bonus;
+                $bonus['art'] = 'class';
+                $bonus['menge'] = 0;
+                $bonus['name'] = $lang_mybonus['text_vip_status'];
+                $bonus['description'] = $lang_mybonus['text_vip_status_note'];
+                $results[] = $bonus;
+
+                return $results;
+            }
+        }
+        
+        $allBonus = bonusarray();
+        
+        // 获取交换选项
+        $option = intval($_POST['option'] ?? -1);
+        if ($option < 0 || !isset($allBonus[$option])) {
+            throw new \InvalidArgumentException('无效的交换选项');
+        }
+        
+        $bonusarray = $allBonus[$option];
+        $points = $bonusarray['points'];
+        $userid = $CURUSER['id'];
+        $art = $bonusarray['art'];
+        
+        // 检查魔力值是否足够
+        if ($CURUSER['seedbonus'] < $points) {
+            throw new \InvalidArgumentException('魔力值不足');
+        }
+        
+        // 获取锁配置
+        $lockSeconds = 10;
+        $lockText = sprintf($lang_mybonus['lock_text'], $lockSeconds);
+        $lockName = "user:$userid:exchange:bonus";
+        $lock = new \Nexus\Database\NexusLock($lockName, $lockSeconds);
+        if (!$lock->get()) {
+            throw new \InvalidArgumentException($lockText);
+        }
+        
+        $bonusRep = new \App\Repositories\BonusRepository();
+        $successMsg = '';
+        
+        // 处理不同类型的交换
+        if ($art == "traffic") {
+            // 上传值交换
+            $ratiolimit_bonus = get_setting('bonus.ratiolimit');
+            $dlamountlimit_bonus = get_setting('bonus.dlamountlimit');
+            
+            if ($CURUSER['uploaded'] > $dlamountlimit_bonus * 1073741824) {
+                if ($CURUSER['downloaded'] > 0) {
+                    $ratio = $CURUSER['uploaded'] / $CURUSER['downloaded'];
+                } else {
+                    $ratio = PHP_INT_MAX;
+                }
+            } else {
+                $ratio = 0;
+            }
+            
+            if ($ratiolimit_bonus > 0 && $ratio > $ratiolimit_bonus) {
+                throw new \InvalidArgumentException($lang_mybonus['text_cheat_alert']);
+            }
+            
+            $upload = $CURUSER['uploaded'];
+            $up = $upload + $bonusarray['menge'];
+            $bonusRep->consumeUserBonus($CURUSER['id'], $points, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_UPLOAD, $points . " Points for uploaded.", ['uploaded' => $up]);
+            $successMsg = $lang_mybonus['text_success_upload'];
+            
+        } elseif ($art == "traffic_downloaded") {
+            // 下载值交换
+            $downloaded = $CURUSER['downloaded'];
+            $down = $downloaded + $bonusarray['menge'];
+            $bonusRep->consumeUserBonus($CURUSER['id'], $points, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_DOWNLOAD, $points . " Points for downloaded.", ['downloaded' => $down]);
+            $successMsg = $lang_mybonus['text_success_download'];
+            
+        } elseif ($art == "invite") {
+            // 邀请名额交换
+            if (!user_can('buyinvite')) {
+                throw new \InvalidArgumentException(get_user_class_name(get_setting('authority.buyinvite'), false, false, true) . $lang_mybonus['text_plus_only']);
+            }
+            $invites = $CURUSER['invites'];
+            $inv = $invites + $bonusarray['menge'];
+            $bonusRep->consumeUserBonus($CURUSER['id'], $points, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_INVITE, $points . " Points for invites.", ['invites' => $inv]);
+            $successMsg = $lang_mybonus['text_success_invites'];
+            
+        } elseif ($art == "tmp_invite") {
+            // 临时邀请名额交换
+            if (!user_can('buyinvite')) {
+                throw new \InvalidArgumentException(get_user_class_name(get_setting('authority.buyinvite'), false, false, true) . $lang_mybonus['text_plus_only']);
+            }
+            $bonusRep->consumeToBuyTemporaryInvite($CURUSER['id']);
+            $successMsg = $lang_mybonus['text_success_tmp_invites'];
+            
+        } elseif ($art == "class") {
+            // VIP 状态交换
+            if (get_user_class() >= UC_VIP) {
+                throw new \InvalidArgumentException($lang_mybonus['std_class_above_vip']);
+            }
+            $vip_until = date("Y-m-d H:i:s", (TIMENOW + 28 * 86400));
+            $bonusRep->consumeUserBonus($CURUSER['id'], $points, \App\Models\BonusLogs::BUSINESS_TYPE_BUY_VIP, $points . " Points for 1 month VIP Status.", ['class' => UC_VIP, 'vip_added' => 'yes', 'vip_until' => $vip_until]);
+            $successMsg = $lang_mybonus['text_success_vip'] . "<b>" . get_user_class_name(UC_VIP, false, false, true) . "</b>" . $lang_mybonus['text_success_vip_two'];
+            
+        } elseif ($art == "title") {
+            // 自定义头衔交换
+            $title = trim($_POST['title'] ?? '');
+            if (empty($title)) {
+                throw new \InvalidArgumentException('请输入头衔');
+            }
+            $words = array("fuck", "shit", "pussy", "cunt", "nigger", "Staff Leader", "SysOp", "Administrator", "Moderator", "Uploader", "Retiree", "VIP", "Nexus Master", "Ultimate User", "Extreme User", "Veteran User", "Insane User", "Crazy User", "Elite User", "Power User", "User", "Peasant", "Champion");
+            $title = str_replace($words, $lang_mybonus['text_wasted_karma'], $title);
+            $bonusRep->consumeUserBonus($CURUSER['id'], $points, \App\Models\BonusLogs::BUSINESS_TYPE_CUSTOM_TITLE, $points . " Points for custom title. Old title is " . htmlspecialchars(trim($CURUSER["title"])) . " and new title is $title.", ['title' => $title]);
+            $successMsg = sprintf($lang_mybonus['text_success_custom_title'], $title);
+            
+        } else {
+            // 其他类型暂不支持 AJAX，需要刷新页面
+            throw new \InvalidArgumentException('该交换类型暂不支持，请使用传统方式');
+        }
+        
+        // 获取更新后的魔力值
+        $freshUser = \App\Models\User::query()->find($userid, ['id', 'seedbonus']);
+        $newBonus = number_format($freshUser->seedbonus ?? 0, 1);
+        
+        exit(json_encode([
+            'ret' => 0,
+            'msg' => $successMsg,
+            'data' => [
+                'new_bonus' => $newBonus
+            ]
+        ]));
+        
+    } catch (\Throwable $e) {
+        exit(json_encode([
+            'ret' => 1,
+            'msg' => $e->getMessage()
+        ]));
+    }
+}
+
 class AjaxInterface{
 
     public static function toggleUserMedalStatus($params)
