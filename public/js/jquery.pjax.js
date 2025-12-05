@@ -111,7 +111,8 @@
             if (href.match(/\.torrent$/i) || 
                 href.match(/download/i) || 
                 href.match(/getattachment/i) || 
-                href.match(/logout/i)) {
+                href.match(/logout/i) ||
+                href.match(/getusertorrentlistajax/i)) {
                 console.log('PJAX: 忽略 - 特殊类型链接');
                 return;
             }

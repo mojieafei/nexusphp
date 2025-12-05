@@ -820,10 +820,11 @@ if ($action === 'exchangeBonus') {
             throw new \InvalidArgumentException('请先登录');
         }
         
-        require_once(get_langfile_path());
-        
         // 包含必要的函数和变量
         require_once('../include/functions.php');
+        
+        // 包含语言文件
+        require_once(get_langfile_path('mybonus.php'));
         
         // 定义 bonusarray 函数（从 mybonus.php 复制）
         if (!function_exists('bonusarray')) {
@@ -966,9 +967,20 @@ if ($action === 'exchangeBonus') {
         $allBonus = bonusarray();
         
         // 获取交换选项
-        $option = intval($_POST['option'] ?? -1);
+        $option = isset($_POST['option']) ? intval($_POST['option']) : -1;
+        
+        // 调试信息
+        if (empty($allBonus)) {
+            do_log("exchangeBonus: allBonus is empty");
+            throw new \InvalidArgumentException('交换选项列表为空，请检查配置');
+        }
+        
+        do_log("exchangeBonus: option=$option, allBonus count=" . count($allBonus) . ", POST=" . json_encode($_POST));
+        
         if ($option < 0 || !isset($allBonus[$option])) {
-            throw new \InvalidArgumentException('无效的交换选项');
+            $maxOption = count($allBonus) - 1;
+            do_log("exchangeBonus: invalid option=$option, max=$maxOption");
+            throw new \InvalidArgumentException("无效的交换选项：选项 $option 不存在（有效范围：0-$maxOption）");
         }
         
         $bonusarray = $allBonus[$option];

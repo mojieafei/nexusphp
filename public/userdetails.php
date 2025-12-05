@@ -691,28 +691,154 @@ jQuery("body").on("click", "#claim-all-seeding", function (e) {
 })
 JS;
 }
-$paginationJs = <<<JS
-jQuery(document).off('click.userdetails-pagination', '.nexus-pagination a').on('click.userdetails-pagination', '.nexus-pagination a', function (e) {
+$paginationJs = <<<'JS'
+// 为所有分页链接添加 data-pjax-ignore 属性，并在 PJAX 初始化之前执行
+(function() {
+    function markPaginationLinks() {
+        jQuery('.nexus-pagination a[href*="getusertorrentlistajax"]').attr('data-pjax-ignore', '1')
+    }
+    
+    // 立即执行（不等待 DOM ready）
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', markPaginationLinks)
+    } else {
+        markPaginationLinks()
+    }
+    
+    // 监听 DOM 变化，当新内容加载后重新标记
+    if (typeof MutationObserver !== 'undefined') {
+        var observer = new MutationObserver(function(mutations) {
+            markPaginationLinks()
+        })
+        
+        // 延迟观察，等待容器加载
+        setTimeout(function() {
+            jQuery('[data-type]').each(function() {
+                observer.observe(this, { childList: true, subtree: true })
+            })
+        }, 100)
+    }
+})()
+
+// 在 DOM ready 之前就绑定事件，确保在 PJAX 之前执行
+// 使用更具体的选择器，只处理 getusertorrentlistajax 链接
+jQuery(function($) {
+    // 先移除可能存在的旧绑定
+    $(document).off('click.userdetails-pagination', '.nexus-pagination a[href*="getusertorrentlistajax"]')
+    
+    // 绑定新的事件处理器
+    $(document).on('click.userdetails-pagination', '.nexus-pagination a[href*="getusertorrentlistajax"]', function (e) {
+    // 立即阻止所有事件传播，防止 PJAX 拦截
     e.preventDefault()
     e.stopImmediatePropagation()
     e.stopPropagation()
+    
     let _this = jQuery(this)
+    
+    // 确保链接不会被 PJAX 处理
+    _this.attr('data-pjax-ignore', '1')
+    
+    // 阻止浏览器默认行为（地址栏跳转）
+    if (e.originalEvent) {
+        e.originalEvent.preventDefault()
+        e.originalEvent.stopImmediatePropagation()
+        e.originalEvent.stopPropagation()
+    }
+    
+    // 如果地址栏已经被改变，立即恢复
+    if (window.history && window.location.href.indexOf('getusertorrentlistajax') !== -1) {
+        var referrer = document.referrer
+        if (referrer) {
+            window.history.replaceState(null, '', referrer)
+        } else {
+            // 如果没有 referrer，尝试从当前 URL 构建
+            var baseUrl = window.location.origin + window.location.pathname
+            var params = new URLSearchParams(window.location.search)
+            var id = params.get('id')
+            if (id) {
+                window.history.replaceState(null, '', baseUrl + '?id=' + id)
+            } else {
+                window.history.replaceState(null, '', baseUrl)
+            }
+        }
+    }
+    
+    // 向上查找容器，确保找到正确的 [data-type] 容器
     let container = _this.closest("[data-type]")
-    if (!container.length) return false
+    if (!container.length) {
+        console.error('未找到 data-type 容器')
+        return false
+    }
+    
+    // 验证容器是否在正确的 DOM 位置（应该在隐藏的 div 中）
+    let containerParent = container.parent()
+    if (!containerParent.length || containerParent.is('body') || containerParent.is('html')) {
+        console.error('容器位置异常:', containerParent)
+        return false
+    }
+    
     let url = _this.attr("href")
-    if (!url) return false
+    if (!url) {
+        console.error('链接 URL 为空')
+        return false
+    }
+    
+    // 确保 URL 包含 getusertorrentlistajax
+    if (url.indexOf('getusertorrentlistajax') === -1) {
+        console.error('URL 格式不正确:', url)
+        return false
+    }
+    
+    console.log('加载分页数据，URL:', url, '容器:', container.attr('id'))
+    
     container.html('<div style="text-align:center;padding:20px;">加载中...</div>')
-    jQuery.get(url, function(result) {
-        container.html(result)
-    }).fail(function() {
-        container.html('<div style="text-align:center;padding:20px;color:red;">加载失败，请重试</div>')
+    
+    jQuery.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'html',
+        cache: false,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-PJAX': 'false'
+        },
+        success: function(result) {
+            // 验证返回的内容不是完整的 HTML 页面
+            if (result.indexOf('<!DOCTYPE') !== -1 || result.indexOf('<html') !== -1 || result.indexOf('<body') !== -1 || result.indexOf('</body>') !== -1 || result.indexOf('</html>') !== -1) {
+                console.error('返回了完整的 HTML 页面，可能被 PJAX 拦截', result.substring(0, 200))
+                container.html('<div style="text-align:center;padding:20px;color:red;">加载失败：返回了完整页面，请刷新页面重试</div>')
+                return
+            }
+            
+            // 验证返回的内容包含预期的内容（表格或分页）
+            if (result.indexOf('<table') === -1 && result.indexOf('nexus-pagination') === -1 && result.indexOf('text_no_record') === -1) {
+                console.warn('返回内容可能不正确:', result.substring(0, 200))
+            }
+            
+            // 只更新容器内容
+            container.html(result)
+            
+            // 重新标记新加载的分页链接
+            container.find('.nexus-pagination a[href*="getusertorrentlistajax"]').attr('data-pjax-ignore', '1')
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX 加载失败:', status, error)
+            if (xhr.responseText) {
+                console.error('响应内容:', xhr.responseText.substring(0, 500))
+            }
+            container.html('<div style="text-align:center;padding:20px;color:red;">加载失败，请重试</div>')
+        }
     })
+    
     return false
+    })
 })
-$claimJs
 JS;
 
-\Nexus\Nexus::js($paginationJs, 'footer', false);
+// 合并分页和认领的 JavaScript
+$finalJs = $paginationJs . "\n" . $claimJs;
+
+\Nexus\Nexus::js($finalJs, 'footer', false);
 
 stdfoot();
 ?>

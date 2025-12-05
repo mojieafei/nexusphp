@@ -478,7 +478,7 @@ for ($i=0; $i < count($allBonus); $i++)
 print("</table><br />");
 print("</div>");
 
-$bonusExchangeJs = <<<JS
+$bonusExchangeJs = <<<'JS'
 // 强制重置PJAX状态和页面初始化
 try {
     if (window.history && window.history.replaceState) {
@@ -516,8 +516,9 @@ try {
 }
 
 jQuery(function ($) {
-    var $wrapper = $('#bonus-exchange-wrapper');
-    if (!$wrapper.length) {
+    var $wrapper = null;
+    $wrapper = $('#bonus-exchange-wrapper');
+    if (!$wrapper || !$wrapper.length) {
         return;
     }
 
@@ -612,10 +613,10 @@ jQuery(function ($) {
         }
         
         // 获取表单数据
-        var option = $form.find('input[name="option"]').val();
+        var optionValue = $form.find('input[name="option"]').val();
         var titleValue = $form.find('input[name="title"]').val();
         var title = titleValue ? titleValue : '';
-        console.log('准备交换，option:', option, 'title:', title);
+        console.log('准备交换，option:', optionValue, 'title:', title);
         
         // 显示确认弹窗
         var confirmMsg = '确认要交换吗？';
@@ -644,16 +645,59 @@ jQuery(function ($) {
                         $button.prop('disabled', true);
                     }
                     
-                    // 准备 AJAX 数据
-                    var ajaxData = {};
-                    ajaxData['action'] = 'exchangeBonus';
-                    ajaxData['option'] = option;
-                    if (title) {
-                        ajaxData['title'] = title;
+                    // 使用表单序列化获取所有表单数据（就像传统表单提交一样）
+                    var formData = $form.serialize();
+                    console.log('表单序列化数据:', formData);
+                    
+                    // 将表单数据转换为对象，并添加 action 参数
+                    var formDataArray = formData.split('&');
+                    var ajaxData = {
+                        action: 'exchangeBonus'
+                    };
+                    
+                    // 解析表单数据
+                    for (var i = 0; i < formDataArray.length; i++) {
+                        var pair = formDataArray[i].split('=');
+                        if (pair.length === 2) {
+                            var key = decodeURIComponent(pair[0]);
+                            var value = decodeURIComponent(pair[1]);
+                            ajaxData[key] = value;
+                        }
+                    }
+                    
+                    console.log('AJAX 数据对象:', ajaxData);
+                    
+                    // 验证 option 值
+                    if (!ajaxData.option || ajaxData.option === '') {
+                        console.error('option 值为空！表单数据:', formData);
+                        if (typeof window.nexusAlert === 'function') {
+                            window.nexusAlert('无法获取交换选项，请刷新页面重试');
+                        } else {
+                            alert('无法获取交换选项，请刷新页面重试');
+                        }
+                        // 恢复按钮状态
+                        if ($button.length) {
+                            var originalText = $button.data('original-text');
+                            if (originalText !== undefined) {
+                                $button.val(originalText);
+                            }
+                            $button.prop('disabled', false).data('loading', false);
+                        }
+                        if (form.dataset) {
+                            form.dataset.submitting = '';
+                        } else {
+                            form.setAttribute('data-submitting', '');
+                        }
+                        return;
                     }
                     
                     // 发送 AJAX 请求
-                    jQuery.post('ajax.php', ajaxData, function(response) {
+                    jQuery.ajax({
+                        url: 'ajax.php',
+                        type: 'POST',
+                        data: ajaxData,
+                        dataType: 'json',
+                        success: function(response) {
                         if (form.dataset) {
                             form.dataset.submitting = '';
                         } else {
@@ -694,12 +738,9 @@ jQuery(function ($) {
                                 alert(response.msg);
                             }
                         }
-                    }, 'json').fail(function(xhr, textStatus, errorThrown) {
-                        if (form.dataset) {
-                            form.dataset.submitting = '';
-                        } else {
-                            form.setAttribute('data-submitting', '');
-                        }
+                    },
+                    error: function(xhr, textStatus, errorThrown) {
+                        form.dataset.submitting = '';
                         if ($button.length) {
                             var originalText = $button.data('original-text');
                             if (originalText !== undefined) {
@@ -724,7 +765,8 @@ jQuery(function ($) {
                         } else {
                             alert(errorMsg);
                         }
-                    });
+                    }
+                });
                 });
             } else {
                 // 如果 nexusConfirm 还没加载，等待一下再试

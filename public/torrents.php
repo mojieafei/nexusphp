@@ -87,9 +87,9 @@ if (isset($_GET['sort']) && $_GET['sort'] && isset($_GET['type']) && $_GET['type
 		default: $ascdesc = "DESC"; $linkascdesc = "desc"; break;
 	}
 
-	// 如果是黑洞页面，按断种开始时间排序（断种时间越久的在前）
+	// 如果是黑洞页面，按做种人数升序（0做种的在前），然后按最后活动时间排序
 	if ($isMeteorPage) {
-		$orderby = "ORDER BY pos_state DESC, zero_seeder_torrents.zero_seeder_start_time ASC, torrents.id DESC";
+		$orderby = "ORDER BY pos_state DESC, torrents.seeders ASC, torrents.last_action ASC, torrents.id DESC";
 	} elseif ($column == "owner") {
 		$orderby = "ORDER BY pos_state DESC, torrents.anonymous, users.username " . $ascdesc;
 	} else {
@@ -921,20 +921,14 @@ $tagFilter = "";
 $tagId = intval($_REQUEST['tag_id'] ?? 0);
 $officialType = isset($_GET['official_type']) ? $_GET['official_type'] : '';
 
-// 检查是否是"黑洞"页面（做种人=0）
+// 检查是否是"黑洞"页面（做种人<=1）
 $isMeteorPage = isset($_GET['seeders_begin']) && intval($_GET['seeders_begin']) == 0 && 
-                isset($_GET['seeders_end']) && intval($_GET['seeders_end']) == 0 && 
+                isset($_GET['seeders_end']) && intval($_GET['seeders_end']) <= 1 && 
                 (!isset($_GET['tag_id']) || intval($_GET['tag_id']) != 3);
 
 $meteorFilter = "";
-if ($isMeteorPage) {
-    // 使用 zero_seeder_torrents 表来筛选，只显示断种7天以上的种子
-    // 计算7天前的时间
-    $sevenDaysAgo = date("Y-m-d H:i:s", strtotime("-7 days"));
-    $meteorFilter = " INNER JOIN zero_seeder_torrents ON torrents.id = zero_seeder_torrents.torrent_id AND zero_seeder_torrents.rewarded = 0 AND zero_seeder_torrents.zero_seeder_start_time <= " . sqlesc($sevenDaysAgo) . " ";
-    // 添加排序字段，按断种开始时间倒序（断种最久的在前）
-    // 这个会在后面的SQL中使用
-}
+// 黑洞页面不再使用 zero_seeder_torrents 表的JOIN，直接通过 seeders <= 1 筛选
+// 移除7天时间限制，所有做种人数<=1的种子都可以进入黑洞
 
 // 默认排除官种（tag_id=3），除非明确选择了官方资源
 if ($tagId > 0) {
