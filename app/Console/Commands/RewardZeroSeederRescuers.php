@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\ModelEventEnum;
 use App\Models\BonusLogs;
 use App\Models\Snatch;
 use App\Models\Torrent;
@@ -19,7 +20,7 @@ class RewardZeroSeederRescuers extends Command
      * @var string
      */
     protected $signature = 'reward:zero-seeder-rescuers 
-                            {--days=7 : 做种人数为0持续天数，默认7天}
+                            {--days=7 : 做种人数=0持续天数（用于奖励判断），默认7天}
                             {--bonus=1000 : 每个种子奖励的魔力值，默认1000}
                             {--min-seed-hours=168 : 用户对每个种子的最低做种时间要求（小时），默认168小时（7天）}
                             {--dry-run : 仅预览，不实际发放奖励}
@@ -31,7 +32,7 @@ class RewardZeroSeederRescuers extends Command
      *
      * @var string
      */
-    protected $description = '奖励对做种人数=0且持续N天的种子进行辅种的用户';
+    protected $description = '奖励对做种人数=0且持续N天的种子进行辅种的用户（黑洞页面显示做种人数<=1的种子）';
 
     /**
      * Execute the console command.
@@ -55,7 +56,7 @@ class RewardZeroSeederRescuers extends Command
             return 0;
         }
 
-        $this->info("开始处理：做种人数=0持续{$days}天的种子奖励");
+        $this->info("开始处理：做种人数=0且持续{$days}天的种子奖励（黑洞页面显示做种人数<=1的种子）");
         $this->info("每个种子奖励：{$bonusAmount}魔力值");
         $this->info("最低做种时间要求：{$minSeedHours}小时（" . round($minSeedHours / 24, 1) . "天）");
         
@@ -125,24 +126,26 @@ class RewardZeroSeederRescuers extends Command
     }
 
     /**
-     * 更新零做种种子追踪表
+     * 更新黑洞种子追踪表（做种人数<=1的种子）
      */
     protected function updateZeroSeederTracking()
     {
-        // 找出当前做种人数=0的种子，并获取last_action用于估算断种时间
+        // 找出当前做种人数<=1的种子（黑洞种子），并获取last_action用于估算断种时间
         $zeroSeederTorrents = Torrent::query()
-            ->where('seeders', 0)
+            ->where('seeders', '<=', 1)
             ->where('visible', 'yes')
             ->where('banned', 'no')
-            ->select('id', 'last_action', 'added')
+            ->select('id', 'last_action', 'added', 'seeders', 'sp_state')
             ->get();
 
-        $this->info("当前做种人数=0的种子数量：" . $zeroSeederTorrents->count());
+        $this->info("当前做种人数<=1的种子数量：" . $zeroSeederTorrents->count());
 
         $now = Carbon::now()->toDateTimeString();
         $updated = 0;
         $inserted = 0;
         $deleted = 0;
+        $promotionAdded = 0; // 添加促销的数量
+        $promotionRemoved = 0; // 移除促销的数量
 
         foreach ($zeroSeederTorrents as $torrent) {
             $torrentId = $torrent->id;
@@ -151,16 +154,44 @@ class RewardZeroSeederRescuers extends Command
                 ->first();
 
             if ($existing) {
-                // 检查当前是否还是0做种
+                // 检查当前做种人数
                 $current = Torrent::find($torrentId);
-                if ($current && $current->seeders > 0) {
-                    // 做种人数恢复了，删除记录
+                if ($current && $current->seeders > 1) {
+                    // 做种人数恢复了（>1），删除记录并移除促销
                     DB::table('zero_seeder_torrents')
                         ->where('torrent_id', $torrentId)
                         ->delete();
+                    
+                    // 如果当前是2xfree促销（sp_state=4），移除促销（恢复为normal）
+                    if ($current->sp_state == Torrent::PROMOTION_FREE_TWO_TIMES_UP) {
+                        $oldTorrent = clone $current;
+                        $current->sp_state = Torrent::PROMOTION_NORMAL;
+                        $current->promotion_time_type = Torrent::PROMOTION_TIME_TYPE_GLOBAL;
+                        $current->promotion_until = null;
+                        $current->save();
+                        if (function_exists('fire_event')) {
+                            fire_event(ModelEventEnum::TORRENT_UPDATED, $current, $oldTorrent);
+                        }
+                        $promotionRemoved++;
+                    }
+                    
                     $deleted++;
                     continue;
                 }
+                
+                // 还在黑洞中（seeders <= 1），确保有2xfree促销
+                if ($current && $current->sp_state != Torrent::PROMOTION_FREE_TWO_TIMES_UP) {
+                    $oldTorrent = clone $current;
+                    $current->sp_state = Torrent::PROMOTION_FREE_TWO_TIMES_UP;
+                    $current->promotion_time_type = Torrent::PROMOTION_TIME_TYPE_PERMANENT;
+                    $current->promotion_until = null;
+                    $current->save();
+                    if (function_exists('fire_event')) {
+                        fire_event(ModelEventEnum::TORRENT_UPDATED, $current, $oldTorrent);
+                    }
+                    $promotionAdded++;
+                }
+                
                 // 更新最后检查时间
                 DB::table('zero_seeder_torrents')
                     ->where('torrent_id', $torrentId)
@@ -171,12 +202,8 @@ class RewardZeroSeederRescuers extends Command
                 // 优先使用last_action（最后一次活动时间），如果没有则使用种子添加时间
                 $estimatedStartTime = $now;
                 if ($torrent->last_action) {
-                    // 如果last_action存在，使用它作为断种开始时间的估算
-                    // 因为如果种子还有做种人，last_action会更频繁更新
-                    // 所以如果做种人数=0且last_action很早，说明可能已经断种很久了
                     $estimatedStartTime = $torrent->last_action;
                 } elseif ($torrent->added) {
-                    // 如果连last_action都没有，使用种子添加时间
                     $estimatedStartTime = $torrent->added;
                 }
 
@@ -189,10 +216,27 @@ class RewardZeroSeederRescuers extends Command
                     'updated_at' => $now,
                 ]);
                 $inserted++;
+                
+                // 为新加入黑洞的种子添加2xfree促销
+                $torrentFull = Torrent::find($torrentId);
+                if ($torrentFull && $torrentFull->sp_state != Torrent::PROMOTION_FREE_TWO_TIMES_UP) {
+                    $oldTorrent = clone $torrentFull;
+                    $torrentFull->sp_state = Torrent::PROMOTION_FREE_TWO_TIMES_UP;
+                    $torrentFull->promotion_time_type = Torrent::PROMOTION_TIME_TYPE_PERMANENT;
+                    $torrentFull->promotion_until = null;
+                    $torrentFull->save();
+                    if (function_exists('fire_event')) {
+                        fire_event(ModelEventEnum::TORRENT_UPDATED, $torrentFull, $oldTorrent);
+                    }
+                    $promotionAdded++;
+                }
             }
         }
 
         $this->info("更新 {$updated} 条记录，新增 {$inserted} 条记录，删除 {$deleted} 条记录（已恢复做种）");
+        if ($promotionAdded > 0 || $promotionRemoved > 0) {
+            $this->info("添加2xfree促销：{$promotionAdded} 个种子，移除促销：{$promotionRemoved} 个种子");
+        }
     }
 
     /**
@@ -200,24 +244,45 @@ class RewardZeroSeederRescuers extends Command
      */
     protected function cleanupRecoveredTorrents()
     {
-        // 找出追踪表中记录但种子已恢复做种的情况
+        // 找出追踪表中记录但种子已恢复做种的情况（seeders > 1）
         $recovered = DB::table('zero_seeder_torrents')
             ->join('torrents', 'zero_seeder_torrents.torrent_id', '=', 'torrents.id')
-            ->where('torrents.seeders', '>', 0)
+            ->where('torrents.seeders', '>', 1)
             ->where('zero_seeder_torrents.rewarded', 0)
-            ->pluck('zero_seeder_torrents.torrent_id')
-            ->toArray();
+            ->select('zero_seeder_torrents.torrent_id', 'torrents.sp_state')
+            ->get();
+        
+        $promotionRemoved = 0;
+        foreach ($recovered as $item) {
+            // 移除促销（如果是2xfree）
+            $torrent = Torrent::find($item->torrent_id);
+            if ($torrent && $torrent->sp_state == Torrent::PROMOTION_FREE_TWO_TIMES_UP) {
+                $oldTorrent = clone $torrent;
+                $torrent->sp_state = Torrent::PROMOTION_NORMAL;
+                $torrent->promotion_time_type = Torrent::PROMOTION_TIME_TYPE_GLOBAL;
+                $torrent->promotion_until = null;
+                $torrent->save();
+                if (function_exists('fire_event')) {
+                    fire_event(ModelEventEnum::TORRENT_UPDATED, $torrent, $oldTorrent);
+                }
+                $promotionRemoved++;
+            }
+        }
         
         if (!empty($recovered)) {
+            $torrentIds = $recovered->pluck('torrent_id')->toArray();
             $deleted = DB::table('zero_seeder_torrents')
-                ->whereIn('torrent_id', $recovered)
+                ->whereIn('torrent_id', $torrentIds)
                 ->delete();
             $this->info("清理已恢复做种的种子记录：{$deleted} 条");
+            if ($promotionRemoved > 0) {
+                $this->info("同时移除了 {$promotionRemoved} 个种子的2xfree促销");
+            }
         }
     }
 
     /**
-     * 获取符合条件的种子（持续N天）
+     * 获取符合条件的种子（做种人数=0且持续N天，用于奖励）
      */
     protected function getQualifiedTorrents(Carbon $targetDate)
     {
@@ -250,7 +315,7 @@ class RewardZeroSeederRescuers extends Command
 
         $minSeedSeconds = $minSeedHours * 3600; // 转换为秒
 
-        // 找出对这些种子完成下载（finished=yes）、正在做种、且做种时间达到要求的用户
+        // 找出对这些断种种子完成下载（finished=yes）、正在做种、且做种时间达到要求的用户
         // 通过peers表确认当前正在做种
         // 通过snatched.seedtime确认做种时间达到要求
         $users = DB::table('snatched')

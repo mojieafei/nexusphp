@@ -87,7 +87,7 @@ if (isset($_GET['sort']) && $_GET['sort'] && isset($_GET['type']) && $_GET['type
 		default: $ascdesc = "DESC"; $linkascdesc = "desc"; break;
 	}
 
-	// 如果是黑洞页面，按做种人数升序（0做种的在前），然后按最后活动时间排序
+	// 如果是黑洞页面，按做种人数升序（做种人数少的在前），然后按最后活动时间排序
 	if ($isMeteorPage) {
 		$orderby = "ORDER BY pos_state DESC, torrents.seeders ASC, torrents.last_action ASC, torrents.id DESC";
 	} elseif ($column == "owner") {
@@ -1059,7 +1059,7 @@ if (!empty($isMeteorPage) && $isMeteorPage) {
             🕳️ 黑洞拯救计划：拯救那些即将熄灭的星光！
         </div>
         <div>
-            这里的每一缕 <strong>星光</strong> 都正在被 <strong>黑洞</strong> 吞噬：做种人数为 0，正漂浮在星河边缘，随时可能永远消失。<br/>
+            这里的每一缕 <strong>星光</strong> 都正在被 <strong>黑洞</strong> 吞噬：做种人数 <= 1，正漂浮在星河边缘，随时可能永远消失。<br/>
             只要你愿意伸出援手，为这些种子重新点亮做种之光：<br/>
             · 你是在帮更多站友补档、找回记忆中的星光；<br/>
             · 你也在为自己积累长期的做种记录和潜在的活动奖励。<br/>

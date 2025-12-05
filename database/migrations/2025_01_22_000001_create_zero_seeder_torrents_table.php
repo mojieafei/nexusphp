@@ -19,7 +19,7 @@ class CreateZeroSeederTorrentsTable extends Migration
         Schema::create('zero_seeder_torrents', function (Blueprint $table) {
             $table->mediumIncrements('id');
             $table->unsignedMediumInteger('torrent_id')->unique()->comment('种子ID');
-            $table->dateTime('zero_seeder_start_time')->comment('做种人数变为0的开始时间');
+            $table->dateTime('zero_seeder_start_time')->comment('做种人数变为<=1的开始时间（用于追踪黑洞种子）');
             $table->dateTime('last_checked_at')->comment('最后检查时间');
             $table->tinyInteger('rewarded')->default(0)->comment('是否已奖励：0未奖励，1已奖励');
             $table->timestamps();
