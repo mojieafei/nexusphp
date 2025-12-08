@@ -446,13 +446,6 @@ class Update extends Install
             $this->doLog("[SPECIAL_PERMISSION] Special permission tables created!");
         }
         
-        // 无论表是否已存在，都确保特殊权限数据已初始化
-        if (Schema::hasTable("special_permissions")) {
-            $this->doLog("[SPECIAL_PERMISSION] Initializing/updating special permissions...");
-            Artisan::call("db:seed", ["--class" => "SpecialPermissionSeeder", "--force" => true]);
-            $this->doLog("[SPECIAL_PERMISSION] Special permissions initialization completed! 🔑");
-        }
-
         /**
          * 游戏得分表 - 添加一键获取标记字段
          * @since 1.9.x
@@ -485,7 +478,15 @@ class Update extends Install
             $this->runMigrate("database/migrations/2025_02_20_000006_add_category_to_bonus_products.php");
             $this->doLog("[BONUS_PRODUCTS] Category column ensured!");
         }
-        
+
+        // 无论表是否已存在，都确保特殊权限数据已初始化
+        // 注意：必须在 bonus_products 表存在后执行，因为模型事件会创建关联商品
+        if (Schema::hasTable("special_permissions") && Schema::hasTable("bonus_products")) {
+            $this->doLog("[SPECIAL_PERMISSION] Initializing/updating special permissions...");
+            Artisan::call("db:seed", ["--class" => "SpecialPermissionSeeder", "--force" => true]);
+            $this->doLog("[SPECIAL_PERMISSION] Special permissions initialization completed! 🔑");
+        }
+
         // 无论表是否已存在，都确保商品数据已初始化（包括为现有特殊权限创建商品）
         // 注意：必须在特殊权限初始化之后执行，因为商品会为特殊权限创建对应商品
         if (Schema::hasTable("bonus_products")) {
