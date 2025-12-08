@@ -755,6 +755,340 @@ if ($action === 'space_miner_submit') {
     }
 }
 
+// 获取商品列表
+if ($action === 'get_bonus_products') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+        
+        $userId = $CURUSER['id'];
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            throw new \InvalidArgumentException('用户不存在');
+        }
+        
+        // 检查表是否存在
+        $tableExists = false;
+        $result = sql_query("SHOW TABLES LIKE 'bonus_products'");
+        if ($result) {
+            $tableExists = mysql_num_rows($result) > 0;
+            @mysql_free_result($result);
+        }
+        
+        $products = [];
+        if ($tableExists) {
+            $dbProducts = \App\Models\BonusProduct::getActiveProducts();
+            foreach ($dbProducts as $product) {
+                $item = [
+                    'id' => $product->id,
+                    'art' => $product->art,
+                    'name' => $product->name,
+                    'category' => $product->category ?? null,
+                    'description' => $product->description,
+                    'points' => floatval($product->points),
+                    'menge' => $product->menge,
+                    'product_type' => $product->product_type,
+                    'special_permission_id' => $product->special_permission_id,
+                ];
+                
+                // 检查特殊权限商品：用户是否已拥有该权限
+                if ($product->product_type === \App\Models\BonusProduct::PRODUCT_TYPE_SPECIAL_PERMISSION && $product->special_permission_id) {
+                    $hasPermission = $user->specialPermissions()->where('special_permissions.id', $product->special_permission_id)->exists();
+                    if ($hasPermission) {
+                        $item['has_permission'] = true;
+                        $item['disable_reason'] = '您已拥有此权限';
+                    }
+                }
+                
+                $products[] = $item;
+            }
+        }
+        
+        // 如果数据库没有商品，返回空数组（不再使用硬编码）
+        exit(json_encode([
+            'ret' => 0,
+            'msg' => '获取成功',
+            'data' => [
+                'products' => $products,
+                'user_bonus' => floatval($user->seedbonus ?? 0),
+            ]
+        ]));
+        
+    } catch (\Throwable $e) {
+        exit(json_encode(['ret' => 1, 'msg' => $e->getMessage()]));
+    }
+}
+
+// 购买商品
+if ($action === 'purchase_bonus_product') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+        
+        $userId = $CURUSER['id'];
+        $productId = intval($_POST['product_id'] ?? 0);
+        
+        if (!$productId) {
+            throw new \InvalidArgumentException('商品ID不能为空');
+        }
+        
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            throw new \InvalidArgumentException('用户不存在');
+        }
+        
+        $product = \App\Models\BonusProduct::find($productId);
+        if (!$product) {
+            throw new \InvalidArgumentException('商品不存在');
+        }
+        
+        if (!$product->is_active) {
+            throw new \InvalidArgumentException('该商品已下架');
+        }
+        
+        // 检查用户魔力值是否足够
+        if ($user->seedbonus < $product->points) {
+            throw new \InvalidArgumentException('魔力值不足');
+        }
+        
+        // 检查特殊权限商品：用户是否已拥有该权限
+        if ($product->product_type === \App\Models\BonusProduct::PRODUCT_TYPE_SPECIAL_PERMISSION && $product->special_permission_id) {
+            $hasPermission = $user->specialPermissions()->where('special_permissions.id', $product->special_permission_id)->exists();
+            if ($hasPermission) {
+                throw new \InvalidArgumentException('您已经拥有此特殊权限，无需重复购买');
+            }
+        }
+        
+        // 执行购买逻辑（使用现有的BonusRepository）
+        $bonusRep = new \App\Repositories\BonusRepository();
+        $art = $product->art;
+        $points = $product->points;
+        $menge = $product->menge;
+        
+        // 根据商品类型执行不同的购买逻辑
+        if ($art == 'traffic') {
+            $bonusRep->consumeToExchangeUpload($user->id, $menge, $points);
+        } elseif ($art == 'traffic_downloaded') {
+            $bonusRep->consumeToExchangeDownload($user->id, $menge, $points);
+        } elseif ($art == 'invite') {
+            $bonusRep->consumeToBuyInvite($user->id, $points);
+        } elseif ($art == 'tmp_invite') {
+            $bonusRep->consumeToBuyTemporaryInvite($user->id);
+        } elseif ($art == 'title') {
+            $title = $_POST['title'] ?? '';
+            if (empty($title)) {
+                throw new \InvalidArgumentException('请输入自定义头衔');
+            }
+            $bonusRep->consumeToBuyCustomTitle($user->id, $title, $points);
+        } elseif ($art == 'class') {
+            $bonusRep->consumeToBuyVip($user->id, $points);
+        } elseif ($art == 'gift_1') {
+            $username = $_POST['username'] ?? '';
+            $bonusgift = $_POST['bonusgift'] ?? 0;
+            $message = $_POST['message'] ?? '';
+            if (empty($username) || empty($bonusgift)) {
+                throw new \InvalidArgumentException('请输入接收者用户名和赠送数量');
+            }
+            $bonusRep->consumeToGiftBonus($user->id, $username, $bonusgift, $message);
+        } elseif ($art == 'gift_2') {
+            $bonuscharity = $_POST['bonuscharity'] ?? 0;
+            $ratiocharity = $_POST['ratiocharity'] ?? 0.3;
+            if (empty($bonuscharity)) {
+                throw new \InvalidArgumentException('请输入捐赠数量');
+            }
+            $bonusRep->consumeToCharityGiving($user->id, $bonuscharity, $ratiocharity);
+        } elseif ($art == 'noad') {
+            $bonusRep->consumeToBuyNoAd($user->id, $points, $menge);
+        } elseif ($art == 'attendance_card') {
+            $bonusRep->consumeToBuyAttendanceCard($user->id);
+        } elseif ($art == 'rainbow_id') {
+            $bonusRep->consumeToBuyRainbowId($user->id);
+        } elseif ($art == 'change_username_card') {
+            $bonusRep->consumeToBuyChangeUsernameCard($user->id);
+        } elseif ($art == 'cancel_hr') {
+            $hrId = $_POST['hr_id'] ?? 0;
+            if (empty($hrId)) {
+                throw new \InvalidArgumentException('请输入H&R ID');
+            }
+            $bonusRep->consumeToCancelHitAndRun($user->id, $hrId);
+        } elseif (strpos($art, 'buy_special_permission') === 0 || $product->special_permission_id) {
+            // 购买特殊权限
+            $permission = $product->specialPermission;
+            if (!$permission || !$permission->is_active) {
+                throw new \InvalidArgumentException('特殊权限不存在或已禁用');
+            }
+            
+            // 扣除魔力值
+            $bonusRep->consumeUserBonus($user->id, $points, \App\Models\BonusLogs::BUSINESS_TYPE_BUY_TORRENT, "购买特殊权限：{$permission->name}");
+            
+            // 分配权限
+            $user->specialPermissions()->syncWithoutDetaching([$product->special_permission_id]);
+            
+            // 清除用户缓存
+            clear_user_cache($user->id, $user->passkey);
+        } else {
+            throw new \InvalidArgumentException('不支持的商品类型：' . $art);
+        }
+        
+        // 刷新用户数据
+        $user->refresh();
+        
+        exit(json_encode([
+            'ret' => 0,
+            'msg' => '购买成功',
+            'data' => [
+                'new_bonus' => number_format($user->seedbonus, 1),
+            ]
+        ]));
+        
+    } catch (\Throwable $e) {
+        exit(json_encode(['ret' => 1, 'msg' => $e->getMessage()]));
+    }
+}
+
+// 一键获取今日星尘
+if ($action === 'auto_claim_stardust') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+        
+        $userId = $CURUSER['id'];
+        
+        // 检查权限
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            throw new \InvalidArgumentException('用户不存在');
+        }
+        
+        // 检查用户等级是否在Elite User以上
+        if ($user->class < \App\Models\User::CLASS_ELITE_USER) {
+            throw new \InvalidArgumentException('一键获取星尘功能仅限 Elite User 及以上等级用户使用');
+        }
+        
+        // 检查是否是捐赠用户
+        $isDonor = $user->isDonating();
+        
+        // 检查是否有一键获取星尘的权限（直接查询数据库，避免缓存问题）
+        $hasPermission = $user->specialPermissions()
+            ->where('code', \App\Models\SpecialPermission::CODE_AUTO_CLAIM_STARDUST)
+            ->where('is_active', true)
+            ->exists();
+        
+        // 如果直接查询没有，再通过user_can检查（可能通过其他方式获得权限）
+        if (!$hasPermission) {
+            $hasPermission = user_can(\App\Models\SpecialPermission::CODE_AUTO_CLAIM_STARDUST, false, $userId);
+        }
+        
+        // 用户等级在Elite User以上 && （捐赠用户 || 具备一键获取星尘的权限）
+        if (!$isDonor && !$hasPermission) {
+            $message = '您没有权限使用一键获取星尘功能' . "\n\n" . 
+                      '使用条件：' . "\n" . 
+                      '1. 用户等级需达到 Elite User 及以上（当前等级：' . \App\Models\User::getClassName($user->class, false, false, false) . '）' . "\n" . 
+                      '2. 需要是捐赠用户，或拥有"一键获取星尘"特殊权限' . "\n\n" . 
+                      '请联系管理员申请权限';
+            throw new \InvalidArgumentException($message);
+        }
+        
+        $maxDailySubmits = 5; // 每天最多5次
+        $defaultScore = 1000; // 默认每局1000分
+        $stardustPerGame = 100; // 每局100星尘（1000分 = 100星尘）
+        
+        // 计算今日剩余提交次数（两个游戏分别计算）
+        $meteorTodayCount = \App\Models\MeteorGameScore::where('user_id', $userId)
+            ->whereDate('created_at', today())
+            ->count();
+        $spaceMinerTodayCount = \App\Models\SpaceMinerGameScore::where('user_id', $userId)
+            ->whereDate('created_at', today())
+            ->count();
+        
+        // 计算剩余次数（取两个游戏中剩余次数较多的）
+        $meteorRemaining = max(0, $maxDailySubmits - $meteorTodayCount);
+        $spaceMinerRemaining = max(0, $maxDailySubmits - $spaceMinerTodayCount);
+        $remainingSubmits = max($meteorRemaining, $spaceMinerRemaining);
+        
+        if ($remainingSubmits <= 0) {
+            throw new \InvalidArgumentException('今日提交次数已达上限，明天再来吧！');
+        }
+        
+        $ipAddress = getip();
+        $totalStardust = 0;
+        $meteorCount = 0;
+        $spaceMinerCount = 0;
+        
+        // 使用事务，确保星尘发放的原子性
+        \Nexus\Database\NexusDB::transaction(function() use ($userId, $defaultScore, $stardustPerGame, $ipAddress, $meteorRemaining, $spaceMinerRemaining, &$totalStardust, &$meteorCount, &$spaceMinerCount) {
+            // 为流星游戏创建记录
+            if ($meteorRemaining > 0) {
+                for ($i = 0; $i < $meteorRemaining; $i++) {
+                    \App\Models\MeteorGameScore::create([
+                        'user_id' => $userId,
+                        'score' => $defaultScore,
+                        'combo_max' => 0,
+                        'duration' => 60,
+                        'ip_address' => $ipAddress,
+                        'telemetry' => null,
+                        'telemetry_hash' => null,
+                        'is_flagged' => false,
+                        'flag_reasons' => null,
+                        'miss_count' => 0,
+                        'good_catch_count' => 0,
+                        'bad_catch_count' => 0,
+                        'inputs_count' => 0,
+                        'is_auto_claim' => true,
+                    ]);
+                    $meteorCount++;
+                    $totalStardust += $stardustPerGame;
+                }
+            }
+            
+            // 为宇宙碎片抓取游戏创建记录
+            if ($spaceMinerRemaining > 0) {
+                for ($i = 0; $i < $spaceMinerRemaining; $i++) {
+                    \App\Models\SpaceMinerGameScore::create([
+                        'user_id' => $userId,
+                        'score' => $defaultScore,
+                        'caught' => 0,
+                        'level' => 1,
+                        'ip_address' => $ipAddress,
+                        'is_auto_claim' => true,
+                    ]);
+                    $spaceMinerCount++;
+                    $totalStardust += $stardustPerGame;
+                }
+            }
+            
+            // 发放星尘
+            if ($totalStardust > 0 && class_exists(\App\Models\StardustFarm::class)) {
+                $farm = \App\Models\StardustFarm::getOrCreateForUser($userId);
+                $farm->addStardust($totalStardust, 'game', "一键获取星尘（流星游戏{$meteorCount}次，宇宙碎片抓取游戏{$spaceMinerCount}次）");
+            }
+        });
+        
+        // 计算最终剩余次数
+        $finalMeteorRemaining = max(0, $maxDailySubmits - ($meteorTodayCount + $meteorCount));
+        $finalSpaceMinerRemaining = max(0, $maxDailySubmits - ($spaceMinerTodayCount + $spaceMinerCount));
+        $finalRemaining = max($finalMeteorRemaining, $finalSpaceMinerRemaining);
+        
+        exit(json_encode([
+            'success' => true,
+            'message' => '成功获取星尘！',
+            'total_stardust' => $totalStardust,
+            'meteor_count' => $meteorCount,
+            'space_miner_count' => $spaceMinerCount,
+            'remaining_submits' => $finalRemaining,
+        ]));
+        
+    } catch (\Throwable $e) {
+        exit(json_encode(['success' => false, 'message' => $e->getMessage()]));
+    }
+}
+
 // 宇宙碎片抓取游戏 - 获取排行榜
 if ($action === 'space_miner_leaderboard') {
     header('Content-Type: application/json; charset=utf-8');
@@ -1312,6 +1646,20 @@ class AjaxInterface{
         }
         $repo = new \App\Repositories\StardustFarmRepository();
         return $repo->harvestCrop($CURUSER['id'], intval($params['land_id']));
+    }
+
+    /**
+     * 一键收获所有可收获的作物
+     */
+    public static function harvestAllStardustCrops($params)
+    {
+        global $CURUSER;
+        // 检查用户等级（需要等级3以上，即 UC_ELITE_USER）
+        if ($CURUSER['class'] < UC_ELITE_USER) {
+            throw new \InvalidArgumentException('一键收获功能需要等级3（Elite User）以上才能使用');
+        }
+        $repo = new \App\Repositories\StardustFarmRepository();
+        return $repo->harvestAllCrops($CURUSER['id']);
     }
 
     /**

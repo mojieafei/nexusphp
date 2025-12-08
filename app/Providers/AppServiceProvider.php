@@ -69,6 +69,9 @@ class AppServiceProvider extends ServiceProvider
         
         // 注册角色权限过滤器
         $this->registerRolePermissionFilter();
+        
+        // 注册特殊权限过滤器
+        $this->registerSpecialPermissionFilter();
     }
     
     /**
@@ -91,6 +94,27 @@ class AppServiceProvider extends ServiceProvider
             }
             
             return array_unique($permissions);
+        }, 10, 2);
+    }
+    
+    /**
+     * 注册特殊权限过滤器
+     */
+    private function registerSpecialPermissionFilter(): void
+    {
+        add_filter('user_direct_permissions', function($permissions, $uid) {
+            $user = \App\Models\User::find($uid);
+            if (!$user) {
+                return $permissions;
+            }
+            
+            // 获取用户的特殊权限代码
+            $specialPerms = $user->specialPermissions()
+                ->where('is_active', true)
+                ->pluck('code')
+                ->toArray();
+            
+            return array_merge($permissions, $specialPerms);
         }, 10, 2);
     }
 

@@ -14,12 +14,14 @@ class SpaceMinerGameScore extends NexusModel
         'caught',
         'level',
         'ip_address',
+        'is_auto_claim',
     ];
 
     protected $casts = [
         'score' => 'integer',
         'caught' => 'integer',
         'level' => 'integer',
+        'is_auto_claim' => 'boolean',
     ];
     
     protected $dates = [

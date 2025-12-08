@@ -344,141 +344,346 @@ if (isset($do)) {
 	$bonus = number_format($CURUSER['seedbonus'], 1);
 if (!$action) {
 	print("<div id=\"bonus-exchange-wrapper\">");
-	print("<table align=\"center\" width=\"97%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\">\n");
-	print("<tr><td class=\"colhead\" colspan=\"4\" align=\"center\"><font class=\"big\">".$SITENAME.$lang_mybonus['text_karma_system']."</font></td></tr>\n");
-	if ($msg)
-	print("<tr id=\"bonus-message\"><td align=\"center\" colspan=\"4\"><font class=\"striking\"><b>". $msg ."</b></font></td></tr>");
-?>
-<tr id="bonus-summary"><td class="text" align="center" colspan="4"><?php echo $lang_mybonus['text_exchange_your_karma']?><span id="current-bonus"><?php echo $bonus?></span><?php echo $lang_mybonus['text_for_goodies'] ?>
-<br /><b><?php echo $lang_mybonus['text_no_buttons_note'] ?></b><br /><small style="color: orangered">(<?php echo $lockText ?>)</small></td></tr>
-<?php
-print("<tr><td class=\"colhead\" align=\"center\">".$lang_mybonus['col_option']."</td>".
-"<td class=\"colhead\" align=\"left\">".$lang_mybonus['col_description']."</td>".
-"<td class=\"colhead\" align=\"center\">".$lang_mybonus['col_points']."</td>".
-"<td class=\"colhead\" align=\"center\">".$lang_mybonus['col_trade']."</td>".
-"</tr>");
+    // 过滤/标题区放在列表上方，去掉旧表格
+    print("<div id=\"bonus-filters\"></div>");
+    print("<div id=\"bonus-products-list\" style=\"padding-top:8px;\"><div class=\"bonus-card-grid\" style=\"padding:16px 0;\"><div style=\"grid-column:1/-1;text-align:center;color:#666;\">加载中...</div></div></div>");
+	print("</div>");
 
-
-for ($i=0; $i < count($allBonus); $i++)
-{
-	$bonusarray = $allBonus[$i];
-	if (
-	    ($bonusarray['art'] == 'gift_1' && $bonusgift_bonus == 'no')
-        || ($bonusarray['art'] == 'noad' && ($enablead_advertisement == 'no' || $bonusnoad_advertisement == 'no'))
-        || ($bonusarray['art'] == 'cancel_hr' && !\App\Models\HitAndRun::getIsEnabled())
-    ) {
-        continue;
-    }
-    $bonusarrray['points'] = floatval($bonusarray['points']);
-
-	print("<form action=\"?action=exchange\" method=\"post\">");
-	print("<tr>");
-	print("<td class=\"rowhead_center\"><input type=\"hidden\" name=\"option\" value=\"".$i."\" /><b>".($i + 1)."</b></td>");
-	if ($bonusarray['art'] == 'title'){ //for Custom Title!
-	    $otheroption_title = "<input type=\"text\" name=\"title\" style=\"width: 200px\" maxlength=\"30\" />";
-	    print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_enter_titile'].$otheroption_title.$lang_mybonus['text_click_exchange']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
-	}
-	elseif ($bonusarray['art'] == 'gift_1'){  //for Give A Karma Gift
-			$otheroption = "<table width=\"100%\"><tr><td class=\"embedded\"><b>".$lang_mybonus['text_username']."</b><input type=\"text\" name=\"username\" style=\"width: 200px\" maxlength=\"24\" /></td><td class=\"embedded\"><b>".$lang_mybonus['text_to_be_given']."</b><input type=\"number\" name=\"bonusgift\" id=\"giftcustom\" style='width: 80px' min='100' />".$lang_mybonus['text_karma_points']."</td></tr><tr><td class=\"embedded\" colspan=\"2\"><b>".$lang_mybonus['text_message']."</b><input type=\"text\" name=\"message\" style=\"width: 400px\" maxlength=\"100\" /></td></tr></table>";
-			print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_enter_receiver_name']."<br />$otheroption</td><td class=\"rowfollow nowrap\" align='center'>".$lang_mybonus['text_min']."100</td>");
-	}
-	elseif ($bonusarray['art'] == 'gift_2'){  //charity giving
-			$otheroption = "<table width=\"100%\"><tr><td class=\"embedded\">".$lang_mybonus['text_ratio_below']."<select name=\"ratiocharity\"> <option value=\"0.1\"> 0.1</option><option value=\"0.2\"> 0.2</option><option value=\"0.3\" selected=\"selected\"> 0.3</option> <option value=\"0.4\"> 0.4</option> <option value=\"0.5\"> 0.5</option> <option value=\"0.6\"> 0.6</option><option value=\"0.7\"> 0.7</option><option value=\"0.8\"> 0.8</option></select>".$lang_mybonus['text_and_downloaded_above']." 10 GB</td><td class=\"embedded\"><b>".$lang_mybonus['text_to_be_given']."</b><select name=\"bonuscharity\" id=\"charityselect\" > <option value=\"1000\"> 1,000</option><option value=\"2000\"> 2,000</option><option value=\"3000\" selected=\"selected\"> 3000</option> <option value=\"5000\"> 5,000</option> <option value=\"8000\"> 8,000</option> <option value=\"10000\"> 10,000</option><option value=\"20000\"> 20,000</option><option value=\"50000\"> 50,000</option></select>".$lang_mybonus['text_karma_points']."</td></tr></table>";
-			print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_select_receiver_ratio']."<br />$otheroption</td><td class=\"rowfollow nowrap\" align='center'>".$lang_mybonus['text_min']."1,000<br />".$lang_mybonus['text_max']."50,000</td>");
-	}
-	else {  //for VIP or Upload
-		print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
-	}
-
-	if($CURUSER['seedbonus'] >= $bonusarray['points'])
-	{
-	    $permission = 'sendinvite';
-		if ($bonusarray['art'] == 'gift_1'){
-			print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_karma_gift']."\" /></td>");
-		}
-		elseif ($bonusarray['art'] == 'noad'){
-			if ($enablenoad_advertisement == 'yes' && get_user_class() >= $noad_advertisement)
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_class_above_no_ad']."\" disabled=\"disabled\" /></td>");
-			elseif (!empty($CURUSER['noaduntil']) && strtotime($CURUSER['noaduntil']) >= TIMENOW)
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_already_disabled']."\" disabled=\"disabled\" /></td>");
-			elseif (get_user_class() < $bonusnoad_advertisement)
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".get_user_class_name($bonusnoad_advertisement,false,false,true).$lang_mybonus['text_plus_only']."\" disabled=\"disabled\" /></td>");
-			else
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-		}
-		elseif ($bonusarray['art'] == 'gift_2'){
-			print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_charity_giving']."\" /></td>");
-		}
-		elseif($bonusarray['art'] == 'invite')
-		{
-			if (\App\Models\Setting::get('main.invitesystem') != 'yes')
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".nexus_trans('invite.send_deny_reasons.invite_system_closed')."\" disabled=\"disabled\" /></td>");
-			elseif(!user_can($permission, false, 0)){
-			$requireClass = get_setting("authority.$permission");
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".nexus_trans('invite.send_deny_reasons.no_permission', ['class' => \App\Models\User::getClassText($requireClass)])."\" disabled=\"disabled\" /></td>");}
-			else
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-		}
-		elseif($bonusarray['art'] == 'tmp_invite')
-		{
-			if (\App\Models\Setting::get('main.invitesystem') != 'yes')
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".nexus_trans('invite.send_deny_reasons.invite_system_closed')."\" disabled=\"disabled\" /></td>");
-			elseif(!user_can($permission, false, 0)){
-			$requireClass = get_setting("authority.$permission");
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".nexus_trans('invite.send_deny_reasons.no_permission', ['class' => \App\Models\User::getClassText($requireClass)])."\" disabled=\"disabled\" /></td>");}
-			else
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-		}
-		elseif ($bonusarray['art'] == 'class')
-		{
-			if (get_user_class() >= UC_VIP)
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['std_class_above_vip']."\" disabled=\"disabled\" /></td>");
-			else
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-		}
-		elseif ($bonusarray['art'] == 'title')
-			print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-		elseif ($bonusarray['art'] == 'traffic')
-		{
-			if ($CURUSER['downloaded'] > 0){
-				if ($CURUSER['uploaded'] > $dlamountlimit_bonus * 1073741824)//Uploaded amount reach limit
-					$ratio = $CURUSER['uploaded']/$CURUSER['downloaded'];
-				else $ratio = 0;
-			}
-			else $ratio = $ratiolimit_bonus + 1; //Ratio always above limit
-			if ($ratiolimit_bonus > 0 && $ratio > $ratiolimit_bonus){
-				print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_ratio_too_high']."\" disabled=\"disabled\" /></td>");
-			}
-			else print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-		} elseif ($bonusarray['art'] == 'change_username_card') {
-		    if (\App\Models\UserMeta::query()->where('uid', $CURUSER['id'])->where('meta_key', \App\Models\UserMeta::META_KEY_CHANGE_USERNAME)->exists()) {
-                print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_change_username_card_already_has']."\" disabled=\"disabled\"/></td>");
-            } else {
-                print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-            }
-        } elseif ($bonusarray['art'] == 'rainbow_id') {
-            if (\App\Models\UserMeta::query()->where('uid', $CURUSER['id'])->where('meta_key', \App\Models\UserMeta::META_KEY_PERSONALIZED_USERNAME)->whereNull('deadline')->exists()) {
-                print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_rainbow_id_already_valid_forever']."\" disabled=\"disabled\"/></td>");
-            } else {
-                print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-            }
-		} else {
-            print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-        }
-	}
-	else
-	{
-		print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_more_points_needed']."\" disabled=\"disabled\" /></td>");
-	}
-	print("</tr>");
-	print("</form>");
-
+// 卡片 + 过滤样式，参考勋章页风格
+print("<style>
+#bonus-exchange-wrapper { max-width: 1180px; margin: 0 auto; }
+#bonus-products-list .bonus-empty { text-align: center; padding: 32px 12px; color: #94a3b8; }
+#bonus-hero { background: linear-gradient(135deg, #0f172a, #1d4ed8); color: #e2e8f0; border-radius: 16px; padding: 20px 22px; margin: 12px 0 8px; box-shadow: 0 16px 36px rgba(37,99,235,0.22); border: 1px solid rgba(255,255,255,0.08); }
+#bonus-hero h2 { margin: 0 0 6px; font-size: 22px; }
+#bonus-hero p { margin: 0; color: rgba(226,232,240,0.9); }
+#bonus-filters { margin: 12px 0 8px; }
+.bonus-filter-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bonus-hero-title { font-size: 18px; font-weight: 700; color: #0f172a; }
+.bonus-hero-sub { font-size: 13px; color: rgba(15,23,42,0.7); }
+.bonus-balance { font-size: 14px; color: #0f172a; background: #eef2ff; padding: 6px 10px; border-radius: 10px; border: 1px solid #e0e7ff; }
+.bonus-filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.bonus-chip { border: 1px solid #1f2937; background: #0b1221; color: #e2e8f0; padding: 6px 12px; border-radius: 18px; cursor: pointer; transition: all .15s; }
+.bonus-chip.active { background: #2563eb; color: #fff; border-color: #2563eb; box-shadow: 0 6px 16px rgba(37,99,235,0.35); }
+#bonus-products-list { position: relative; display: block; width: 100%; }
+#bonus-products-list .bonus-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; padding: 12px 0 28px; }
+#bonus-products-list .bonus-card { border: 1px solid #1f2937; border-radius: 14px; padding: 14px; background: linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.78)); box-shadow: 0 10px 30px rgba(0,0,0,0.35); height: 100%; display: flex; flex-direction: column; transition: transform .12s, box-shadow .12s, border-color .12s; color: #e2e8f0; position: relative; }
+#bonus-products-list .bonus-card:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,0,0,0.45); border-color: #2563eb; }
+#bonus-products-list .bonus-card h3 { margin: 6px 0 10px; font-size: 16px; color: #f8fafc; }
+#bonus-products-list .bonus-card .desc { flex: 1; color: #cbd5e1; line-height: 1.6; font-size: 13px; white-space: pre-wrap; }
+#bonus-products-list .bonus-card .bonus-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.bonus-chip-sm { display: inline-block; padding: 4px 9px; border-radius: 999px; background: rgba(37,99,235,0.18); color: #bfdbfe; font-size: 12px; border: 1px solid rgba(37,99,235,0.35); }
+.bonus-price { font-weight: 700; color: #fbbf24; font-size: 13px; }
+.bonus-meta-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0 6px; font-size: 12px; color: #94a3b8; }
+.bonus-tag { background: rgba(52,211,153,0.16); color: #bbf7d0; padding: 3px 8px; border-radius: 999px; font-size: 12px; border: 1px solid rgba(52,211,153,0.25); }
+.bonus-type { background: rgba(248,113,113,0.16); color: #fecdd3; padding: 3px 8px; border-radius: 999px; font-size: 12px; border: 1px solid rgba(248,113,113,0.25); }
+#bonus-products-list .bonus-card .actions { margin-top: 12px; }
+#bonus-products-list .bonus-card .actions input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #2563eb; cursor: pointer; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; font-weight: 700; letter-spacing: 0.2px; }
+#bonus-products-list .bonus-card .actions input:disabled { background: #334155; border-color: #334155; color: #94a3b8; cursor: not-allowed; }
+@media (max-width: 768px) {
+  #bonus-exchange-wrapper { padding: 0 8px; }
+  #bonus-products-list .bonus-card-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 }
 
-print("</table><br />");
-print("</div>");
+/* 统一表单弹窗 */
+.bonus-modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 20000; display: flex; align-items: center; justify-content: center; }
+.bonus-modal { width: 420px; max-width: 92vw; background: #0f172a; color: #e2e8f0; border: 1px solid #1e293b; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.45); padding: 18px; }
+.bonus-modal h4 { margin: 0 0 10px; font-size: 16px; }
+.bonus-modal .modal-body { display: flex; flex-direction: column; gap: 10px; }
+.bonus-modal .modal-field label { display: block; margin-bottom: 4px; color: #cbd5e1; font-size: 13px; }
+.bonus-modal .modal-field input, .bonus-modal .modal-field textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #0b1221; color: #e2e8f0; font-size: 13px; }
+.bonus-modal .modal-field small { color: #94a3b8; }
+.bonus-modal .modal-actions { margin-top: 12px; display: flex; justify-content: flex-end; gap: 10px; }
+.bonus-modal .btn { padding: 8px 12px; border-radius: 8px; border: 1px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; }
+.bonus-modal .btn.cancel { background: #334155; border-color: #334155; }
+.bonus-modal .btn:disabled { opacity: .6; cursor: not-allowed; }
+</style>");
 
 $bonusExchangeJs = <<<'JS'
+// 全局缓存
+var allProducts = [];
+var currentUserBonus = 0;
+var currentCategory = 'all';
+
+// 统一表单弹窗
+function showFormDialog(opts) {
+    jQuery('.bonus-modal-mask').remove();
+    var mask = jQuery('<div class="bonus-modal-mask"></div>');
+    var modal = jQuery('<div class="bonus-modal"></div>');
+    modal.append('<h4>' + (opts.title || '填写信息') + '</h4>');
+    var body = jQuery('<div class="modal-body"></div>');
+    (opts.fields || []).forEach(function(f) {
+        var field = jQuery('<div class="modal-field"></div>');
+        field.append('<label>' + f.label + (f.required ? ' *' : '') + '</label>');
+        var input = jQuery('<input>');
+        input.attr('name', f.name);
+        input.attr('type', f.type || 'text');
+        if (f.placeholder) input.attr('placeholder', f.placeholder);
+        if (f.min !== undefined) input.attr('min', f.min);
+        if (f.max !== undefined) input.attr('max', f.max);
+        if (f.step !== undefined) input.attr('step', f.step);
+        if (f.required) input.attr('required', 'required');
+        field.append(input);
+        if (f.help) field.append('<small>' + f.help + '</small>');
+        body.append(field);
+    });
+    modal.append(body);
+    var footer = jQuery('<div class="modal-actions"></div>');
+    var btnCancel = jQuery('<button class="btn cancel">取消</button>');
+    var btnOk = jQuery('<button class="btn">确定</button>');
+    footer.append(btnCancel).append(btnOk);
+    modal.append(footer);
+    mask.append(modal);
+    jQuery('body').append(mask);
+
+    btnCancel.on('click', function() { mask.remove(); });
+    btnOk.on('click', function() {
+        var values = {};
+        var valid = true;
+        (opts.fields || []).forEach(function(f) {
+            var v = modal.find('[name="'+f.name+'"]').val();
+            if (f.required && (!v || v.trim() === '')) { valid = false; }
+            values[f.name] = v;
+        });
+        if (!valid) { alertOrNexus('请完整填写必填项'); return; }
+        mask.remove();
+        if (typeof opts.onSubmit === 'function') opts.onSubmit(values);
+    });
+}
+
+function alertOrNexus(msg, cb) {
+    if (typeof window.nexusAlert === 'function') {
+        window.nexusAlert(msg, cb);
+    } else {
+        alert(msg);
+        if (typeof cb === 'function') cb();
+    }
+}
+
+// 全局加载遮罩（与购买/提交共用）
+var layerLoadIndex = null;
+var fallbackOverlay = null;
+function startLoading() {
+    if (layerLoadIndex !== null || fallbackOverlay) return;
+    if (window.layer && typeof window.layer.load === 'function') {
+        layerLoadIndex = window.layer.load(1, {shade: 0.2});
+    } else {
+        fallbackOverlay = $('<div id="bonus-loading-overlay">处理中…</div>').css({
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.35)',
+            color: '#fff',
+            fontSize: '18px',
+            lineHeight: '100vh',
+            textAlign: 'center',
+            zIndex: 9999
+        }).appendTo('body');
+    }
+}
+function stopLoading() {
+    if (layerLoadIndex !== null && window.layer && typeof window.layer.close === 'function') {
+        window.layer.close(layerLoadIndex);
+    }
+    layerLoadIndex = null;
+    if (fallbackOverlay) {
+        fallbackOverlay.remove();
+        fallbackOverlay = null;
+    }
+}
+
+// 从后端获取商品列表并渲染
+function loadBonusProducts() {
+    jQuery.ajax({
+        url: 'ajax.php',
+        type: 'POST',
+        data: { action: 'get_bonus_products' },
+        dataType: 'json',
+        success: function(res) {
+            if (res.ret !== 0 || !res.data || !res.data.products) {
+                jQuery('#bonus-products-list').html('<div class="bonus-card-grid"><div class="bonus-empty">加载商品失败：' + (res.msg || '未知错误') + '</div></div>');
+                return;
+            }
+            allProducts = res.data.products || [];
+            currentUserBonus = res.data.user_bonus || 0;
+            renderFilters(allProducts);
+            renderProducts(filterByCategory(allProducts, currentCategory), currentUserBonus);
+        },
+        error: function() {
+            jQuery('#bonus-products-list').html('<div class="bonus-card-grid"><div class="bonus-empty">加载商品失败，请稍后重试</div></div>');
+        }
+    });
+}
+
+function filterByCategory(list, cat) {
+    if (!cat || cat === 'all') return list;
+    return list.filter(function (p) { return p.category === cat; });
+}
+
+// 渲染分类过滤
+function renderFilters(products) {
+    var catMap = {
+        'upload': '上传类',
+        'download': '下载类',
+        'tool': '道具类',
+        'social': '互动类',
+        'permission': '权限类',
+        'other': '其他'
+    };
+    var counts = {};
+    products.forEach(function(p){ var c=p.category||'other'; counts[c]=(counts[c]||0)+1; });
+    var html = '<div id="bonus-hero"><h2>魔力值商城</h2><p>兑换流量、道具、权限，或赠送好友。分类筛选更高效。</p></div>';
+    html += '<div class="bonus-filter-bar"><div class="bonus-filter-left"><div class="bonus-hero-title">分类</div><div class="bonus-hero-sub">按类型筛选商品</div></div><div class="bonus-filter-right"><span class="bonus-balance">当前魔力值：<strong>'+ (currentUserBonus||0) +'</strong></span></div></div>';
+    html += '<div class="bonus-filter-chips">';
+    var cats = ['all','upload','download','tool','social','permission','other'];
+    cats.forEach(function(c){
+        var label = c==='all' ? '全部' : (catMap[c]||c);
+        var count = c==='all' ? products.length : (counts[c]||0);
+        html += '<button class="bonus-chip '+(currentCategory===c?'active':'')+'" data-cat="'+c+'">'+label+' ('+count+')</button>';
+    });
+    html += '</div>';
+    jQuery('#bonus-filters').html(html);
+    jQuery('.bonus-chip').off('click').on('click', function(){
+        currentCategory = jQuery(this).data('cat');
+        jQuery('.bonus-chip').removeClass('active');
+        jQuery(this).addClass('active');
+        renderProducts(filterByCategory(allProducts, currentCategory), currentUserBonus);
+    });
+}
+
+// 渲染商品列表到表格
+function renderProducts(products, userBonus) {
+    var grid = '<div class="bonus-card-grid">';
+    var catMap = {
+        'upload': '上传类',
+        'download': '下载类',
+        'tool': '道具类',
+        'social': '互动类',
+        'permission': '权限类',
+        'other': '其他'
+    };
+    for (var i = 0; i < products.length; i++) {
+        var p = products[i];
+        var canBuy = userBonus >= parseFloat(p.points);
+        var desc = p.description || '';
+        var btnText = canBuy ? '兑换' : '魔力值不足';
+        var disabled = canBuy ? '' : 'disabled';
+        var catLabel = catMap[p.category] || '其他';
+        var typeTag = p.product_type === 'special_permission'
+            ? '<span class="bonus-type">权限商品</span>'
+            : '<span class="bonus-tag">普通商品</span>';
+        grid += '<div class="bonus-card">' +
+            '<div class="bonus-card-head"><span class="bonus-chip-sm">'+catLabel+'</span><span class="bonus-price">'+parseFloat(p.points).toLocaleString()+' 魔力值</span></div>' +
+            '<h3>' + p.name + '</h3>' +
+            '<div class="desc">' + desc + '</div>' +
+            '<div class="bonus-meta-row"><span>'+ typeTag +'</span><span>剩余魔力值：'+ userBonus +'</span></div>' +
+            '<div class="actions">' +
+              '<input type="button" class="purchase-btn" data-product-id="' + p.id + '" data-art="' + p.art + '" value="' + btnText + '" ' + disabled + ' />' +
+            '</div>' +
+          '</div>';
+    }
+    grid += '</div>';
+    if (products.length === 0) {
+        grid = '<div class="bonus-card-grid"><div class="bonus-empty">暂无可用商品</div></div>';
+    }
+    jQuery('#bonus-products-list').html(grid);
+
+    // 绑定购买事件（含必填项）
+    jQuery('.purchase-btn').off('click').on('click', function() {
+        var $btn = jQuery(this);
+        if ($btn.prop('disabled')) return;
+        var productId = $btn.data('product-id');
+        var art = $btn.data('art');
+
+        var extraData = {};
+        if (art === 'title') {
+            showFormDialog({
+                title: '自定义头衔',
+                fields: [
+                    { name: 'title', label: '头衔', required: true, placeholder: '最多30字符' }
+                ],
+                onSubmit: function(vals) {
+                    extraData.title = (vals.title || '').substring(0, 30);
+                    doPurchase();
+                }
+            });
+            return;
+        } else if (art === 'gift_1') {
+            showFormDialog({
+                title: '赠送魔力值',
+                fields: [
+                    { name: 'username', label: '接收者用户名', required: true, placeholder: '输入用户名' },
+                    { name: 'bonusgift', label: '赠送魔力值', required: true, type: 'number', min: 1, step: 1, placeholder: '正整数' },
+                    { name: 'message', label: '留言（可选）', required: false, placeholder: '最多100字' }
+                ],
+                onSubmit: function(vals) {
+                    if (!vals.username || !vals.bonusgift || isNaN(vals.bonusgift) || Number(vals.bonusgift) <= 0) {
+                        alertOrNexus('请填写用户名和正整数的赠送数量'); return;
+                    }
+                    extraData.username = vals.username.trim();
+                    extraData.bonusgift = parseInt(vals.bonusgift, 10);
+                    extraData.message = (vals.message || '').substring(0, 100);
+                    doPurchase();
+                }
+            });
+            return;
+        } else if (art === 'gift_2') {
+            showFormDialog({
+                title: '慈善捐赠',
+                fields: [
+                    { name: 'ratiocharity', label: '分享率上限 (0.1-0.8)', required: true, type: 'number', min: 0.1, max: 0.8, step: 0.1, placeholder: '如 0.3' },
+                    { name: 'bonuscharity', label: '捐赠魔力值 (1000-50000)', required: true, type: 'number', min: 1000, max: 50000, step: 1, placeholder: '整数' }
+                ],
+                onSubmit: function(vals) {
+                    var ratioNum = parseFloat(vals.ratiocharity);
+                    var bcNum = parseInt(vals.bonuscharity, 10);
+                    if (isNaN(ratioNum) || ratioNum < 0.1 || ratioNum > 0.8) {
+                        alertOrNexus('分享率需在 0.1 - 0.8 之间'); return;
+                    }
+                    if (isNaN(bcNum) || bcNum < 1000 || bcNum > 50000) {
+                        alertOrNexus('捐赠数量需在 1000 - 50000 之间'); return;
+                    }
+                    extraData.ratiocharity = ratioNum;
+                    extraData.bonuscharity = bcNum;
+                    doPurchase();
+                }
+            });
+            return;
+        }
+
+        // 普通商品直接购买
+        doPurchase();
+
+        function doPurchase() {
+            startLoading();
+            jQuery.ajax({
+                url: 'ajax.php',
+                type: 'POST',
+                data: Object.assign({ action: 'purchase_bonus_product', product_id: productId }, extraData),
+                dataType: 'json',
+                success: function(resp) {
+                    stopLoading();
+                    if (resp.ret === 0) {
+                        alertOrNexus(resp.msg || '兑换成功', function(){ loadBonusProducts(); });
+                    } else {
+                        alertOrNexus(resp.msg || '兑换失败');
+                    }
+                },
+                error: function() {
+                    stopLoading();
+                    alertOrNexus('请求失败，请稍后重试');
+                }
+            });
+        }
+    });
+	}
+
+// 页面就绪后加载商品列表
+jQuery(function() {
+    loadBonusProducts();
+});
+
 // 强制重置PJAX状态和页面初始化
 try {
     if (window.history && window.history.replaceState) {
@@ -522,9 +727,6 @@ jQuery(function ($) {
         return;
     }
 
-    var layerLoadIndex = null;
-    var fallbackOverlay = null;
-
     function scheduleCleanup() {
         $(window).one('pagehide beforeunload unload', function () {
             stopLoading();
@@ -548,40 +750,6 @@ jQuery(function ($) {
                 $btn.prop('disabled', false).data('loading', false);
             });
         });
-    }
-
-    function startLoading() {
-        if (layerLoadIndex !== null || fallbackOverlay) {
-            return;
-        }
-        if (window.layer && typeof window.layer.load === 'function') {
-            layerLoadIndex = window.layer.load(1, {shade: 0.2});
-        } else {
-            fallbackOverlay = $('<div id="bonus-loading-overlay">处理中…</div>').css({
-                position: 'fixed',
-                left: 0,
-                top: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0,0,0,0.35)',
-                color: '#fff',
-                fontSize: '18px',
-                lineHeight: '100vh',
-                textAlign: 'center',
-                zIndex: 9999
-            }).appendTo('body');
-        }
-    }
-
-    function stopLoading() {
-        if (layerLoadIndex !== null && window.layer && typeof window.layer.close === 'function') {
-            window.layer.close(layerLoadIndex);
-        }
-        layerLoadIndex = null;
-        if (fallbackOverlay) {
-            fallbackOverlay.remove();
-            fallbackOverlay = null;
-        }
     }
 
     $(window).on('pageshow', function () {

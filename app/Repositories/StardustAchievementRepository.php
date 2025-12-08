@@ -470,13 +470,29 @@ class StardustAchievementRepository extends BaseRepository
                 break;
                 
             case 'fragments':
-                // 碎片收藏榜：按碎片数量排序
+                // 碎片收藏榜：按历史获取的碎片总数排序（当前背包碎片 + 已合成行星数 × 9）
                 $sql = "
-                    SELECT u.id, u.username, SUM(i.quantity) as total_fragments
-                    FROM stardust_inventories i
-                    INNER JOIN users u ON i.user_id = u.id
-                    WHERE i.item_type = 'fragment'
-                    GROUP BY i.user_id, u.id, u.username
+                    SELECT 
+                        u.id, 
+                        u.username,
+                        COALESCE(fragments_sum.current_fragments, 0) + 
+                        COALESCE(planets_sum.planets_count * 9, 0) as total_fragments
+                    FROM users u
+                    INNER JOIN stardust_farms f ON f.user_id = u.id
+                    LEFT JOIN (
+                        SELECT user_id, SUM(quantity) as current_fragments
+                        FROM stardust_inventories
+                        WHERE item_type = 'fragment'
+                        GROUP BY user_id
+                    ) fragments_sum ON fragments_sum.user_id = u.id
+                    LEFT JOIN (
+                        SELECT user_id, SUM(quantity) as planets_count
+                        FROM stardust_inventories
+                        WHERE item_type = 'planet'
+                        GROUP BY user_id
+                    ) planets_sum ON planets_sum.user_id = u.id
+                    GROUP BY u.id, u.username, fragments_sum.current_fragments, planets_sum.planets_count
+                    HAVING total_fragments > 0
                     ORDER BY total_fragments DESC
                     LIMIT {$limit}
                 ";

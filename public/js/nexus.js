@@ -258,8 +258,10 @@ jQuery(document).ready(function () {
         `;
         document.body.appendChild(modal);
         
-        // 设置消息
-        document.getElementById('nexus-alert-message').textContent = message;
+        // 设置消息（支持换行）
+        var messageEl = document.getElementById('nexus-alert-message');
+        messageEl.style.whiteSpace = 'pre-wrap';
+        messageEl.textContent = message;
         
         // 显示弹窗
         modal.style.display = 'flex';

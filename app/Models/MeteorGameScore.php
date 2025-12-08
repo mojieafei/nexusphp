@@ -24,6 +24,7 @@ class MeteorGameScore extends NexusModel
         'inputs_count',
         'session_started_at',
         'session_ended_at',
+        'is_auto_claim',
     ];
 
     protected $casts = [
@@ -39,6 +40,7 @@ class MeteorGameScore extends NexusModel
         'inputs_count' => 'integer',
         'session_started_at' => 'datetime',
         'session_ended_at' => 'datetime',
+        'is_auto_claim' => 'boolean',
     ];
     
     protected $dates = [

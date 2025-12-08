@@ -434,6 +434,65 @@ class Update extends Install
             Artisan::call("db:seed", ["--class" => "RoleSeeder", "--force" => true]);
             $this->doLog("[ROLE_SYSTEM] Roles seeder re-run completed!");
         }
+
+        /**
+         * 特殊权限系统 - 初始化
+         * @since 1.9.x
+         */
+        if (!Schema::hasTable("special_permissions")) {
+            $this->doLog("[SPECIAL_PERMISSION] Creating special permission tables...");
+            $this->runMigrate("database/migrations/2025_01_25_000001_create_special_permissions_table.php");
+            $this->runMigrate("database/migrations/2025_01_25_000002_create_user_special_permissions_table.php");
+            $this->doLog("[SPECIAL_PERMISSION] Special permission tables created!");
+        }
+        
+        // 无论表是否已存在，都确保特殊权限数据已初始化
+        if (Schema::hasTable("special_permissions")) {
+            $this->doLog("[SPECIAL_PERMISSION] Initializing/updating special permissions...");
+            Artisan::call("db:seed", ["--class" => "SpecialPermissionSeeder", "--force" => true]);
+            $this->doLog("[SPECIAL_PERMISSION] Special permissions initialization completed! 🔑");
+        }
+
+        /**
+         * 游戏得分表 - 添加一键获取标记字段
+         * @since 1.9.x
+         */
+        if (Schema::hasTable("meteor_game_scores") && !Schema::hasColumn("meteor_game_scores", "is_auto_claim")) {
+            $this->doLog("[GAME_SCORES] Adding is_auto_claim column to game score tables...");
+            $this->runMigrate("database/migrations/2025_01_25_000003_add_is_auto_claim_to_game_scores.php");
+            $this->doLog("[GAME_SCORES] is_auto_claim column added!");
+        }
+
+        /**
+         * 魔力值商品表 - 初始化
+         * @since 1.9.x
+         * 注意：必须在特殊权限初始化之后执行，因为商品会为特殊权限创建对应商品
+         */
+        if (!Schema::hasTable("bonus_products")) {
+            $this->doLog("[BONUS_PRODUCTS] Creating bonus products table...");
+            $this->runMigrate("database/migrations/2025_01_25_000004_create_bonus_products_table.php");
+            $this->doLog("[BONUS_PRODUCTS] Bonus products table created!");
+        } else {
+            // 如果表已存在，检查并修复唯一约束（art 改为 art + menge 组合）
+            $this->doLog("[BONUS_PRODUCTS] Checking unique constraint...");
+            $this->runMigrate("database/migrations/2025_01_25_000005_fix_bonus_products_unique_constraint.php");
+            $this->doLog("[BONUS_PRODUCTS] Unique constraint updated!");
+        }
+
+        // 补充新增字段：category
+        if (Schema::hasTable("bonus_products")) {
+            $this->doLog("[BONUS_PRODUCTS] Adding category column if missing...");
+            $this->runMigrate("database/migrations/2025_02_20_000006_add_category_to_bonus_products.php");
+            $this->doLog("[BONUS_PRODUCTS] Category column ensured!");
+        }
+        
+        // 无论表是否已存在，都确保商品数据已初始化（包括为现有特殊权限创建商品）
+        // 注意：必须在特殊权限初始化之后执行，因为商品会为特殊权限创建对应商品
+        if (Schema::hasTable("bonus_products")) {
+            $this->doLog("[BONUS_PRODUCTS] Initializing/updating products...");
+            Artisan::call("db:seed", ["--class" => "BonusProductSeeder", "--force" => true]);
+            $this->doLog("[BONUS_PRODUCTS] Products initialization completed! 🛒");
+        }
     }
 
     public function runExtraMigrate()

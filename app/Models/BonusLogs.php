@@ -42,6 +42,7 @@ class BonusLogs extends NexusModel
     const BUSINESS_TYPE_TASK_NOT_PASS_DEDUCT = 20;
     const BUSINESS_TYPE_TASK_PASS_REWARD = 21;
     const BUSINESS_TYPE_REWARD_TORRENT = 22;
+    const BUSINESS_TYPE_BUY_INVITE = 23;
 
     //获得类，普通获得，1000 起步
     const BUSINESS_TYPE_ROLE_WORK_SALARY = 1000;
@@ -83,6 +84,7 @@ class BonusLogs extends NexusModel
         self::BUSINESS_TYPE_TASK_NOT_PASS_DEDUCT => ['text' => 'Task failure penalty'],
         self::BUSINESS_TYPE_TASK_PASS_REWARD => ['text' => 'Task success reward'],
         self::BUSINESS_TYPE_REWARD_TORRENT => ['text' => 'Reward torrent'],
+        self::BUSINESS_TYPE_BUY_INVITE => ['text' => 'Buy invite'],
 
         self::BUSINESS_TYPE_ROLE_WORK_SALARY => ['text' => 'Role work salary'],
         self::BUSINESS_TYPE_TORRENT_BE_DOWNLOADED => ['text' => 'Torrent be downloaded'],

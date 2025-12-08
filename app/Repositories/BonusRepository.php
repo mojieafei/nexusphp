@@ -19,6 +19,173 @@ use Nexus\Database\NexusDB;
 
 class BonusRepository extends BaseRepository
 {
+    // 兑换上传流量
+    public function consumeToExchangeUpload(int $uid, int $bytes, float $cost): bool
+    {
+        $user = User::query()->findOrFail($uid);
+        $requireBonus = $cost;
+        NexusDB::transaction(function () use ($user, $bytes, $requireBonus) {
+            $comment = nexus_trans('bonus.comment_exchange_upload', [
+                'bonus' => $requireBonus,
+                'size' => mksize($bytes),
+            ], $user->locale);
+            $this->consumeUserBonus($user, $requireBonus, BonusLogs::BUSINESS_TYPE_EXCHANGE_UPLOAD, $comment);
+            User::query()->where('id', $user->id)->increment('uploaded', $bytes);
+        });
+        return true;
+    }
+
+    // 兑换下载流量
+    public function consumeToExchangeDownload(int $uid, int $bytes, float $cost): bool
+    {
+        $user = User::query()->findOrFail($uid);
+        $requireBonus = $cost;
+        NexusDB::transaction(function () use ($user, $bytes, $requireBonus) {
+            $comment = nexus_trans('bonus.comment_exchange_download', [
+                'bonus' => $requireBonus,
+                'size' => mksize($bytes),
+            ], $user->locale);
+            $this->consumeUserBonus($user, $requireBonus, BonusLogs::BUSINESS_TYPE_EXCHANGE_DOWNLOAD, $comment);
+            User::query()->where('id', $user->id)->increment('downloaded', $bytes);
+        });
+        return true;
+    }
+
+    // 购买邀请
+    public function consumeToBuyInvite(int $uid, float $cost): bool
+    {
+        $user = User::query()->findOrFail($uid);
+        $requireBonus = $cost;
+        NexusDB::transaction(function () use ($user, $requireBonus) {
+            $comment = nexus_trans('bonus.comment_buy_invite', [
+                'bonus' => $requireBonus,
+            ], $user->locale);
+            $this->consumeUserBonus($user, $requireBonus, BonusLogs::BUSINESS_TYPE_BUY_INVITE, $comment);
+            User::query()->where('id', $user->id)->increment('invites', 1);
+        });
+        return true;
+    }
+
+    // 赠送魔力值
+    public function consumeToGiftBonus(int $uid, string $toUsername, int $amount, string $message = ''): bool
+    {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('赠送数量需为正整数');
+        }
+        $user = User::query()->findOrFail($uid);
+        $toUser = User::query()->where('username', $toUsername)->first();
+        if (!$toUser) {
+            throw new \InvalidArgumentException('接收者不存在');
+        }
+        if ($toUser->id === $user->id) {
+            throw new \InvalidArgumentException('不能给自己赠送');
+        }
+        $requireBonus = $amount;
+        $msg = $message ? mb_substr($message, 0, 100) : '';
+
+        NexusDB::transaction(function () use ($user, $toUser, $requireBonus, $msg) {
+            $comment = nexus_trans('bonus.comment_gift_to_someone', [
+                'bonus' => $requireBonus,
+                'to_username' => $toUser->username,
+            ], $user->locale);
+            $this->consumeUserBonus($user, $requireBonus, BonusLogs::BUSINESS_TYPE_GIFT_TO_SOMEONE, $comment);
+
+            $toUser->increment('seedbonus', $requireBonus);
+            BonusLogs::add(
+                $toUser->id,
+                $toUser->seedbonus - $requireBonus,
+                $requireBonus,
+                $toUser->seedbonus,
+                nexus_trans('bonus.comment_receive_gift', [
+                    'bonus' => $requireBonus,
+                    'from_username' => $user->username,
+                ], $toUser->locale),
+                BonusLogs::BUSINESS_TYPE_RECEIVE_GIFT
+            );
+
+            // 站内信提示
+            Message::add([
+                'sender' => 0,
+                'receiver' => $toUser->id,
+                'subject' => nexus_trans('message.receive_gift.subject', [], $toUser->locale),
+                'msg' => nexus_trans('message.receive_gift.body', [
+                    'username' => $user->username,
+                    'bonus' => $requireBonus,
+                    'message' => $msg ?: nexus_trans('label.none', [], $toUser->locale),
+                ], $toUser->locale),
+                'added' => now(),
+            ]);
+        });
+
+        return true;
+    }
+
+    // 慈善捐赠
+    public function consumeToCharityGiving(int $uid, int $bonusAmount, float $ratioThreshold = 0.3): bool
+    {
+        if ($bonusAmount < 1000 || $bonusAmount > 50000) {
+            throw new \InvalidArgumentException('捐赠数量需在 1000 - 50000 之间');
+        }
+        if ($ratioThreshold < 0.1 || $ratioThreshold > 0.8) {
+            throw new \InvalidArgumentException('分享率阈值需在 0.1 - 0.8 之间');
+        }
+        $user = User::query()->findOrFail($uid);
+        $requireBonus = $bonusAmount;
+
+        NexusDB::transaction(function () use ($user, $requireBonus, $ratioThreshold) {
+            $comment = nexus_trans('bonus.comment_charity_giving', [
+                'bonus' => $requireBonus,
+                'ratio' => $ratioThreshold,
+            ], $user->locale);
+            $this->consumeUserBonus($user, $requireBonus, BonusLogs::BUSINESS_TYPE_GIFT_TO_LOW_SHARE_RATIO, $comment);
+            // 这里不直接分配对象用户，由原有业务规则去匹配低分享率用户（与旧逻辑保持一致）
+        });
+
+        return true;
+    }
+
+    // 自定义头衔
+    public function consumeToBuyCustomTitle(int $uid, string $title, float $cost): bool
+    {
+        $title = trim(mb_substr($title, 0, 30));
+        if ($title === '') {
+            throw new \InvalidArgumentException('头衔不能为空');
+        }
+        $user = User::query()->findOrFail($uid);
+        $oldTitle = trim((string)($user->title ?? ''));
+        $requireBonus = $cost;
+
+        NexusDB::transaction(function () use ($user, $requireBonus, $oldTitle, $title) {
+            $comment = sprintf("%s Points for custom title. Old title is %s and new title is %s", $requireBonus, htmlspecialchars($oldTitle), $title);
+            $this->consumeUserBonus($user, $requireBonus, BonusLogs::BUSINESS_TYPE_CUSTOM_TITLE, $comment, ['title' => $title]);
+            User::query()->where('id', $user->id)->update(['title' => $title]);
+        });
+
+        return true;
+    }
+
+    // 购买无广告
+    public function consumeToBuyNoAd(int $uid, float $cost, int $durationSeconds): bool
+    {
+        if ($durationSeconds <= 0) {
+            throw new \InvalidArgumentException('无广告时长必须大于0');
+        }
+        $user = User::query()->findOrFail($uid);
+        $requireBonus = $cost;
+        $noaduntil = date("Y-m-d H:i:s", time() + $durationSeconds);
+        $days = round($durationSeconds / 86400, 1);
+
+        NexusDB::transaction(function () use ($user, $requireBonus, $noaduntil, $days) {
+            $comment = sprintf("%s Points for %s days without ads", $requireBonus, $days);
+            $this->consumeUserBonus($user, $requireBonus, BonusLogs::BUSINESS_TYPE_NO_AD, $comment, [
+                'noad' => 'yes',
+                'noaduntil' => $noaduntil,
+            ]);
+        });
+
+        return true;
+    }
+
     public function consumeToCancelHitAndRun($uid, $hitAndRunId): bool
     {
         if (!HitAndRun::getIsEnabled()) {

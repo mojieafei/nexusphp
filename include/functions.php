@@ -3823,20 +3823,66 @@ if ($CURUSER) {
         </svg>
     </a>
 </div>
-<!-- 接流星游戏按钮 -->
+<!-- 一键获取星尘按钮 -->
 <div class="meteor-game-btn">
-    <a href="meteor_game.php" target="_blank" title="进入接流星小游戏 🎮">
+    <a href="javascript:void(0);" id="autoClaimStardustBtn" title="一键获取今日星尘 ⭐">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="17" width="18" height="3" rx="1.5" stroke="#fff" stroke-width="2" fill="none"/>
-            <circle cx="8" cy="6" r="2" fill="#FFD700"/>
-            <circle cx="12" cy="4" r="1.5" fill="#FF6B6B"/>
-            <circle cx="16" cy="8" r="2.5" fill="#4ECDC4"/>
-            <path d="M8 8 L8 15" stroke="#FFD700" stroke-width="1.5" stroke-dasharray="2 2"/>
-            <path d="M12 6 L12 15" stroke="#FF6B6B" stroke-width="1.5" stroke-dasharray="2 2"/>
-            <path d="M16 10.5 L16 15" stroke="#4ECDC4" stroke-width="1.5" stroke-dasharray="2 2"/>
+            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FFD700" stroke="#fff" stroke-width="1.5"/>
         </svg>
     </a>
 </div>
+<script>
+(function() {
+    const btn = document.getElementById('autoClaimStardustBtn');
+    if (!btn) return;
+    
+    btn.addEventListener('click', function() {
+        if (btn.disabled) return;
+        
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        
+        fetch('ajax.php?action=auto_claim_stardust', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=auto_claim_stardust'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                var message = '成功获取 ' + data.total_stardust + ' 星尘！\n今日剩余提交次数：' + data.remaining_submits;
+                if (typeof window.nexusAlert === 'function') {
+                    window.nexusAlert(message);
+                } else {
+                    alert(message);
+                }
+            } else {
+                var errorMsg = data.message || '获取失败';
+                if (typeof window.nexusAlert === 'function') {
+                    window.nexusAlert(errorMsg);
+                } else {
+                    alert(errorMsg);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            var errorMsg = '请求失败，请稍后重试';
+            if (typeof window.nexusAlert === 'function') {
+                window.nexusAlert(errorMsg);
+            } else {
+                alert(errorMsg);
+            }
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        });
+    });
+})();
+</script>
 <!-- 星尘农场按钮 -->
 <div class="stardust-farm-btn">
     <a href="stardust_farm.php" target="_blank" title="星尘农场 - 重建太阳系 🌍">

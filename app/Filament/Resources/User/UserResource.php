@@ -89,6 +89,11 @@ class UserResource extends Resource
                     ->relationship('roles', 'display_name', fn ($query) => $query->orderBy('id'))
                     ->columns(2)
                     ->helperText('选择用户拥有的角色'),
+                Forms\Components\CheckboxList::make('specialPermissions')
+                    ->label('特殊权限')
+                    ->relationship('specialPermissions', 'name', fn ($query) => $query->where('is_active', true)->orderBy('id'))
+                    ->columns(2)
+                    ->helperText('选择用户拥有的特殊权限'),
             ]);
     }
 

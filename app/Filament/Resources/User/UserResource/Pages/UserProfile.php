@@ -7,6 +7,7 @@ use App\Filament\Resources\User\UserResource;
 use App\Models\Exam;
 use App\Models\Invite;
 use App\Models\Medal;
+use App\Models\SpecialPermission;
 use App\Models\User;
 use App\Models\UserMeta;
 use App\Repositories\ExamRepository;
@@ -66,6 +67,7 @@ class UserProfile extends ViewRecord
         $actions = [];
         if ($this->canEditUser()) {
             $actions[] = $this->buildManageRolesAction();
+            $actions[] = $this->buildManageSpecialPermissionsAction();
             $actions[] = $this->buildGrantPropsAction();
             $actions[] = $this->buildGrantMedalAction();
             $actions[] = $this->buildAssignExamAction();
@@ -329,6 +331,51 @@ class UserProfile extends ViewRecord
                     }
                     
                     $this->sendSuccessNotification('角色更新成功！');
+                } catch (\Exception $exception) {
+                    $this->sendFailNotification($exception->getMessage());
+                }
+            });
+    }
+
+    private function buildManageSpecialPermissionsAction()
+    {
+        return Actions\Action::make('管理特殊权限')
+            ->label('管理特殊权限')
+            ->modalHeading('管理用户特殊权限')
+            ->form([
+                Forms\Components\CheckboxList::make('specialPermissions')
+                    ->label('特殊权限')
+                    ->options(\App\Models\SpecialPermission::query()
+                        ->where('is_active', true)
+                        ->orderBy('id')
+                        ->pluck('name', 'id')
+                        ->toArray())
+                    ->default(fn () => $this->record->specialPermissions()->pluck('special_permissions.id')->toArray())
+                    ->columns(2)
+                    ->helperText('选择用户拥有的特殊权限（可多选）'),
+            ])
+            ->action(function ($data) {
+                try {
+                    // 同步用户特殊权限
+                    $permissionIds = $data['specialPermissions'] ?? [];
+                    $this->record->specialPermissions()->sync($permissionIds);
+                    
+                    // 清除用户相关缓存，确保前端立即看到更新
+                    $uid = $this->record->id;
+                    try {
+                        clear_user_cache($uid, $this->record->passkey);
+                        // 清除权限相关的所有缓存
+                        \Nexus\Database\NexusDB::cache_del("user_{$uid}_content");
+                        \Nexus\Database\NexusDB::cache_del("user_{$uid}_roles");
+                        \Nexus\Database\NexusDB::cache_del(\App\Models\Setting::DIRECT_PERMISSION_CACHE_KEY_PREFIX . $uid);
+                        \Nexus\Database\NexusDB::cache_del("user_role_ids:$uid");
+                        \Nexus\Database\NexusDB::cache_del("direct_permissions:$uid");
+                    } catch (\Exception $e) {
+                        // 缓存清除失败不影响主流程，只记录日志
+                        do_log("Clear cache failed for user $uid: " . $e->getMessage(), 'error');
+                    }
+                    
+                    $this->sendSuccessNotification('特殊权限更新成功！请让用户重新登录或等待几分钟后重试。');
                 } catch (\Exception $exception) {
                     $this->sendFailNotification($exception->getMessage());
                 }

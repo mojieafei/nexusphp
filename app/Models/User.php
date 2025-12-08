@@ -541,6 +541,15 @@ class User extends Authenticatable implements FilamentUser, HasName
         return $this->hasMany(UserPermission::class, 'uid');
     }
 
+    /**
+     * 关联特殊权限（多对多）
+     */
+    public function specialPermissions()
+    {
+        return $this->belongsToMany(SpecialPermission::class, 'user_special_permissions', 'user_id', 'special_permission_id')
+            ->withTimestamps();
+    }
+
     public function examAndTasks(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Exam::class, "exam_users", "uid", "exam_id");

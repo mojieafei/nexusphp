@@ -75,21 +75,30 @@ $moviepicker = $user["picker"] == 'yes';
 
 print("<h1 style='margin:0px'>" . get_username($user['id'], true,false) . $country."</h1>");
 if ($userInfo->valid_medals->isNotEmpty()) {
+    print('<div id="medals-wrapper" style="margin:12px 0; padding:12px; background:#0b1221; border:1px solid #1e293b; border-radius:10px;">');
+    print('<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">');
+    print('<div style="color:#e2e8f0;font-weight:700;">勋章展示</div>');
+    print('<div style="font-size:12px;color:#94a3b8;">如需整理，可在勋章页管理佩戴/排序；此处仅展示当前佩戴及已拥有</div>');
+    print('<button id="toggle-medals" style="padding:6px 10px;border:1px solid #2563eb;background:#2563eb;color:#fff;border-radius:8px;cursor:pointer;">收起/展开</button>');
+    print('</div>');
+    print('<div id="medals-content" style="margin-top:10px; max-height:520px; overflow:auto; padding-right:6px; display:none;">');
     print build_medal_image($userInfo->{$medalType}, 120, $CURUSER['id'] == $user['id']);
+    print('</div></div>');
     $warnMedalJs = <<<JS
 jQuery('#save-user-medal-btn').on("click", function (e) {
     let form = jQuery(this).closest('form');
     let data = form.serializeArray();
-    console.log(data)
     jQuery.post('ajax.php', {params: data, action: 'saveUserMedal'}, function (response) {
-        console.log(response)
         if (response.ret != 0) {
             layer.alert(response.msg)
         } else {
             window.location.reload()
         }
     }, 'json')
-})
+});
+jQuery('#toggle-medals').on('click', function(){
+    jQuery('#medals-content').slideToggle(150);
+});
 JS;
     \Nexus\Nexus::js($warnMedalJs, 'footer', false);
 }
@@ -353,7 +362,13 @@ jQuery('#{$triggerId}').on("click", function () {
         btn: ['OK'],
         btnAlign: 'c',
         yes: function () {
-            let params = jQuery('#layer-form-{$metaKey}').serialize()
+            let form = jQuery('#layer-form-{$metaKey}');
+            let username = form.find('input[name="params[username]"]').val().trim();
+            if (!username) {
+                layer.alert('请输入新用户名');
+                return;
+            }
+            let params = form.serialize();
             jQuery.post('ajax.php', params + "&action=consumeBenefit", function (response) {
                 console.log(response)
                 if (response.ret != 0) {

@@ -191,6 +191,92 @@ class StardustFarmRepository extends BaseRepository
     }
 
     /**
+     * 一键收获所有可收获的作物
+     */
+    public function harvestAllCrops(int $userId): array
+    {
+        $farm = StardustFarm::getOrCreateForUser($userId);
+        
+        // 获取所有可收获的土地（成熟或枯萎的）
+        $lands = StardustLand::where('farm_id', $farm->id)
+            ->whereNotNull('crop_id')
+            ->get();
+        
+        $harvestedCount = 0;
+        $totalFragments = 0;
+        $harvestResults = [];
+        
+        foreach ($lands as $land) {
+            // 更新土地状态
+            $land->updateStatus();
+            
+            // 检查是否可以收获
+            if (!in_array($land->status, ['mature', 'withered'])) {
+                continue;
+            }
+            
+            $result = $land->harvest();
+            if (!$result) {
+                continue;
+            }
+            
+            // 添加碎片到背包
+            StardustInventory::addItem($userId, 'fragment', $result['crop_id'], $result['fragments']);
+            
+            // 增加经验
+            $farm->addExperience($result['experience']);
+            
+            // 记录交易日志
+            StardustTransactionLog::create([
+                'user_id' => $userId,
+                'type' => 'earn',
+                'source' => 'harvest',
+                'amount' => $result['fragments'],
+                'balance_after' => $farm->stardust,
+                'description' => "收获 {$result['crop_name']} 获得 {$result['fragments']} 碎片",
+                'metadata' => [
+                    'crop_id' => $result['crop_id'],
+                    'crop_name' => $result['crop_name'],
+                    'land_id' => $land->id,
+                ],
+            ]);
+            
+            // 广播：收获大量碎片（≥3个）
+            if ($result['fragments'] >= 3) {
+                $user = \App\Models\User::find($userId);
+                \App\Models\StardustBroadcast::createBroadcast(
+                    $userId,
+                    $user->username,
+                    'fragment',
+                    "收获了 {$result['fragments']} 个{$result['crop_emoji']}{$result['crop_name']}碎片",
+                    ['crop_id' => $result['crop_id'], 'crop_name' => $result['crop_name'], 'fragments' => $result['fragments'], 'rarity' => $result['fragments'] >= 5 ? 'rare' : 'normal']
+                );
+            }
+            
+            $harvestedCount++;
+            $totalFragments += $result['fragments'];
+            $harvestResults[] = $result;
+        }
+        
+        if ($harvestedCount === 0) {
+            throw new \InvalidArgumentException('没有可收获的土地');
+        }
+        
+        return [
+            'success' => true,
+            'message' => "成功收获 {$harvestedCount} 块土地，共获得 {$totalFragments} 个碎片",
+            'harvested_count' => $harvestedCount,
+            'total_fragments' => $totalFragments,
+            'harvests' => $harvestResults,
+            'farm' => [
+                'level' => $farm->level,
+                'experience' => $farm->experience,
+                'next_level_exp' => $farm->getNextLevelExp(),
+            ],
+        ];
+    }
+
+    /**
      * 合成行星
      */
     public function craftPlanet(int $userId, int $cropId): array

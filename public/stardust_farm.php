@@ -968,6 +968,9 @@ body {
             
             <div class="farm-actions">
                 <?php if ($isOwnFarm): ?>
+                <button id="harvestAllBtn" class="btn btn-success" onclick="harvestAll()" style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);" <?php if ($CURUSER['class'] < UC_ELITE_USER): ?>disabled title="需要等级3（Elite User）以上才能使用"<?php endif; ?>>
+                    ⚡ 一键收获<?php if ($CURUSER['class'] < UC_ELITE_USER): ?> <span style="font-size: 12px;">(需等级3)</span><?php endif; ?>
+                </button>
                 <button class="btn btn-success" onclick="location.href='stardust_friends.php'">🤝 好友农场</button>
                 <button class="btn btn-warning" onclick="location.href='stardust_leaderboard.php'">🏆 排行榜</button>
                 <button class="btn" onclick="location.href='index.php'">🏠 返回首页</button>
@@ -1185,6 +1188,8 @@ let selectedLandId = null;
 const isOwnFarm = <?php echo $isOwnFarm ? 'true' : 'false'; ?>;
 const targetUserId = <?php echo $targetUserId; ?>;
 const currentUserId = <?php echo $CURUSER['id']; ?>;
+const userClass = <?php echo $CURUSER['class']; ?>;
+const canUseHarvestAll = userClass >= <?php echo UC_ELITE_USER; ?>;
 
 const PLANET_CLASS_MAP = {
     'moon': 'planet-moon',
@@ -1573,6 +1578,76 @@ function harvest(landId) {
         });
 }
 
+// 一键收获所有可收获的土地
+function harvestAll() {
+    const btn = document.getElementById('harvestAllBtn');
+    
+    // 检查用户等级
+    if (!canUseHarvestAll) {
+        showNotification('需要等级3（Elite User）以上才能使用一键收获功能', 'error');
+        return;
+    }
+    
+    if (btn && btn.disabled) {
+        return;
+    }
+    
+    // 使用封装的确认弹窗
+    const confirmMessage = '确定要一键收获所有可收获的土地吗？';
+    
+    if (typeof window.nexusConfirm === 'function') {
+        window.nexusConfirm(confirmMessage, function() {
+            // 确认后执行收获
+            // 禁用按钮防止重复点击
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '收获中...';
+            }
+            
+            callAPI('harvestAllStardustCrops', {})
+                .then(data => {
+                    showNotification(data.message, 'success');
+                    loadFarmData();
+                })
+                .catch(error => {
+                    showNotification(error, 'error');
+                })
+                .finally(() => {
+                    // 恢复按钮状态（只有在等级足够时才恢复）
+                    if (btn && canUseHarvestAll) {
+                        btn.disabled = false;
+                        btn.textContent = '⚡ 一键收获';
+                    }
+                });
+        });
+    } else {
+        // 降级方案：使用原生 confirm
+        if (!confirm(confirmMessage)) return;
+        
+        // 禁用按钮防止重复点击
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '收获中...';
+        }
+        
+        callAPI('harvestAllStardustCrops', {})
+            .then(data => {
+                showNotification(data.message, 'success');
+                loadFarmData();
+            })
+            .catch(error => {
+                showNotification(error, 'error');
+            })
+            .finally(() => {
+                // 恢复按钮状态（只有在等级足够时才恢复）
+                if (btn && canUseHarvestAll) {
+                    btn.disabled = false;
+                    btn.textContent = '⚡ 一键收获';
+                }
+            });
+    }
+}
+
 // 浇水
 function waterLand(landId) {
     callAPI('waterStardustLand', { target_user_id: targetUserId, land_id: landId })
@@ -1587,16 +1662,30 @@ function waterLand(landId) {
 
 // 偷碎片
 function stealFragment(landId) {
-    if (!confirm('确定要偷取碎片吗？')) return;
+    const confirmMessage = '确定要偷取碎片吗？';
     
-    callAPI('stealStardustFragment', { target_user_id: targetUserId, land_id: landId })
-        .then(data => {
-            showNotification(data.message, 'success');
-            loadFarmData();
-        })
-        .catch(error => {
-            showNotification(error, 'error');
+    if (typeof window.nexusConfirm === 'function') {
+        window.nexusConfirm(confirmMessage, function() {
+            callAPI('stealStardustFragment', { target_user_id: targetUserId, land_id: landId })
+                .then(data => {
+                    showNotification(data.message, 'success');
+                    loadFarmData();
+                })
+                .catch(error => {
+                    showNotification(error, 'error');
+                });
         });
+    } else {
+        if (!confirm(confirmMessage)) return;
+        callAPI('stealStardustFragment', { target_user_id: targetUserId, land_id: landId })
+            .then(data => {
+                showNotification(data.message, 'success');
+                loadFarmData();
+            })
+            .catch(error => {
+                showNotification(error, 'error');
+            });
+    }
 }
 
 // 渲染背包
@@ -1649,33 +1738,60 @@ function renderInventory() {
 
 // 合成行星
 function craftPlanet(cropId) {
-    if (!confirm('消耗9个碎片合成1个完整行星？')) return;
+    const confirmMessage = '消耗9个碎片合成1个完整行星？';
     
-    callAPI('craftStardustPlanet', { crop_id: cropId })
-        .then(data => {
-            showNotification(data.message, 'success');
-            loadFarmData();
-        })
-        .catch(error => {
-            showNotification(error, 'error');
+    if (typeof window.nexusConfirm === 'function') {
+        window.nexusConfirm(confirmMessage, function() {
+            callAPI('craftStardustPlanet', { crop_id: cropId })
+                .then(data => {
+                    showNotification(data.message, 'success');
+                    loadFarmData();
+                })
+                .catch(error => {
+                    showNotification(error, 'error');
+                });
         });
+    } else {
+        if (!confirm(confirmMessage)) return;
+        callAPI('craftStardustPlanet', { crop_id: cropId })
+            .then(data => {
+                showNotification(data.message, 'success');
+                loadFarmData();
+            })
+            .catch(error => {
+                showNotification(error, 'error');
+            });
+    }
 }
 
 // 购买土地
 function purchaseLand() {
     const nextPrice = farmData.next_land_price;
     const currentLands = farmData.farm.land_slots;
+    const confirmMessage = `确定花费 ${nextPrice}⭐ 星尘购买第 ${currentLands + 1} 块土地吗？`;
     
-    if (!confirm(`确定花费 ${nextPrice}⭐ 星尘购买第 ${currentLands + 1} 块土地吗？`)) return;
-    
-    callAPI('purchaseStardustLand', {})
-        .then(data => {
-            showNotification(data.message || '购买成功！', 'success');
-            loadFarmData();
-        })
-        .catch(error => {
-            showNotification(error, 'error');
+    if (typeof window.nexusConfirm === 'function') {
+        window.nexusConfirm(confirmMessage, function() {
+            callAPI('purchaseStardustLand', {})
+                .then(data => {
+                    showNotification(data.message || '购买成功！', 'success');
+                    loadFarmData();
+                })
+                .catch(error => {
+                    showNotification(error, 'error');
+                });
         });
+    } else {
+        if (!confirm(confirmMessage)) return;
+        callAPI('purchaseStardustLand', {})
+            .then(data => {
+                showNotification(data.message || '购买成功！', 'success');
+                loadFarmData();
+            })
+            .catch(error => {
+                showNotification(error, 'error');
+            });
+    }
 }
 
 // 切换侧边栏标签
@@ -1751,6 +1867,14 @@ setInterval(() => {
     }
 }, 60000); // 每分钟刷新一次
 </script>
+<?php
+// 引入 nexus.js 以使用封装的确认弹窗
+if (defined('VERSION')) {
+    echo '<script type="application/javascript" src="js/nexus.js?v=' . VERSION . '"></script>';
+} else {
+    echo '<script type="application/javascript" src="js/nexus.js"></script>';
+}
+?>
 </body>
 </html>
 

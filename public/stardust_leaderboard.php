@@ -344,7 +344,7 @@ function renderLeaderboard(type, data) {
                 break;
             case 'fragments':
                 valueText = item.total_fragments + ' 💎';
-                detailText = `已收获 ${item.total_fragments} 个碎片`;
+                detailText = `历史获取 ${item.total_fragments} 个碎片`;
                 break;
             case 'planets':
                 valueText = item.total_planets + ' 🌍';
