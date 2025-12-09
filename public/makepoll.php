@@ -133,7 +133,6 @@ else
 }
 ?>
 
-<table border=1 cellspacing=0 cellpadding=5>
 <form method=post action=makepoll.php>
 <style type="text/css">
 input.mp
@@ -141,6 +140,7 @@ input.mp
 	width: 450px;
 }
 </style>
+<table border=1 cellspacing=0 cellpadding=5>
 <tr><td class=rowhead><?php echo $lang_makepoll['text_question']?> <font color=red>*</font></td><td align=left><input name=question class=mp maxlength=255 value="<?php echo $poll['question'] ?? ''?>"></td></tr>
 <tr><td class=rowhead><?php echo $lang_makepoll['text_option']?>1 <font color=red>*</font></td><td align=left><input name=option0 class=mp maxlength=40 value="<?php echo $poll['option0'] ?? ''?>"><br /></td></tr>
 <tr><td class=rowhead><?php echo $lang_makepoll['text_option']?>2 <font color=red>*</font></td><td align=left><input name=option1 class=mp maxlength=40 value="<?php echo $poll['option1'] ?? ''?>"><br /></td></tr>
@@ -163,13 +163,13 @@ input.mp
 <tr><td class=rowhead><?php echo $lang_makepoll['text_option']?>19</td><td align=left><input name=option18 class=mp maxlength=40 value="<?php echo $poll['option18'] ?? ''?>"><br /></td></tr>
 <tr><td class=rowhead><?php echo $lang_makepoll['text_option']?>20</td><td align=left><input name=option19 class=mp maxlength=40 value="<?php echo $poll['option19'] ?? ''?>"><br /></td></tr>
 <tr><td colspan=2 align=center><input type=submit value="<?php echo $pollid ? $lang_makepoll['submit_edit_poll'] : $lang_makepoll['submit_create_poll']?>" style='height: 20pt'></td></tr>
-</table>
-<p><font color=red>*</font><?php echo $lang_makepoll['text_required']?></p>
 <?php
 if ($pollid)
-print("<input type=hidden name=pollid value=\"".$poll["id"]."\">");
+print("<tr><td colspan=2><input type=hidden name=pollid value=\"".$poll["id"]."\"></td></tr>");
 ?>
-<input type=hidden name=returnto value="<?php echo htmlspecialchars($_GET["returnto"] ?? '') ? htmlspecialchars($_GET["returnto"] ?? '') : htmlspecialchars($_SERVER["HTTP_REFERER"] ?? '')?>">
+<tr><td colspan=2><input type=hidden name=returnto value="<?php echo htmlspecialchars($_GET["returnto"] ?? '') ? htmlspecialchars($_GET["returnto"] ?? '') : htmlspecialchars($_SERVER["HTTP_REFERER"] ?? '')?>"></td></tr>
+</table>
+<p><font color=red>*</font><?php echo $lang_makepoll['text_required']?></p>
 </form>
 
 <?php

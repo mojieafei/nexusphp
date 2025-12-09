@@ -186,6 +186,32 @@ class BonusRepository extends BaseRepository
         return true;
     }
 
+    // 购买VIP身份
+    public function consumeToBuyVip(int $uid, float $cost): bool
+    {
+        $user = User::query()->findOrFail($uid);
+        
+        // 检查用户等级是否已经是VIP或更高
+        if ($user->class >= 10) { // UC_VIP = 10
+            throw new \InvalidArgumentException('您的等级已经是VIP或更高，无需重复购买');
+        }
+        
+        $requireBonus = $cost;
+        // VIP有效期为28天
+        $vip_until = date("Y-m-d H:i:s", time() + 28 * 86400);
+
+        NexusDB::transaction(function () use ($user, $requireBonus, $vip_until) {
+            $comment = sprintf("%s Points for 1 month VIP Status", $requireBonus);
+            $this->consumeUserBonus($user, $requireBonus, BonusLogs::BUSINESS_TYPE_BUY_VIP, $comment, [
+                'class' => 10, // UC_VIP
+                'vip_added' => 'yes',
+                'vip_until' => $vip_until,
+            ]);
+        });
+
+        return true;
+    }
+
     public function consumeToCancelHitAndRun($uid, $hitAndRunId): bool
     {
         if (!HitAndRun::getIsEnabled()) {

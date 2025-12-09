@@ -990,8 +990,7 @@ if ($action === 'auto_claim_stardust') {
             $message = '您没有权限使用一键获取星尘功能' . "\n\n" .
                       '使用条件：' . "\n" .
                       '1. 用户等级需达到 Elite User 及以上（当前等级：' . \App\Models\User::getClassName($user->class, false, false, false) . '）' . "\n" .
-                      '2. 需要是捐赠用户，或拥有"一键获取星尘"特殊权限（魔力值商店购买）' . "\n\n" .
-                      '请联系管理员申请权限';
+                      '2. 需要是捐赠用户，或拥有"一键获取星尘"特殊权限（魔力值商店购买）';
             throw new \InvalidArgumentException($message);
         }
 
