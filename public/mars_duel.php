@@ -1482,9 +1482,16 @@ $defaultPort = 2346;
             };
 
             var host = hostOverride || window.location.hostname;
-            var port = portOverride || defaultPort;
+            var port = (portOverride !== null && portOverride !== undefined && portOverride !== '') ? portOverride : defaultPort;
             var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            var wsUrl = protocol + host + ':' + port + '/?room=' + encodeURIComponent(room) +
+            var needPort = true;
+            if (protocol === 'wss://') {
+                if (!port || port === '443' || port === 443) needPort = false;
+            } else {
+                if (!port || port === '80' || port === 80) needPort = false;
+            }
+            var portPart = needPort ? (':' + port) : '';
+            var wsUrl = protocol + host + portPart + '/?room=' + encodeURIComponent(room) +
                 '&role=' + encodeURIComponent(role) +
                 (seat ? '&seat=' + encodeURIComponent(seat) : '') +
                 '&user=' + encodeURIComponent(user) +
