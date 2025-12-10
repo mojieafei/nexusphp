@@ -780,6 +780,7 @@ $defaultPort = 2346;
 <body>
     <div style="max-width: 1400px; margin: 0 auto;">
         <h2>🚀 火星赌局 · PVP 幸运对战</h2>
+        <p style="margin: 6px 0 14px 0; color: #f87171; font-size: 13px;">温馨提示：本功能仅限娱乐，严禁赌博，严格遵守法律法规。</p>
         <div style="background: rgba(10, 22, 40, 0.6); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 16px; backdrop-filter: blur(10px); box-shadow: 0 0 15px rgba(0, 212, 255, 0.15);">
             <p style="margin: 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                 <span style="color: #9ca3af;">当前用户：</span>
