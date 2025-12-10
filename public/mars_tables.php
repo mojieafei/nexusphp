@@ -596,7 +596,8 @@ $defaultPort = $wsPortDefault;
         function connectLobby() {
             var host = wsHostOverride || window.location.hostname;
             var port = wsPortOverride || defaultPort;
-            var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            // 强制使用 ws 协议（即便页面是 https），按需确保浏览器允许运行
+            var protocol = 'ws://';
             // 端口为空或“0”不拼；wss 的 443、ws 的 80 也不拼
             var portStr = (port === null || port === undefined) ? '' : port.toString().trim();
             var portPart = '';
