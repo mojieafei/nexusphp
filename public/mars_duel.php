@@ -1486,7 +1486,9 @@ $defaultPort = 2346;
             var portStr = (portRaw === null || portRaw === undefined) ? '' : portRaw.toString().trim();
             var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
             var needPort = true;
-            if (protocol === 'wss://') {
+            if (portStr === '0') {
+                needPort = false; // 显式传0则不拼端口
+            } else if (protocol === 'wss://') {
                 if (portStr === '' || portStr === '443') needPort = false;
             } else {
                 if (portStr === '' || portStr === '80') needPort = false;
