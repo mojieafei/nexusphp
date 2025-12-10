@@ -1493,8 +1493,7 @@ $defaultPort = 2346;
             var hasPortZeroOverride = (portOverride === '0' || portOverride === 0 || (typeof portOverride === 'string' && portOverride.trim() === '0'));
             var portRaw = hasPortZeroOverride ? '0' : ((portOverride !== null && portOverride !== undefined && portOverride !== '') ? portOverride : defaultPort);
             var portStr = (portRaw === null || portRaw === undefined) ? '' : portRaw.toString().trim();
-            // 强制使用 ws 协议（即便页面是 https），按需确保浏览器允许运行
-            var protocol = 'ws://';
+            var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
             // 规则：port 为空或 '0' 不拼；wss 的 443 不拼；ws 的 80 不拼
             var portPart = '';
             if (portStr !== '' && portStr !== '0') {
