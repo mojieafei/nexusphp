@@ -10,9 +10,10 @@ $userId = intval($CURUSER["id"] ?? 0);
 $ownerCardCount = intval($CURUSER['mars_owner_card'] ?? 0);
 $tableIdParam = intval($_GET['table_id'] ?? 0);
 
-// 可通过 query 覆盖 ws host/port，便于测试
+// 可通过 query 覆盖 ws host/port，便于测试；端口为 0 时表示不拼端口
 $wsHostOverride = $_GET['ws_host'] ?? get_setting('pvp.ws_host', 'localhost');
-$wsPortOverride = $_GET['ws_port'] ?? get_setting('pvp.ws_port', 2346);
+$wsPortSetting = get_setting('pvp.ws_port', null);
+$wsPortOverride = array_key_exists('ws_port', $_GET) ? $_GET['ws_port'] : ($wsPortSetting === null ? '' : $wsPortSetting);
 $defaultPort = 2346;
 ?>
 <!DOCTYPE html>
@@ -1482,18 +1483,18 @@ $defaultPort = 2346;
             };
 
             var host = hostOverride || window.location.hostname;
-            var portRaw = (portOverride !== null && portOverride !== undefined && portOverride !== '') ? portOverride : defaultPort;
+            var hasPortZeroOverride = (portOverride === '0' || portOverride === 0 || (typeof portOverride === 'string' && portOverride.trim() === '0'));
+            var portRaw = hasPortZeroOverride ? '0' : ((portOverride !== null && portOverride !== undefined && portOverride !== '') ? portOverride : defaultPort);
             var portStr = (portRaw === null || portRaw === undefined) ? '' : portRaw.toString().trim();
             var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            var needPort = true;
-            if (portStr === '0') {
-                needPort = false; // 显式传0则不拼端口
-            } else if (protocol === 'wss://') {
-                if (portStr === '' || portStr === '443') needPort = false;
-            } else {
-                if (portStr === '' || portStr === '80') needPort = false;
+            // 规则：port 为空或 '0' 不拼；wss 的 443 不拼；ws 的 80 不拼
+            var portPart = '';
+            if (portStr !== '' && portStr !== '0') {
+                if (!(protocol === 'wss://' && portStr === '443') && !(protocol === 'ws://' && portStr === '80')) {
+                    portPart = ':' + portStr;
+                }
             }
-            var portPart = needPort ? (':' + portStr) : '';
+            console.debug('[WS] hostOverride=', hostOverride, 'portOverride=', portOverride, 'defaultPort=', defaultPort, 'resolved portStr=', portStr, 'protocol=', protocol, 'portPart=', portPart);
             var wsUrl = protocol + host + portPart + '/?room=' + encodeURIComponent(room) +
                 '&role=' + encodeURIComponent(role) +
                 (seat ? '&seat=' + encodeURIComponent(seat) : '') +

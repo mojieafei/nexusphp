@@ -576,7 +576,15 @@ $defaultPort = $wsPortDefault;
             var host = wsHostOverride || window.location.hostname;
             var port = wsPortOverride || defaultPort;
             var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            var wsUrl = protocol + host + ':' + port + '/?room=global&role=spectator&user=' + encodeURIComponent(nickname) + (userId ? ('&uid=' + encodeURIComponent(userId)) : '');
+            // 端口为空或“0”不拼；wss 的 443、ws 的 80 也不拼
+            var portStr = (port === null || port === undefined) ? '' : port.toString().trim();
+            var portPart = '';
+            if (portStr !== '' && portStr !== '0') {
+                if (!(protocol === 'wss://' && portStr === '443') && !(protocol === 'ws://' && portStr === '80')) {
+                    portPart = ':' + portStr;
+                }
+            }
+            var wsUrl = protocol + host + portPart + '/?room=global&role=spectator&user=' + encodeURIComponent(nickname) + (userId ? ('&uid=' + encodeURIComponent(userId)) : '');
             lobbyWs = new WebSocket(wsUrl);
             lobbyStatus.textContent = '大厅连接中...';
             lobbyStatus.classList.remove('connected');

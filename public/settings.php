@@ -302,8 +302,14 @@ elseif ($action == 'savesettings_misc')
 
     // 保存 PVP WS 配置
     $pvp_ws_host = trim($_POST['pvp_ws_host'] ?? 'localhost');
-    $pvp_ws_port = intval($_POST['pvp_ws_port'] ?? 2346);
-    if ($pvp_ws_port <= 0) $pvp_ws_port = 2346;
+    $pvp_ws_port_raw = isset($_POST['pvp_ws_port']) ? trim($_POST['pvp_ws_port']) : '';
+    if ($pvp_ws_port_raw === '') {
+        $pvp_ws_port = 2346; // 为空时用默认
+    } elseif ($pvp_ws_port_raw === '0') {
+        $pvp_ws_port = 0;    // 显式 0 表示不拼端口
+    } else {
+        $pvp_ws_port = intval($pvp_ws_port_raw);
+    }
     saveSetting('pvp', [
         'ws_host' => $pvp_ws_host,
         'ws_port' => $pvp_ws_port,
