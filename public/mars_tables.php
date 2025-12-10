@@ -178,6 +178,10 @@ $defaultPort = $wsPortDefault;
         
         #modal {
             display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             background: linear-gradient(135deg, rgba(10, 22, 40, 0.98), rgba(30, 27, 75, 0.98));
             border: 1px solid rgba(0, 212, 255, 0.4);
             border-radius: 16px;
@@ -191,7 +195,6 @@ $defaultPort = $wsPortDefault;
                 inset 0 0 20px rgba(0, 212, 255, 0.05);
             backdrop-filter: blur(15px);
             z-index: 9999;
-            position: relative;
             overflow-y: auto;
         }
         
@@ -331,8 +334,26 @@ $defaultPort = $wsPortDefault;
 </head>
 <body>
     <div style="max-width: 1400px; margin: 0 auto;">
-        <h2>🚀 火星幸运局 · 桌子列表</h2>
+        <h2 style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span>🚀 火星幸运局 · 桌子列表</span>
+            <span style="flex:1 1 auto"></span>
+            <span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <a href="index.php" style="display:inline-block; padding:8px 12px; border-radius:8px; background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.5); color:#fbbf24; text-decoration:none;">🏠 返回主页</a>
+            </span>
+        </h2>
         <p style="margin: 6px 0 14px 0; color: #f87171; font-size: 13px;">温馨提示：本功能仅限娱乐，严禁赌博，严格遵守法律法规。</p>
+        <div style="background: rgba(10, 22, 40, 0.65); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 0 12px rgba(0, 212, 255, 0.12);">
+            <div style="color:#00d4ff; font-weight:600; margin-bottom:8px;">🎮 对战说明</div>
+            <ul style="margin:0; padding-left:18px; color:#cbd5e1; line-height:1.6; font-size:13px;">
+                <li>玩法：双方各掷两枚骰子，比点数和；支持手动掷骰，超时系统自动掷。</li>
+                <li>进入：默认观战，点击玩家一/二“占位”入座，房主可踢人回观众。</li>
+                <li>开始：两席都有玩家后，任意一方点击“开始对局”，先点者先手。</li>
+                <li>魔力值扣减：开局前实时按桌面“下注额”从双方账户扣款；余额不足无法开局。</li>
+                <li>分成结算：结束后立即结算，赢家获得(总池-平台抽成-老板抽成)，房主获得老板抽成，平台抽固定比例。</li>
+                <li>老板说明：持有“火星老板卡”可在无有效老板的桌子上点击“我要当老板”，有效期30天；成为老板后可在“设置”中调节下注额与抽成。</li>
+                <li>其他：掉线可手动“重新连接”；房间右侧显示在线与聊天，大厅支持全局聊天与在线数。</li>
+            </ul>
+        </div>
         <div style="background: rgba(10, 22, 40, 0.6); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px; backdrop-filter: blur(10px); box-shadow: 0 0 15px rgba(0, 212, 255, 0.15);">
             <p style="margin: 0;">
                 <span style="color: #9ca3af;">当前用户：</span>

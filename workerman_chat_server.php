@@ -2,6 +2,9 @@
 // Simple Workerman chat server (broadcast to all connections).
 // Requirements: composer require workerman/workerman
 
+// 设置时区为 UTC+8，保持日志/时间与站点一致
+date_default_timezone_set('Asia/Shanghai');
+
 use Workerman\Connection\TcpConnection;
 use Workerman\Worker;
 use Workerman\Timer;

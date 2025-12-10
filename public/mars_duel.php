@@ -780,7 +780,14 @@ $defaultPort = 2346;
 </head>
 <body>
     <div style="max-width: 1400px; margin: 0 auto;">
-        <h2>🚀 火星赌局 · PVP 幸运对战</h2>
+        <h2 style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <span>🚀 火星赌局 · PVP 幸运对战</span>
+            <span style="flex:1 1 auto"></span>
+            <span>
+                <a href="mars_tables.php" style="display:inline-block; padding:8px 12px; border-radius:8px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.4); color:#00d4ff; text-decoration:none; margin-right:8px;">← 返回大厅</a>
+                <a href="index.php" style="display:inline-block; padding:8px 12px; border-radius:8px; background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.5); color:#fbbf24; text-decoration:none;">🏠 返回主页</a>
+            </span>
+        </h2>
         <p style="margin: 6px 0 14px 0; color: #f87171; font-size: 13px;">温馨提示：本功能仅限娱乐，严禁赌博，严格遵守法律法规。</p>
         <div style="background: rgba(10, 22, 40, 0.6); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 16px; backdrop-filter: blur(10px); box-shadow: 0 0 15px rgba(0, 212, 255, 0.15);">
             <p style="margin: 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
