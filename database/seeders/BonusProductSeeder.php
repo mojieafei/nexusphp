@@ -223,6 +223,17 @@ class BonusProductSeeder extends Seeder
                 'category' => BonusProduct::CATEGORY_TOOL,
                 'sort_order' => 17,
             ],
+            // Mars Owner Card (火星老板卡)
+            [
+                'art' => 'mars_owner_card',
+                'name' => '火星老板卡',
+                'description' => '使用后可成为火星幸运局桌子的老板，有效期30天',
+                'points' => 100000,
+                'menge' => 0,
+                'product_type' => BonusProduct::PRODUCT_TYPE_NORMAL,
+                'category' => BonusProduct::CATEGORY_PERMISSION,
+                'sort_order' => 18,
+            ],
         ];
 
         foreach ($products as $product) {

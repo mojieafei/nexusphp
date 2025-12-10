@@ -7,6 +7,7 @@ use App\Models\BonusLogs;
 use App\Models\Category;
 use App\Models\Exam;
 use App\Models\ExamUser;
+use App\Models\GameTable;
 use App\Models\HitAndRun;
 use App\Models\Icon;
 use App\Models\Language;
@@ -494,6 +495,37 @@ class Update extends Install
             Artisan::call("db:seed", ["--class" => "BonusProductSeeder", "--force" => true]);
             $this->doLog("[BONUS_PRODUCTS] Products initialization completed! 🛒");
         }
+
+        /**
+         * 游戏桌子表 - 创建和初始化
+         * @since 1.9.x
+         */
+        if (!Schema::hasTable("game_tables")) {
+            $this->doLog("[GAME_TABLES] Creating game tables table...");
+            $this->runMigrate("database/migrations/2025_12_08_000001_create_game_tables.php");
+            $this->doLog("[GAME_TABLES] Game tables table created!");
+        }
+
+        // 补充老板起始时间列
+        if (Schema::hasTable("game_tables") && !Schema::hasColumn("game_tables", "owner_start")) {
+            $this->doLog("[GAME_TABLES] Adding owner_start column if missing...");
+            $this->runMigrate("database/migrations/2025_12_10_000002_add_owner_start_to_game_tables.php");
+            $this->doLog("[GAME_TABLES] owner_start column ensured!");
+        }
+
+        // 用户表增加火星老板卡库存
+        if (Schema::hasTable("users") && !Schema::hasColumn("users", "mars_owner_card")) {
+            $this->doLog("[GAME_TABLES] Adding mars_owner_card column to users if missing...");
+            $this->runMigrate("database/migrations/2025_12_10_000003_add_mars_owner_card_to_users_table.php");
+            $this->doLog("[GAME_TABLES] mars_owner_card column ensured!");
+        }
+
+        // 初始化默认桌子（如果表存在且为空）
+        if (Schema::hasTable("game_tables")) {
+            $this->doLog("[GAME_TABLES] Initializing default tables...");
+            $this->initializeGameTables();
+            $this->doLog("[GAME_TABLES] Default tables initialized! 🎲");
+        }
     }
 
     public function runExtraMigrate()
@@ -874,6 +906,40 @@ class Update extends Install
                 'updated_at' => date('Y-m-d H:i:s'),
             ]));
         }
+    }
+
+    /**
+     * 初始化游戏桌子数据
+     */
+    private function initializeGameTables()
+    {
+        if (!Schema::hasTable('game_tables')) {
+            return;
+        }
+
+        $tableCount = \App\Models\GameTable::count();
+        if ($tableCount > 0) {
+            // 如果已有桌子，不重复创建
+            return;
+        }
+
+        // 默认创建10张桌子，第一张桌子默认老板是用户ID 1
+        $tables = [];
+        for ($i = 1; $i <= 10; $i++) {
+            $nowMs = (int)(microtime(true) * 1000);
+            $tables[] = [
+                'name' => '桌子 ' . $i,
+                'owner_id' => $i === 1 ? 1 : null, // 第一张桌子默认老板是用户ID 1
+                'owner_start' => $i === 1 ? $nowMs : null,
+                'owner_until' => $i === 1 ? $nowMs + (30 * 24 * 60 * 60 * 1000) : null, // 30天后到期
+                'owner_rake_percent' => 1, // 默认1%抽成
+                'bet_amount' => 10000, // 默认下注10000魔力值
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ];
+        }
+
+        \App\Models\GameTable::insert($tables);
     }
 
 }

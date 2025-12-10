@@ -508,6 +508,34 @@ class BonusRepository extends BaseRepository
         });
     }
 
+    /**
+     * 增加用户魔力值
+     */
+    public function addUserBonus(int $userId, float $amount, int $logBusinessType, string $logComment = ''): bool
+    {
+        $user = User::query()->findOrFail($userId);
+        $oldBonus = floatval($user->seedbonus);
+        $newBonus = $oldBonus + $amount;
+
+        NexusDB::transaction(function () use ($user, $amount, $oldBonus, $newBonus, $logBusinessType, $logComment) {
+            BonusLogs::add($user->id, $oldBonus, $amount, $newBonus, $logComment, $logBusinessType);
+            User::query()->where('id', $user->id)->update(['seedbonus' => $newBonus]);
+        });
+
+        return true;
+    }
+
+    /**
+     * 购买火星老板卡（库存+1，扣魔力值）
+     */
+    public function consumeToBuyMarsOwnerCard(int $uid, float $cost): bool
+    {
+        $user = User::query()->findOrFail($uid);
+        $this->consumeUserBonus($user, $cost, BonusLogs::BUSINESS_TYPE_BUY_TORRENT, "购买火星老板卡");
+        User::query()->where('id', $user->id)->increment('mars_owner_card');
+        return true;
+    }
+
     public function consumeUserBonus($user, $requireBonus, $logBusinessType, $logComment = '', array $userUpdates = [])
     {
         if (!isset(BonusLogs::$businessTypes[$logBusinessType])) {

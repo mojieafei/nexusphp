@@ -2471,6 +2471,7 @@ function menu ($selected = "home") {
         print ("<ul class=\"dropdown-content\">");
         print ("<li><a href=\"meteor_game.php\" target=\"_blank\">🌠 接流星</a></li>");
         print ("<li><a href=\"space_miner_game.php\" target=\"_blank\">🪐 星际矿工</a></li>");
+        print ("<li><a href=\"mars_tables.php\" target=\"_blank\">🔥 火星幸运局(试运行)</a></li>");
         print ("<li><a href=\"stardust_farm.php\" target=\"_blank\">🌍 星尘农场</a></li>");
         print ("</ul>");
         print ("</li>");

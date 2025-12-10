@@ -1,10 +1,43 @@
 <?php
+// 开启输出缓冲，避免任何输出影响 JSON 响应
+ob_start();
+
 use Carbon\Carbon;
 use App\Models\MedalSeries;
 
 require "../include/bittorrent.php";
 dbconn();
-loggedinorreturn();
+
+// 检查是否是内部 API 调用（火星幸运局相关）
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
+$isInternalApi = false;
+if (in_array($action, ['mars_duel_bet', 'mars_duel_settle'])) {
+    $token = $_POST['token'] ?? '';
+    $tokenSetting = get_setting('pvp.settle_token', '');
+    
+    // 如果 tokenSetting 为空，允许空 token（用于开发环境）
+    // 如果 tokenSetting 有值，则必须匹配
+    if (empty($tokenSetting)) {
+        // tokenSetting 未设置，允许空 token（内部调用）
+        $isInternalApi = true;
+    } elseif (hash_equals($tokenSetting, $token)) {
+        // token 匹配，内部调用
+        $isInternalApi = true;
+    }
+    
+    if ($isInternalApi) {
+        // 清除所有输出缓冲区，确保只输出 JSON
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        ob_start();
+    }
+}
+
+// 如果不是内部 API 调用，才检查登录
+if (!$isInternalApi) {
+    loggedinorreturn();
+}
 
 if (!function_exists('meteor_game_config_value')) {
     function meteor_game_config_value(string $key, $default = null)
@@ -228,7 +261,14 @@ if (!function_exists('meteor_game_validate_telemetry')) {
     }
 }
 
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
+// 获取当前用户魔力值（seedbonus）
+if ($action === 'get_current_bonus') {
+    loggedinorreturn();
+    $bonus = floatval($CURUSER['seedbonus'] ?? 0);
+    exit(json_encode(['ret' => 0, 'data' => ['bonus' => $bonus]], JSON_UNESCAPED_UNICODE));
+}
+
+// $action 已在文件开头定义
 $params = $_POST['params'] ?? [];
 
 // 如果 params 是 JSON 字符串，解码它
@@ -909,6 +949,8 @@ if ($action === 'purchase_bonus_product') {
             $bonusRep->consumeToBuyRainbowId($user->id);
         } elseif ($art == 'change_username_card') {
             $bonusRep->consumeToBuyChangeUsernameCard($user->id);
+        } elseif ($art == 'mars_owner_card') {
+            $bonusRep->consumeToBuyMarsOwnerCard($user->id, $points);
         } elseif ($art == 'cancel_hr') {
             $hrId = $_POST['hr_id'] ?? 0;
             if (empty($hrId)) {
@@ -1085,6 +1127,435 @@ if ($action === 'auto_claim_stardust') {
 
     } catch (\Throwable $e) {
         exit(json_encode(['success' => false, 'message' => $e->getMessage()]));
+    }
+}
+
+// 获取桌子列表
+if ($action === 'get_game_tables') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+
+        $tables = \App\Models\GameTable::orderBy('id')->get();
+        $now = (int)(microtime(true) * 1000); // 13位毫秒时间戳
+        
+        $result = [];
+        foreach ($tables as $table) {
+            $rawOwnerId = $table->owner_id ?: 0;
+            $ownerUntil = $table->owner_until ?: 0;
+            // 兼容秒级时间戳：小于 10^11 认为是秒，转毫秒
+            if ($ownerUntil > 0 && $ownerUntil < 2000000000) {
+                $ownerUntil = $ownerUntil * 1000;
+            }
+            $isExpired = $ownerUntil > 0 ? ($ownerUntil < $now) : false;
+
+            $effectiveOwnerId = $table->effective_owner_id; // 过期时会回落到 1（平台）
+            // 显示与绑定基于原始 owner_id；若原始为空则显示“暂无老板”且允许绑定
+            $displayOwnerId = $rawOwnerId;
+            $ownerRaw = null;
+            if ($displayOwnerId && $displayOwnerId !== 1) {
+                $ownerRaw = \App\Models\User::find($displayOwnerId);
+            }
+
+            $result[] = [
+                'id' => $table->id,
+                'name' => $table->name,
+                'owner_id' => $displayOwnerId ?: null,
+                'owner_id_effective' => $effectiveOwnerId,
+                'owner_name' => $ownerRaw ? $ownerRaw->username : null,
+                'owner_id_raw' => $displayOwnerId,
+                'owner_name_raw' => $ownerRaw ? $ownerRaw->username : null,
+                'owner_start' => $table->owner_start,
+                'owner_until' => $ownerUntil,
+                'owner_rake_percent' => $table->owner_rake_percent,
+                'bet_amount' => $table->bet_amount,
+                'is_expired' => $isExpired,
+            ];
+        }
+
+        exit(json_encode(['ret' => 0, 'data' => $result]));
+    } catch (\Throwable $e) {
+        exit(json_encode(['ret' => 1, 'msg' => $e->getMessage()]));
+    }
+}
+
+// 使用老板卡绑定桌子
+if ($action === 'use_mars_owner_card') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+
+        $userId = $CURUSER['id'];
+        $tableId = intval($_POST['table_id'] ?? 0);
+
+        if (!$tableId) {
+            throw new \InvalidArgumentException('桌子ID不能为空');
+        }
+
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            throw new \InvalidArgumentException('用户不存在');
+        }
+
+        $table = \App\Models\GameTable::find($tableId);
+        if (!$table) {
+            throw new \InvalidArgumentException('桌子不存在');
+        }
+
+        // 检查用户库存是否有老板卡
+        $ownerCardCount = \App\Models\User::where('id', $userId)->value('mars_owner_card') ?? 0;
+        if ($ownerCardCount <= 0) {
+            throw new \InvalidArgumentException('您没有火星老板卡（当前库存：' . $ownerCardCount . '），请先在魔力值商店购买');
+        }
+
+        // 绑定桌子（30天有效期）
+        $now = (int)(microtime(true) * 1000);
+        $until = $now + (30 * 24 * 60 * 60 * 1000); // 30天后
+
+        $table->owner_id = $userId;
+        $table->owner_start = $now;
+        $table->owner_until = $until;
+        $table->save();
+
+        // 扣除用户的老板卡库存
+        \App\Models\User::where('id', $userId)->where('mars_owner_card', '>', 0)->decrement('mars_owner_card');
+
+        $newCount = \App\Models\User::where('id', $userId)->value('mars_owner_card') ?? 0;
+
+        exit(json_encode(['ret' => 0, 'msg' => '成功绑定桌子，有效期30天', 'data' => ['owner_card' => intval($newCount)]]));
+    } catch (\Throwable $e) {
+        exit(json_encode(['ret' => 1, 'msg' => $e->getMessage()]));
+    }
+}
+
+// 查询老板卡库存
+if ($action === 'get_mars_owner_card_count') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+        $userId = $CURUSER['id'];
+        $count = \App\Models\User::where('id', $userId)->value('mars_owner_card') ?? 0;
+        exit(json_encode(['ret' => 0, 'data' => ['count' => intval($count)]]));
+    } catch (\Throwable $e) {
+        exit(json_encode(['ret' => 1, 'msg' => $e->getMessage()]));
+    }
+}
+
+// 老板设置桌子参数（抽成、下注额）
+if ($action === 'update_game_table_settings') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!$CURUSER) {
+            throw new \InvalidArgumentException('请先登录');
+        }
+        $userId = $CURUSER['id'];
+        $tableId = intval($_POST['table_id'] ?? 0);
+        $rake = intval($_POST['owner_rake_percent'] ?? 0);
+        $bet = intval($_POST['bet_amount'] ?? 0);
+        $name = trim($_POST['name'] ?? '');
+
+        if (!$tableId) {
+            throw new \InvalidArgumentException('参数错误');
+        }
+        if ($rake < 1 || $rake > 90) {
+            throw new \InvalidArgumentException('抽成需在1-90之间');
+        }
+        if ($bet <= 0) {
+            throw new \InvalidArgumentException('下注额必须大于0');
+        }
+        if ($name === '') {
+            throw new \InvalidArgumentException('桌子名称不能为空');
+        }
+        if (mb_strlen($name) > 64) {
+            throw new \InvalidArgumentException('桌子名称长度需在64字符以内');
+        }
+
+        $table = \App\Models\GameTable::find($tableId);
+        if (!$table) {
+            throw new \InvalidArgumentException('桌子不存在');
+        }
+
+        $now = (int)(microtime(true) * 1000);
+        if (!($table->owner_id == $userId && $table->owner_until && $table->owner_until >= $now)) {
+            throw new \InvalidArgumentException('仅当前生效的老板可设置该桌子');
+        }
+
+        $table->name = $name;
+        $table->owner_rake_percent = $rake;
+        $table->bet_amount = $bet;
+        $table->save();
+
+        exit(json_encode(['ret' => 0, 'msg' => '设置已保存']));
+    } catch (\Throwable $e) {
+        exit(json_encode(['ret' => 1, 'msg' => $e->getMessage()]));
+    }
+}
+
+// 火星幸运局下注
+if ($action === 'mars_duel_bet') {
+    // 完全清除所有输出缓冲区
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    // 重新开启输出缓冲，并设置回调函数来捕获任何输出
+    ob_start(function($buffer) {
+        // 如果捕获到任何输出，记录到日志
+        if (!empty($buffer)) {
+            error_log("Mars Duel Bet: Unexpected output captured: " . substr($buffer, 0, 500));
+        }
+        return ''; // 丢弃所有输出
+    });
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        $token = $_POST['token'] ?? '';
+        $tokenSetting = get_setting('pvp.settle_token', '');
+        
+        // 如果 tokenSetting 为空，允许空 token（用于开发环境）
+        // 如果 tokenSetting 有值，则必须匹配
+        if (empty($tokenSetting)) {
+            $isInternal = true; // tokenSetting 未设置，允许空 token
+        } else {
+            $isInternal = hash_equals($tokenSetting, $token);
+        }
+
+        if (!$isInternal) {
+            if (!$CURUSER) {
+                throw new \InvalidArgumentException('请先登录');
+            }
+        }
+
+        $userId = $isInternal ? intval($_POST['user_id'] ?? 0) : $CURUSER['id'];
+        $tableId = intval($_POST['table_id'] ?? 0);
+        $duelId = trim($_POST['duel_id'] ?? '');
+
+        if (!$tableId || !$userId) {
+            throw new \InvalidArgumentException('参数错误');
+        }
+
+        $table = \App\Models\GameTable::find($tableId);
+        if (!$table) {
+            throw new \InvalidArgumentException('桌子不存在');
+        }
+
+        $betAmount = intval($table->bet_amount);
+        if ($betAmount <= 0) {
+            throw new \InvalidArgumentException('该桌未设置有效的下注金额');
+        }
+
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            throw new \InvalidArgumentException('用户不存在');
+        }
+
+        // 检查用户魔力值是否足够
+        if ($user->seedbonus < $betAmount) {
+            throw new \InvalidArgumentException('魔力值不足');
+        }
+
+        // 扣除下注金额
+        $bonusRep = new \App\Repositories\BonusRepository();
+        $suffix = $duelId ? " [duel_id: {$duelId}]" : '';
+        $bonusRep->consumeUserBonus(
+            $userId,
+            $betAmount,
+            \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_BET,
+            "火星幸运局下注（桌子 #{$tableId}）{$suffix}"
+        );
+
+        // 清除输出缓冲区（包括回调函数）
+        ob_end_clean();
+        
+        $response = ['ret' => 0, 'msg' => '下注成功', 'data' => ['bet_amount' => $betAmount, 'duel_id' => $duelId]];
+        $json = json_encode($response, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new \RuntimeException('JSON 编码失败: ' . json_last_error_msg());
+        }
+        
+        // 记录输出的 JSON
+        error_log("Mars Duel Bet Success Response: " . $json);
+        error_log("Mars Duel Bet Success Response Length: " . strlen($json));
+        error_log("Mars Duel Bet Success Response Hex: " . bin2hex(substr($json, 0, 100)));
+        
+        echo $json;
+        exit(0);
+    } catch (\Throwable $e) {
+        // 清除输出缓冲区（包括回调函数）
+        ob_end_clean();
+        
+        // 记录异常信息
+        error_log("Mars Duel Bet Exception: " . $e->getMessage());
+        error_log("Mars Duel Bet Exception Trace: " . $e->getTraceAsString());
+        
+        $response = ['ret' => 1, 'msg' => $e->getMessage()];
+        $json = json_encode($response, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            error_log("Mars Duel Bet JSON Encode Failed: " . json_last_error_msg());
+            $json = json_encode(['ret' => 1, 'msg' => '系统错误'], JSON_UNESCAPED_UNICODE);
+        }
+        
+        // 记录输出的 JSON
+        error_log("Mars Duel Bet Error Response: " . $json);
+        error_log("Mars Duel Bet Error Response Length: " . strlen($json));
+        error_log("Mars Duel Bet Error Response Hex: " . bin2hex(substr($json, 0, 100)));
+        
+        echo $json;
+        exit(1);
+    }
+}
+
+// 火星幸运局结算（由 WebSocket 服务器调用，或通过内部 API）
+if ($action === 'mars_duel_settle') {
+    // 清除所有输出缓冲区，确保只输出 JSON
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        // 内部调用校验
+        $token = $_POST['token'] ?? '';
+        $tokenSetting = get_setting('pvp.settle_token', '');
+        
+        // 如果 tokenSetting 为空，允许空 token（用于开发环境）
+        // 如果 tokenSetting 有值，则必须匹配
+        if (!empty($tokenSetting) && !hash_equals($tokenSetting, $token)) {
+            throw new \InvalidArgumentException('签名无效');
+        }
+
+        $tableId = intval($_POST['table_id'] ?? 0);
+        $p1UserId = intval($_POST['p1_user_id'] ?? 0);
+        $p2UserId = intval($_POST['p2_user_id'] ?? 0);
+        $winnerUserId = intval($_POST['winner_user_id'] ?? 0); // 0表示平局
+        $betAmount = intval($_POST['bet_amount'] ?? 0);
+        $duelId = trim($_POST['duel_id'] ?? '');
+
+        if (!$tableId || !$p1UserId || !$p2UserId) {
+            throw new \InvalidArgumentException('参数错误');
+        }
+
+        $table = \App\Models\GameTable::find($tableId);
+        if (!$table) {
+            throw new \InvalidArgumentException('桌子不存在');
+        }
+
+        // 下注额以桌子配置为准，若传入则校验一致
+        $tableBet = intval($table->bet_amount);
+        if ($tableBet <= 0) {
+            throw new \InvalidArgumentException('该桌未设置有效的下注金额');
+        }
+        if ($betAmount > 0 && $betAmount !== $tableBet) {
+            throw new \InvalidArgumentException('下注金额与桌面配置不一致');
+        }
+        $betAmount = $tableBet;
+
+        // 计算总池
+        $totalPool = $betAmount * 2; // 双方各下注
+
+        // 平台抽成（默认10%，可从设置中读取）
+        $platformPercent = get_setting('pvp.platform_rake_percent', 10);
+        $platformRake = (int)($totalPool * $platformPercent / 100);
+
+        // 老板抽成（如果过期则老板为平台）
+        $effectiveOwnerId = $table->effective_owner_id;
+        $ownerRakePercent = $table->owner_rake_percent;
+        $ownerRake = (int)($totalPool * $ownerRakePercent / 100);
+
+        // 赢家获得剩余
+        $winnerAmount = $totalPool - $platformRake - $ownerRake;
+
+        // 记录三条 bonus_logs
+        $bonusRep = new \App\Repositories\BonusRepository();
+
+        $suffix = $duelId ? " [duel_id: {$duelId}]" : '';
+
+        // 1. 老板获得抽成（如果过期则平台获得）
+        if ($ownerRake > 0) {
+            $bonusRep->addUserBonus(
+                $effectiveOwnerId,
+                $ownerRake,
+                \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_OWNER_RAKE,
+                "火星幸运局老板抽成（桌子 #{$tableId}）{$suffix}"
+            );
+        }
+
+        // 2. 平台获得抽成
+        if ($platformRake > 0) {
+            $bonusRep->addUserBonus(
+                1, // 平台用户ID
+                $platformRake,
+                \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_PLATFORM_RAKE,
+                "火星幸运局平台抽成（桌子 #{$tableId}）{$suffix}"
+            );
+        }
+
+        // 3. 赢家获得剩余（平局则双方各得一半）
+        $winnerBonus = 0;
+        $p1Bonus = 0;
+        $p2Bonus = 0;
+        if ($winnerUserId > 0) {
+            $bonusRep->addUserBonus(
+                $winnerUserId,
+                $winnerAmount,
+                \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_WINNER,
+                "火星幸运局获胜奖励（桌子 #{$tableId}）{$suffix}"
+            );
+            $winnerBonus = $winnerAmount;
+        } else {
+            // 平局：双方各得一半
+            $halfAmount = (int)($winnerAmount / 2);
+            $bonusRep->addUserBonus(
+                $p1UserId,
+                $halfAmount,
+                \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_WINNER,
+                "火星幸运局平局奖励（桌子 #{$tableId}）{$suffix}"
+            );
+            $bonusRep->addUserBonus(
+                $p2UserId,
+                $halfAmount,
+                \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_WINNER,
+                "火星幸运局平局奖励（桌子 #{$tableId}）{$suffix}"
+            );
+            $p1Bonus = $halfAmount;
+            $p2Bonus = $halfAmount;
+        }
+
+        $response = ['ret' => 0, 'msg' => '结算成功', 'data' => [
+            'platform_rake' => $platformRake,
+            'owner_rake' => $ownerRake,
+            'winner_amount' => $winnerAmount,
+            'winner_bonus' => $winnerBonus,
+            'p1_bonus' => $p1Bonus,
+            'p2_bonus' => $p2Bonus,
+            'winner_user_id' => $winnerUserId,
+            'duel_id' => $duelId,
+        ]];
+        $json = json_encode($response, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new \RuntimeException('JSON 编码失败: ' . json_last_error_msg());
+        }
+        // 再次清除输出缓冲区，确保只输出 JSON
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        echo $json;
+        exit(0);
+    } catch (\Throwable $e) {
+        $response = ['ret' => 1, 'msg' => $e->getMessage()];
+        $json = json_encode($response, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            $json = json_encode(['ret' => 1, 'msg' => '系统错误'], JSON_UNESCAPED_UNICODE);
+        }
+        // 再次清除输出缓冲区，确保只输出 JSON
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        echo $json;
+        exit(1);
     }
 }
 
@@ -1787,5 +2258,30 @@ try {
     }
 }catch(\Throwable $exception){
     do_log($exception->getMessage() . $exception->getTraceAsString(), "error");
-    exit(json_encode(fail($exception->getMessage(), $_POST)));
+    
+    // 如果是内部 API 调用（火星幸运局相关），确保返回正确的 JSON 格式
+    $isInternalApi = in_array($action, ['mars_duel_bet', 'mars_duel_settle']);
+    if ($isInternalApi) {
+        // 清除所有输出缓冲区
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        $response = ['ret' => 1, 'msg' => $exception->getMessage()];
+        $json = json_encode($response, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            $json = json_encode(['ret' => 1, 'msg' => '系统错误'], JSON_UNESCAPED_UNICODE);
+        }
+        echo $json;
+        exit(1);
+    } else {
+        // 普通 API 调用，使用 fail() 函数
+        $result = fail($exception->getMessage(), $_POST);
+        $json = json_encode($result, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            // 如果 json_encode 失败，使用简单的错误格式
+            $json = json_encode(['ret' => -1, 'msg' => '系统错误', 'data' => []], JSON_UNESCAPED_UNICODE);
+        }
+        exit($json);
+    }
 }

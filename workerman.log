@@ -1,0 +1,472 @@
+2025-12-09 09:05:15 pid:1060135 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 09:38:44 pid:1060135 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 09:38:44 pid:1060135 Workerman[workerman_chat_server.php] stopping
+2025-12-09 09:38:45 pid:1060135 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 09:38:48 pid:1098420 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 09:49:08 pid:1098420 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 09:49:08 pid:1098420 Workerman[workerman_chat_server.php] stopping
+2025-12-09 09:49:08 pid:1098420 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 09:49:10 pid:1103349 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 09:49:22 pid:1103349 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 09:49:22 pid:1103349 Workerman[workerman_chat_server.php] stopping
+2025-12-09 09:49:22 pid:1103349 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 09:49:25 pid:1103460 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 09:52:55 pid:1103460 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 09:52:55 pid:1103460 Workerman[workerman_chat_server.php] stopping
+2025-12-09 09:52:55 pid:1103460 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 09:52:59 pid:1105669 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 10:18:41 pid:1105669 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 10:18:41 pid:1105669 Workerman[workerman_chat_server.php] stopping
+2025-12-09 10:18:41 pid:1105669 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 10:18:44 pid:1112301 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 10:22:32 pid:1112301 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 10:22:32 pid:1112301 Workerman[workerman_chat_server.php] stopping
+2025-12-09 10:22:32 pid:1112301 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 10:22:49 pid:1114587 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 10:25:25 pid:1114587 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 10:25:25 pid:1114587 Workerman[workerman_chat_server.php] stopping
+2025-12-09 10:25:25 pid:1114587 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 10:25:28 pid:1116001 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 10:30:02 pid:1116001 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 10:30:02 pid:1116001 Workerman[workerman_chat_server.php] stopping
+2025-12-09 10:30:02 pid:1116001 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 10:30:03 pid:1118183 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 10:32:50 pid:1118183 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 10:32:50 pid:1118183 Workerman[workerman_chat_server.php] stopping
+2025-12-09 10:32:50 pid:1118183 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 10:32:53 pid:1119655 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 10:37:04 pid:1119655 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 10:37:04 pid:1119655 Workerman[workerman_chat_server.php] stopping
+2025-12-09 10:37:04 pid:1119655 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 10:37:05 pid:1121669 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 10:43:21 pid:1121669 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 10:43:21 pid:1121669 Workerman[workerman_chat_server.php] stopping
+2025-12-09 10:43:21 pid:1121669 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 10:43:26 pid:1124663 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 10:59:48 pid:1124663 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 10:59:48 pid:1124663 Workerman[workerman_chat_server.php] stopping
+2025-12-09 10:59:48 pid:1124663 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 10:59:53 pid:1130941 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 11:13:36 pid:1130941 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 11:13:36 pid:1130941 Workerman[workerman_chat_server.php] stopping
+2025-12-09 11:13:36 pid:1130941 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 11:13:39 pid:1137422 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 11:17:15 pid:1137422 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 11:17:15 pid:1137422 Workerman[workerman_chat_server.php] stopping
+2025-12-09 11:17:15 pid:1137422 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 11:17:17 pid:1139593 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 11:29:14 pid:1139593 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 11:29:14 pid:1139593 Workerman[workerman_chat_server.php] stopping
+2025-12-09 11:29:14 pid:1139593 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 11:29:17 pid:1144936 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 12:37:19 pid:1144936 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 12:37:19 pid:1144936 Workerman[workerman_chat_server.php] stopping
+2025-12-09 12:37:19 pid:1144936 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 12:37:23 pid:1217530 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-09 12:37:23 pid:1217531 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(601): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#9 {main}
+2025-12-09 12:37:23 pid:1217530 worker[chat-demo:1217531] exit with status 64000
+2025-12-09 12:37:26 pid:1217532 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:26 pid:1217530 worker[chat-demo:1217532] exit with status 64000
+2025-12-09 12:37:29 pid:1217533 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:29 pid:1217530 worker[chat-demo:1217533] exit with status 64000
+2025-12-09 12:37:33 pid:1217563 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:33 pid:1217530 worker[chat-demo:1217563] exit with status 64000
+2025-12-09 12:37:36 pid:1217564 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:36 pid:1217530 worker[chat-demo:1217564] exit with status 64000
+2025-12-09 12:37:39 pid:1217566 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:39 pid:1217530 worker[chat-demo:1217566] exit with status 64000
+2025-12-09 12:37:42 pid:1217833 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:42 pid:1217530 worker[chat-demo:1217833] exit with status 64000
+2025-12-09 12:37:45 pid:1217864 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:45 pid:1217530 worker[chat-demo:1217864] exit with status 64000
+2025-12-09 12:37:48 pid:1217865 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:48 pid:1217530 worker[chat-demo:1217865] exit with status 64000
+2025-12-09 12:37:51 pid:1218019 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:51 pid:1217530 worker[chat-demo:1218019] exit with status 64000
+2025-12-09 12:37:54 pid:1218057 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:54 pid:1217530 worker[chat-demo:1218057] exit with status 64000
+2025-12-09 12:37:57 pid:1218261 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:37:57 pid:1217530 worker[chat-demo:1218261] exit with status 64000
+2025-12-09 12:38:00 pid:1218262 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:00 pid:1217530 worker[chat-demo:1218262] exit with status 64000
+2025-12-09 12:38:03 pid:1218298 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:03 pid:1217530 worker[chat-demo:1218298] exit with status 64000
+2025-12-09 12:38:07 pid:1218304 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:08 pid:1217530 worker[chat-demo:1218304] exit with status 64000
+2025-12-09 12:38:12 pid:1218513 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:12 pid:1217530 worker[chat-demo:1218513] exit with status 64000
+2025-12-09 12:38:17 pid:1218544 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:17 pid:1217530 worker[chat-demo:1218544] exit with status 64000
+2025-12-09 12:38:24 pid:1218545 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:24 pid:1217530 worker[chat-demo:1218545] exit with status 64000
+2025-12-09 12:38:31 pid:1218785 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:31 pid:1217530 worker[chat-demo:1218785] exit with status 64000
+2025-12-09 12:38:36 pid:1218816 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:36 pid:1217530 worker[chat-demo:1218816] exit with status 64000
+2025-12-09 12:38:40 pid:1218884 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:40 pid:1217530 worker[chat-demo:1218884] exit with status 64000
+2025-12-09 12:38:45 pid:1219057 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:255
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(471): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Protocols/Websocket.php(98): Workerman\Protocols\Websocket::dealHandshake()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(703): Workerman\Protocols\Websocket::input()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1901): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1836): Workerman\Worker::monitorWorkersForLinux()
+#9 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(603): Workerman\Worker::monitorWorkers()
+#10 /root/nexusphp/workerman_chat_server.php(611): Workerman\Worker::runAll()
+#11 {main}
+2025-12-09 12:38:45 pid:1217530 worker[chat-demo:1219057] exit with status 64000
+2025-12-09 12:39:49 pid:1217530 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-09 12:39:49 pid:1217530 Workerman[workerman_chat_server.php] stopping
+2025-12-09 12:39:49 pid:1217530 Workerman[workerman_chat_server.php] has been stopped
+2025-12-09 12:39:52 pid:1220508 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 02:51:50 pid:1220508 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 02:51:50 pid:1220508 Workerman[workerman_chat_server.php] stopping
+2025-12-10 02:51:51 pid:1220508 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 02:51:52 pid:1428134 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 02:54:35 pid:1428134 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 02:54:35 pid:1428134 Workerman[workerman_chat_server.php] stopping
+2025-12-10 02:54:35 pid:1428134 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 02:54:39 pid:1430418 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 02:58:47 pid:1430418 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 02:58:47 pid:1430418 Workerman[workerman_chat_server.php] stopping
+2025-12-10 02:58:47 pid:1430418 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 02:58:51 pid:1434856 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 03:09:35 pid:1434856 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 03:09:35 pid:1434856 Workerman[workerman_chat_server.php] stopping
+2025-12-10 03:09:35 pid:1434856 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 03:10:27 pid:1440338 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 03:14:07 pid:1440338 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 03:14:07 pid:1440338 Workerman[workerman_chat_server.php] stopping
+2025-12-10 03:14:07 pid:1440338 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 03:14:16 pid:1443190 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 03:26:56 pid:1443190 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 03:26:56 pid:1443190 Workerman[workerman_chat_server.php] stopping
+2025-12-10 03:26:56 pid:1443190 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 03:27:00 pid:1447559 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 03:27:12 pid:1447560 Error: Value of type null is not callable in /root/nexusphp/workerman_chat_server.php:600
+Stack trace:
+#0 /root/nexusphp/vendor/workerman/workerman/src/Connection/TcpConnection.php(742): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(601): Workerman\Worker::forkWorkers()
+#6 /root/nexusphp/workerman_chat_server.php(679): Workerman\Worker::runAll()
+#7 {main}
+2025-12-10 03:27:12 pid:1447559 worker[chat-demo:1447560] exit with status 64000
+2025-12-10 03:30:40 pid:1447559 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 03:30:40 pid:1447559 Workerman[workerman_chat_server.php] stopping
+2025-12-10 03:30:40 pid:1447559 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 03:30:43 pid:1450601 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 04:48:47 pid:1450601 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 04:48:47 pid:1450601 Workerman[workerman_chat_server.php] stopping
+2025-12-10 04:48:47 pid:1450601 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 04:49:01 pid:1475595 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 04:58:42 pid:1475595 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 04:58:42 pid:1475595 Workerman[workerman_chat_server.php] stopping
+2025-12-10 04:58:42 pid:1475595 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 05:00:35 pid:1543956 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 05:14:56 pid:1543956 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 05:14:56 pid:1543956 Workerman[workerman_chat_server.php] stopping
+2025-12-10 05:14:56 pid:1543956 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 05:14:57 pid:1553500 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 05:34:25 pid:1553500 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 05:34:25 pid:1553500 Workerman[workerman_chat_server.php] stopping
+2025-12-10 05:34:25 pid:1553500 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 05:34:30 pid:1565797 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 06:21:04 pid:1565797 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 06:21:04 pid:1565797 Workerman[workerman_chat_server.php] stopping
+2025-12-10 06:21:04 pid:1565797 Workerman[workerman_chat_server.php] has been stopped
+2025-12-10 06:21:06 pid:1592803 Workerman[workerman_chat_server.php] start in DEBUG mode
+2025-12-10 06:25:44 pid:1592804 TypeError: {closure}(): Argument #3 ($playerName) must be of type string, null given, called in /root/nexusphp/workerman_chat_server.php on line 228 and defined in /root/nexusphp/workerman_chat_server.php:200
+Stack trace:
+#0 /root/nexusphp/workerman_chat_server.php(228): {closure}()
+#1 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(483): {closure}()
+#2 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(340): Workerman\Events\Select->safeCall()
+#3 /root/nexusphp/vendor/workerman/workerman/src/Events/Select.php(426): Workerman\Events\Select->tick()
+#4 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1756): Workerman\Events\Select->run()
+#5 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1552): Workerman\Worker::forkOneWorkerForLinux()
+#6 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(1532): Workerman\Worker::forkWorkersForLinux()
+#7 /root/nexusphp/vendor/workerman/workerman/src/Worker.php(601): Workerman\Worker::forkWorkers()
+#8 /root/nexusphp/workerman_chat_server.php(1066): Workerman\Worker::runAll()
+#9 {main}
+2025-12-10 06:25:44 pid:1592803 worker[chat-demo:1592804] exit with status 64000
+2025-12-10 06:37:57 pid:1592803 Workerman[workerman_chat_server.php] received signal SIGINT
+2025-12-10 06:37:57 pid:1592803 Workerman[workerman_chat_server.php] stopping
+2025-12-10 06:37:57 pid:1592803 Workerman[workerman_chat_server.php] has been stopped

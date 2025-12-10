@@ -43,6 +43,10 @@ class BonusLogs extends NexusModel
     const BUSINESS_TYPE_TASK_PASS_REWARD = 21;
     const BUSINESS_TYPE_REWARD_TORRENT = 22;
     const BUSINESS_TYPE_BUY_INVITE = 23;
+    const BUSINESS_TYPE_MARS_DUEL_BET = 24; // 火星幸运局下注扣除
+    const BUSINESS_TYPE_MARS_DUEL_OWNER_RAKE = 25; // 火星幸运局老板抽成
+    const BUSINESS_TYPE_MARS_DUEL_PLATFORM_RAKE = 26; // 火星幸运局平台抽成
+    const BUSINESS_TYPE_MARS_DUEL_WINNER = 27; // 火星幸运局赢家获得
 
     //获得类，普通获得，1000 起步
     const BUSINESS_TYPE_ROLE_WORK_SALARY = 1000;
@@ -85,6 +89,10 @@ class BonusLogs extends NexusModel
         self::BUSINESS_TYPE_TASK_PASS_REWARD => ['text' => 'Task success reward'],
         self::BUSINESS_TYPE_REWARD_TORRENT => ['text' => 'Reward torrent'],
         self::BUSINESS_TYPE_BUY_INVITE => ['text' => 'Buy invite'],
+        self::BUSINESS_TYPE_MARS_DUEL_BET => ['text' => 'Mars Duel Bet'],
+        self::BUSINESS_TYPE_MARS_DUEL_OWNER_RAKE => ['text' => 'Mars Duel Owner Rake'],
+        self::BUSINESS_TYPE_MARS_DUEL_PLATFORM_RAKE => ['text' => 'Mars Duel Platform Rake'],
+        self::BUSINESS_TYPE_MARS_DUEL_WINNER => ['text' => 'Mars Duel Winner'],
 
         self::BUSINESS_TYPE_ROLE_WORK_SALARY => ['text' => 'Role work salary'],
         self::BUSINESS_TYPE_TORRENT_BE_DOWNLOADED => ['text' => 'Torrent be downloaded'],

@@ -299,6 +299,15 @@ elseif ($action == 'savesettings_misc')
         $data[$config] = $$config ?? null;
     }
     saveSetting('misc', $data, 'no');
+
+    // 保存 PVP WS 配置
+    $pvp_ws_host = trim($_POST['pvp_ws_host'] ?? 'localhost');
+    $pvp_ws_port = intval($_POST['pvp_ws_port'] ?? 2346);
+    if ($pvp_ws_port <= 0) $pvp_ws_port = 2346;
+    saveSetting('pvp', [
+        'ws_host' => $pvp_ws_host,
+        'ws_port' => $pvp_ws_port,
+    ]);
     $actiontime = date("F j, Y, g:i a");
     write_log("Misc settings updated by {$CURUSER['username']}. $actiontime",'mod');
     go_back();
@@ -943,6 +952,10 @@ elseif ($action == 'miscsettings')
     print ("<form method='post' action='".$_SERVER["SCRIPT_NAME"]."'><input type='hidden' name='action' value='savesettings_misc'>");
     tr($lang_settings['row_misc_donation_custom'],"<textarea cols=\"100\"  rows=\"10\" name='donation_custom'>".($misc['donation_custom'] ?? '')."</textarea><br/>".$lang_settings['text_donation_custom_note'], 1);
 	tr($lang_settings['row_protected_forum'], "<input type='text' style=\"width: 100px\" name='protected_forum' value='".($misc["protected_forum"] ??'')."'> ".$lang_settings['text_protected_forum'], 1);
+    $pvpWsHost = get_setting('pvp.ws_host', 'localhost');
+    $pvpWsPort = get_setting('pvp.ws_port', 2346);
+    tr('PVP WS Host', "<input type='text' style=\"width: 160px\" name='pvp_ws_host' value='".htmlspecialchars($pvpWsHost, ENT_QUOTES)."'> 默认 localhost", 1);
+    tr('PVP WS Port', "<input type='number' style=\"width: 160px\" name='pvp_ws_port' value='".htmlspecialchars($pvpWsPort, ENT_QUOTES)."'> 默认 2346", 1);
 	tr($lang_settings['row_save_settings'],"<input type='submit' name='save' value='".$lang_settings['submit_save_settings']."'>", 1);
     print ("</form>");
 }
