@@ -779,6 +779,121 @@ $worker->onMessage = function (TcpConnection $connection, $data) use (&$roomStat
         return;
     }
 
+    if ($isJson && ($decoded['type'] ?? '') === 'switch_seat') {
+        $targetSeat = intval($decoded['seat'] ?? 0);
+        if (!in_array($targetSeat, [1, 2], true)) {
+            $connection->send(json_encode([
+                'type' => 'error',
+                'text' => '座位无效',
+            ], JSON_UNESCAPED_UNICODE));
+            return;
+        }
+        $user = $connection->user ?? 'guest';
+        $uid = $connection->uid ?? null;
+        $currentSeat = $connection->seat ?? null;
+        $status = $roomState[$room]['status'] ?? 'idle';
+
+        // 游戏进行中不允许换座
+        if ($status !== 'idle') {
+            $connection->send(json_encode([
+                'type' => 'error',
+                'text' => '对局进行中，暂不可换座',
+            ], JSON_UNESCAPED_UNICODE));
+            return;
+        }
+
+        // 如果目标座位已被他人占用，拒绝
+        if ($targetSeat === 1 && ($roomState[$room]['p1'] ?? null) !== null && ($roomState[$room]['p1'] ?? null) !== $user) {
+            $connection->send(json_encode([
+                'type' => 'error',
+                'text' => '该座位已被占用',
+            ], JSON_UNESCAPED_UNICODE));
+            return;
+        }
+        if ($targetSeat === 2 && ($roomState[$room]['p2'] ?? null) !== null && ($roomState[$room]['p2'] ?? null) !== $user) {
+            $connection->send(json_encode([
+                'type' => 'error',
+                'text' => '该座位已被占用',
+            ], JSON_UNESCAPED_UNICODE));
+            return;
+        }
+
+        // 如果原本就在目标座位，直接返回
+        if ($currentSeat === $targetSeat) {
+            return;
+        }
+
+        // 从当前座位移除
+        if ($currentSeat === 1 && ($roomState[$room]['p1'] ?? null) === $user) {
+            $roomState[$room]['p1'] = null;
+            $roomState[$room]['p1_id'] = null;
+            unset($roomState[$room]['player_last_activity']['p1']);
+            $roomState[$room]['ready']['p1'] = false;
+        } elseif ($currentSeat === 2 && ($roomState[$room]['p2'] ?? null) === $user) {
+            $roomState[$room]['p2'] = null;
+            $roomState[$room]['p2_id'] = null;
+            unset($roomState[$room]['player_last_activity']['p2']);
+            $roomState[$room]['ready']['p2'] = false;
+        }
+
+        // 从观众列表移除（防止重复）
+        if (isset($roomState[$room]['spectators_list'])) {
+            $roomState[$room]['spectators_list'] = array_values(array_filter(
+                $roomState[$room]['spectators_list'],
+                fn($u) => $u !== $user
+            ));
+        }
+
+        // 放入目标座位
+        if ($targetSeat === 1) {
+            $roomState[$room]['p1'] = $user;
+            $roomState[$room]['p1_id'] = $uid;
+            $roomState[$room]['ready']['p1'] = false;
+        } else {
+            $roomState[$room]['p2'] = $user;
+            $roomState[$room]['p2_id'] = $uid;
+            $roomState[$room]['ready']['p2'] = false;
+        }
+
+        // 更新连接角色/座位
+        $connection->role = 'player';
+        $connection->seat = $targetSeat;
+
+        // 重置状态为 idle
+        $roomState[$room]['status'] = 'idle';
+        $roomState[$room]['turn'] = null;
+        $roomState[$room]['ready']['p1'] = $roomState[$room]['ready']['p1'] ?? false;
+        $roomState[$room]['ready']['p2'] = $roomState[$room]['ready']['p2'] ?? false;
+        $roomState[$room]['last_result'] = null;
+        $roomState[$room]['duel_settled'] = false;
+
+        $broadcastRoom($room, json_encode([
+            'type' => 'system',
+            'text' => "{$user} 切换到座位 {$targetSeat}",
+        ], JSON_UNESCAPED_UNICODE));
+
+        // 广播房间更新
+        $broadcastRoom($room, json_encode([
+            'type' => 'room_update',
+            'room' => $room,
+            'players' => [
+                'p1' => $roomState[$room]['p1'],
+                'p2' => $roomState[$room]['p2'],
+            ],
+            'spectators' => count($roomState[$room]['spectators_list'] ?? []),
+            'spectators_list' => $roomState[$room]['spectators_list'] ?? [],
+            'status' => $roomState[$room]['status'],
+            'last_result' => $roomState[$room]['last_result'] ?? null,
+            'owner_id' => $roomState[$room]['owner_id'] ?? null,
+            'owner_name' => $roomState[$room]['owner_name'] ?? null,
+            'owner_until' => $roomState[$room]['owner_until'] ?? null,
+            'bet_amount' => $roomState[$room]['bet_amount'] ?? 0,
+            'owner_rake_percent' => $roomState[$room]['owner_rake_percent'] ?? 0,
+            'table_id' => $roomState[$room]['table_id'] ?? 0,
+        ], JSON_UNESCAPED_UNICODE));
+        return;
+    }
+
     if ($isJson && ($decoded['type'] ?? '') === 'kick_player') {
         // 房主踢人功能
         $kickerUid = $connection->uid ?? 0;

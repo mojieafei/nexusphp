@@ -1648,6 +1648,15 @@ $defaultPort = 2346;
             ws.send(JSON.stringify({type: 'leave_seat'}));
         }
 
+        function sendSwitchSeat(seat) {
+            if (ws && ws.readyState === 1) {
+                ws.send(JSON.stringify({type: 'switch_seat', seat: seat}));
+            } else {
+                // 如果未连接，直接按玩家身份连接
+                connect(currentRoom, 'player', seat, lastConnectParams.tableId, lastConnectParams.ownerId);
+            }
+        }
+
         function sendKickPlayer(seat) {
             if (!ws || ws.readyState !== 1) return;
             if (!isTableOwner) {
@@ -1728,14 +1737,14 @@ $defaultPort = 2346;
                         alert('请先进入房间');
                         return;
                     }
-                    // 检查座位是否已被占用
+                    // 检查座位是否已被占用（前端快速判断，最终以后端为准）
                     var seatBody = seat === 1 ? document.querySelector('#seat1 .body').textContent : document.querySelector('#seat2 .body').textContent;
                     if (seatBody !== '空位' && seatBody !== user) {
                         alert('该座位已被占用');
                         return;
                     }
-                    // 重新连接为玩家角色
-                    connect(currentRoom, 'player', seat);
+                    // 不断开重连，改为发送切换座位消息
+                    sendSwitchSeat(seat);
                 }
             }
         });
