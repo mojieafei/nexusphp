@@ -624,6 +624,72 @@ $defaultPort = 2346;
             font-size: 14px;
         }
         
+        #hidden-select-modal {
+            position: fixed;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 10001;
+        }
+        
+        #hidden-select-modal .panel {
+            background: linear-gradient(135deg, rgba(10, 22, 40, 0.98), rgba(30, 27, 75, 0.98));
+            border: 2px solid rgba(251, 191, 36, 0.5);
+            border-radius: 16px;
+            padding: 24px;
+            width: 420px;
+            box-shadow: 0 0 40px rgba(251, 191, 36, 0.4);
+            backdrop-filter: blur(15px);
+        }
+        
+        #hidden-select-modal h4 {
+            margin: 0 0 12px 0;
+            color: #fbbf24;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+            font-size: 20px;
+            text-align: center;
+        }
+        
+        #hidden-select-indexes button {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            border: 2px solid rgba(0, 212, 255, 0.4);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(168, 85, 247, 0.2));
+            color: #00d4ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #hidden-select-indexes button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+            border-color: rgba(0, 212, 255, 0.6);
+        }
+        
+        #hidden-select-indexes button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(107, 114, 128, 0.3);
+            border-color: rgba(107, 114, 128, 0.5);
+            color: #6b7280;
+        }
+        
+        #hidden-select-indexes button.selected {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.4), rgba(245, 158, 11, 0.4));
+            border-color: rgba(251, 191, 36, 0.6);
+            color: #fbbf24;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+        }
+        
         .leave-seat-btn {
             background: linear-gradient(135deg, rgba(107, 114, 128, 0.8), rgba(75, 85, 99, 0.8)) !important;
             color: #fff !important;
@@ -835,6 +901,14 @@ $defaultPort = 2346;
                 <h4>对战内容区域</h4>
                 <p>两名玩家就位后自动开局，掷 2 颗骰子比大小。支持观战与聊天。</p>
                 <p id="spectators" class="small">观众：0</p>
+                <div id="hidden-dice-display" style="margin-bottom: 16px; padding: 12px; background: rgba(10, 22, 40, 0.6); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; display: none;">
+                    <div style="color: #fbbf24; font-weight: 600; margin-bottom: 8px; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);">🎲 暗骰</div>
+                    <div id="hidden-dice-p1" style="margin-bottom: 8px; color: #9ca3af; font-size: 14px;"></div>
+                    <div id="hidden-dice-p2" style="margin-bottom: 8px; color: #9ca3af; font-size: 14px;"></div>
+                    <div id="pool-amount-display" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(251, 191, 36, 0.2); color: #fbbf24; font-size: 14px; font-weight: 600;">
+                        💰 当前奖池：<span id="pool-amount-value" style="color: #00d4ff;">0</span> 魔力值
+                    </div>
+                </div>
                 <div id="duel-result">
                     <div class="small">对局结果将在这里显示</div>
                 </div>
@@ -901,6 +975,15 @@ $defaultPort = 2346;
             <div class="small" id="roll-countdown">剩余 30 秒</div>
         </div>
     </div>
+    <div id="hidden-select-modal">
+        <div class="panel">
+            <h4 id="hidden-select-title">选择暗骰序号</h4>
+            <div class="small" id="hidden-select-note" style="margin-bottom: 12px; color: #fbbf24;">请选择一枚暗骰序号（1-10），点数服务器保密</div>
+            <div id="hidden-select-countdown" style="margin-bottom: 12px; color: #f59e0b; font-weight: 600; text-align: center; font-size: 16px;"></div>
+            <div id="hidden-select-indexes" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px;"></div>
+            <div id="hidden-select-status" class="small" style="text-align: center; color: #9ca3af; margin-top: 8px;"></div>
+        </div>
+    </div>
 
     <script>
     (function() {
@@ -944,6 +1027,19 @@ $defaultPort = 2346;
         var resultEl = document.getElementById('duel-result');
         var startBtn = document.getElementById('start');
         if (startBtn) startBtn.style.display = 'none'; // 观众默认不显示开始按钮
+        var hiddenDiceDisplay = document.getElementById('hidden-dice-display');
+        var hiddenDiceP1 = document.getElementById('hidden-dice-p1');
+        var hiddenDiceP2 = document.getElementById('hidden-dice-p2');
+        var poolAmountValue = document.getElementById('pool-amount-value');
+        var currentPoolAmount = 0; // 当前奖池金额
+        var myHiddenDiceIndex = null; // 自己选择的暗骰序号
+        var opponentHiddenDiceIndex = null; // 对手选择的暗骰序号
+        var currentDiceLog = {p1: [], p2: []}; // 当前对局的骰子记录（包括暗骰和明骰）
+        var hiddenSelectContainer = document.getElementById('hidden-select');
+        var hiddenIndexesEl = document.getElementById('hidden-indexes');
+        var decisionContainer = document.getElementById('decision-box');
+        var btnCall = document.getElementById('btn-call');
+        var btnFold = document.getElementById('btn-fold');
 
         function updateStartButtonVisibility() {
             if (!startBtn) return;
@@ -952,6 +1048,325 @@ $defaultPort = 2346;
             } else {
                 startBtn.style.display = 'none';
             }
+        }
+
+        // 暗骰选择 UI（弹窗版本）
+        function showHiddenSelectModal(data) {
+            if (!hiddenSelectModal || !hiddenSelectIndexes) return;
+            var availableIndexes = data.available_indexes || range(1, 10);
+            var selectedIndexes = data.selected_indexes || {};
+            var starter = data.starter || 'p1';
+            var timeout = data.starter_timeout || 5;
+            var isStarter = (currentSeat === 1 && starter === 'p1') || (currentSeat === 2 && starter === 'p2');
+            
+            hiddenSelectModal.style.display = 'flex';
+            hiddenSelected = false;
+            
+            // 生成序号按钮
+            var html = '';
+            for (var i = 1; i <= 10; i++) {
+                var p1Idx = (selectedIndexes && selectedIndexes.p1) ? selectedIndexes.p1 : null;
+                var p2Idx = (selectedIndexes && selectedIndexes.p2) ? selectedIndexes.p2 : null;
+                var isMySelection = false;
+                var isOtherSelection = false;
+                
+                // 检查选择状态
+                if (p1Idx === i) {
+                    isMySelection = (currentSeat === 1);
+                    isOtherSelection = (currentSeat !== 1);
+                } else if (p2Idx === i) {
+                    isMySelection = (currentSeat === 2);
+                    isOtherSelection = (currentSeat !== 2);
+                }
+                
+                var disabled = isOtherSelection || hiddenSelected;
+                var className = isMySelection ? 'selected' : '';
+                
+                html += '<button class="' + className + '" data-idx="' + i + '" ' + 
+                        (disabled ? 'disabled' : '') + '>' + i + '</button>';
+            }
+            hiddenSelectIndexes.innerHTML = html;
+            
+            // 如果是先手玩家，显示倒计时
+            if (isStarter && !hiddenSelected) {
+                hiddenSelectDeadline = Date.now() + timeout * 1000;
+                if (hiddenSelectTimer) clearInterval(hiddenSelectTimer);
+                hiddenSelectTimer = setInterval(function() {
+                    var left = Math.max(0, Math.ceil((hiddenSelectDeadline - Date.now()) / 1000));
+                    if (hiddenSelectCountdown) {
+                        hiddenSelectCountdown.textContent = '⏰ 剩余时间：' + left + ' 秒（超时将自动随机选择）';
+                        hiddenSelectCountdown.style.display = 'block';
+                    }
+                    if (left <= 0) {
+                        clearInterval(hiddenSelectTimer);
+                        hiddenSelectTimer = null;
+                        if (hiddenSelectCountdown) {
+                            hiddenSelectCountdown.textContent = '⏰ 时间到，自动选择中...';
+                        }
+                    }
+                }, 200);
+            } else {
+                if (hiddenSelectCountdown) {
+                    hiddenSelectCountdown.style.display = 'none';
+                }
+            }
+            
+            // 更新状态提示
+            if (hiddenSelectStatus) {
+                if (hiddenSelected) {
+                    hiddenSelectStatus.textContent = '✓ 您已选择暗骰，等待对方选择...';
+                } else if (selectedIndexes.length > 0) {
+                    hiddenSelectStatus.textContent = '⚠ 对手已选择部分序号，请选择其他序号';
+                } else {
+                    hiddenSelectStatus.textContent = '';
+                }
+            }
+        }
+        
+        function updateHiddenSelectModal(selectedIndexes, playerKey, isAuto) {
+            if (!hiddenSelectModal || hiddenSelectModal.style.display !== 'flex') return;
+            if (!hiddenSelectIndexes) return;
+            
+            // 更新按钮状态
+            var buttons = hiddenSelectIndexes.querySelectorAll('button');
+            buttons.forEach(function(btn) {
+                var idx = parseInt(btn.getAttribute('data-idx'), 10);
+                var isMySelection = false;
+                var isOtherSelection = false;
+                
+                // 检查选择状态（selectedIndexes 可能是对象 {p1: 3, p2: 5} 或数组）
+                var p1Idx = (selectedIndexes && typeof selectedIndexes === 'object' && selectedIndexes.p1) ? selectedIndexes.p1 : null;
+                var p2Idx = (selectedIndexes && typeof selectedIndexes === 'object' && selectedIndexes.p2) ? selectedIndexes.p2 : null;
+                
+                if (p1Idx === idx) {
+                    isMySelection = (currentSeat === 1);
+                    isOtherSelection = (currentSeat !== 1);
+                } else if (p2Idx === idx) {
+                    isMySelection = (currentSeat === 2);
+                    isOtherSelection = (currentSeat !== 2);
+                }
+                
+                if (isMySelection) {
+                    btn.classList.add('selected');
+                    btn.disabled = true;
+                } else if (isOtherSelection) {
+                    btn.disabled = true;
+                    btn.classList.remove('selected');
+                } else if (hiddenSelected) {
+                    btn.disabled = true;
+                } else {
+                    btn.disabled = false;
+                }
+            });
+            
+            // 更新状态提示
+            if (hiddenSelectStatus) {
+                if (hiddenSelected) {
+                    hiddenSelectStatus.textContent = '✓ 您已选择暗骰，等待对方选择...';
+                } else if (selectedIndexes && ((selectedIndexes.p1 !== null && selectedIndexes.p1 !== undefined) || (selectedIndexes.p2 !== null && selectedIndexes.p2 !== undefined))) {
+                    hiddenSelectStatus.textContent = '⚠ 对手已选择部分序号，请选择其他序号';
+                } else {
+                    hiddenSelectStatus.textContent = '';
+                }
+            }
+        }
+        
+        function hideHiddenSelectModal() {
+            if (hiddenSelectModal) hiddenSelectModal.style.display = 'none';
+            if (hiddenSelectTimer) {
+                clearInterval(hiddenSelectTimer);
+                hiddenSelectTimer = null;
+            }
+            if (hiddenSelectCountdown) {
+                hiddenSelectCountdown.style.display = 'none';
+            }
+        }
+        
+        function sendHiddenSelect(idx) {
+            if (!ws || ws.readyState !== 1) return;
+            if (hiddenSelected) return;
+            ws.send(JSON.stringify({type: 'hidden_select', index: idx}));
+        }
+        
+        // 辅助函数：生成范围数组
+        function range(start, end) {
+            var arr = [];
+            for (var i = start; i <= end; i++) {
+                arr.push(i);
+            }
+            return arr;
+        }
+        
+        // 更新暗骰显示（包含所有骰子和总和）
+        function updateHiddenDiceDisplay() {
+            if (!hiddenDiceDisplay || !hiddenDiceP1 || !hiddenDiceP2) return;
+            
+            var p1Name = currentPlayers.p1 || '玩家一';
+            var p2Name = currentPlayers.p2 || '玩家二';
+            
+            // 确定p1和p2的暗骰序号
+            var p1Index = null;
+            var p2Index = null;
+            
+            if (currentSeat === 1) {
+                // 我是p1
+                p1Index = myHiddenDiceIndex;
+                p2Index = opponentHiddenDiceIndex;
+            } else if (currentSeat === 2) {
+                // 我是p2
+                p1Index = opponentHiddenDiceIndex;
+                p2Index = myHiddenDiceIndex;
+            } else {
+                // 观众，显示双方
+                p1Index = opponentHiddenDiceIndex; // p1的选择
+                p2Index = myHiddenDiceIndex; // p2的选择（观众视角）
+            }
+            
+            // 构建显示内容：暗骰 + 明骰 + 总和
+            function buildDiceDisplay(playerName, hiddenIndex, diceLog) {
+                var diceValues = [];
+                var openSum = 0;
+                
+                // 添加暗骰（用?表示）
+                if (hiddenIndex !== null) {
+                    diceValues.push('<span style="color: #fbbf24;">?</span>');
+                }
+                
+                // 添加明骰
+                if (diceLog && Array.isArray(diceLog)) {
+                    for (var i = 0; i < diceLog.length; i++) {
+                        if (diceLog[i].type === 'open') {
+                            var val = diceLog[i].val || 0;
+                            openSum += val;
+                            diceValues.push(val);
+                        }
+                    }
+                }
+                
+                // 构建显示字符串
+                var display = '<span style="color: #00d4ff;">' + playerName + '</span>：';
+                
+                if (diceValues.length === 0 && hiddenIndex === null) {
+                    // 未选择暗骰，也没有明骰
+                    display += '<span style="color: #6b7280;">未选择</span>';
+                } else {
+                    // 显示骰子数组和总和
+                    if (diceValues.length > 0) {
+                        display += '[' + diceValues.join(',') + ']';
+                    }
+                    
+                    // 计算并显示总和
+                    var sumDisplay = '';
+                    if (hiddenIndex !== null) {
+                        // 有暗骰，显示 ?+明骰总和
+                        if (openSum > 0) {
+                            sumDisplay = '<span style="color: #fbbf24;">?</span>+' + openSum;
+                        } else {
+                            sumDisplay = '<span style="color: #fbbf24;">?</span>';
+                        }
+                    } else {
+                        // 只有明骰
+                        sumDisplay = openSum.toString();
+                    }
+                    
+                    display += ' = <span style="color: #fbbf24; font-size: 18px; font-weight: 600; text-shadow: 0 0 10px rgba(251, 191, 36, 0.6);">' + sumDisplay + '</span>';
+                }
+                
+                return display;
+            }
+            
+            // 更新p1显示
+            hiddenDiceP1.innerHTML = buildDiceDisplay(p1Name, p1Index, currentDiceLog.p1);
+            
+            // 更新p2显示
+            hiddenDiceP2.innerHTML = buildDiceDisplay(p2Name, p2Index, currentDiceLog.p2);
+            
+            // 如果至少有一方选择了，显示暗骰区域
+            if (p1Index !== null || p2Index !== null || (currentDiceLog.p1 && currentDiceLog.p1.length > 0) || (currentDiceLog.p2 && currentDiceLog.p2.length > 0)) {
+                hiddenDiceDisplay.style.display = 'block';
+            } else {
+                hiddenDiceDisplay.style.display = 'none';
+            }
+        }
+        
+        // 对局结束后，显示暗骰的真实点数
+        function updateHiddenDiceDisplayWithResult(diceLog) {
+            if (!hiddenDiceDisplay || !hiddenDiceP1 || !hiddenDiceP2 || !diceLog) return;
+            
+            var p1Name = currentPlayers.p1 || '玩家一';
+            var p2Name = currentPlayers.p2 || '玩家二';
+            
+            // 从dice_log中提取暗骰信息
+            var p1Hidden = null;
+            var p2Hidden = null;
+            
+            if (diceLog.p1 && Array.isArray(diceLog.p1)) {
+                for (var i = 0; i < diceLog.p1.length; i++) {
+                    if (diceLog.p1[i].type === 'hidden') {
+                        p1Hidden = diceLog.p1[i];
+                        break;
+                    }
+                }
+            }
+            
+            if (diceLog.p2 && Array.isArray(diceLog.p2)) {
+                for (var i = 0; i < diceLog.p2.length; i++) {
+                    if (diceLog.p2[i].type === 'hidden') {
+                        p2Hidden = diceLog.p2[i];
+                        break;
+                    }
+                }
+            }
+            
+            // 更新显示（显示真实点数）
+            if (p1Hidden) {
+                hiddenDiceP1.innerHTML = '<span style="color: #00d4ff;">' + p1Name + '</span>：暗骰 #' + (p1Hidden.idx || '?') + ' = <span style="color: #fbbf24; font-size: 18px; font-weight: 600;">' + (p1Hidden.val || '?') + '</span>';
+            } else {
+                hiddenDiceP1.innerHTML = '<span style="color: #00d4ff;">' + p1Name + '</span>：未选择';
+            }
+            
+            if (p2Hidden) {
+                hiddenDiceP2.innerHTML = '<span style="color: #00d4ff;">' + p2Name + '</span>：暗骰 #' + (p2Hidden.idx || '?') + ' = <span style="color: #fbbf24; font-size: 18px; font-weight: 600;">' + (p2Hidden.val || '?') + '</span>';
+            } else {
+                hiddenDiceP2.innerHTML = '<span style="color: #00d4ff;">' + p2Name + '</span>：未选择';
+            }
+            
+            // 显示暗骰区域
+            if (p1Hidden || p2Hidden) {
+                hiddenDiceDisplay.style.display = 'block';
+            }
+        }
+
+        // 跟注/弃权
+        var decisionTimer = null;
+        var decisionDeadline = 0;
+        function showDecision(timeout) {
+            if (decisionContainer) decisionContainer.style.display = 'block';
+            if (btnCall) btnCall.disabled = false;
+            if (btnFold) btnFold.disabled = false;
+            decisionDeadline = Date.now() + (timeout || 15) * 1000;
+            if (decisionTimer) clearInterval(decisionTimer);
+            decisionTimer = setInterval(function() {
+                var left = Math.max(0, Math.ceil((decisionDeadline - Date.now()) / 1000));
+                decisionContainer.querySelector('.small').textContent = '选择跟注或弃权（剩余 ' + left + ' 秒）';
+                if (left <= 0) {
+                    clearInterval(decisionTimer);
+                    decisionTimer = null;
+                    if (btnCall) { btnCall.disabled = true; btnFold.disabled = true; }
+                }
+            }, 500);
+        }
+        function hideDecision() {
+            if (decisionTimer) { clearInterval(decisionTimer); decisionTimer = null; }
+            if (decisionContainer) decisionContainer.style.display = 'none';
+            if (btnCall) btnCall.disabled = true;
+            if (btnFold) btnFold.disabled = true;
+        }
+        function sendDecision(choice) {
+            if (!ws || ws.readyState !== 1) return;
+            ws.send(JSON.stringify({type: 'decision', choice: choice}));
+            if (btnCall) btnCall.disabled = true;
+            if (btnFold) btnFold.disabled = true;
         }
 
         function renderCurrentBonus(bonus) {
@@ -995,7 +1410,33 @@ $defaultPort = 2346;
         var rollSpell = document.getElementById('roll-spell');
         var rollConfirm = document.getElementById('roll-confirm');
         var rollCountdown = document.getElementById('roll-countdown');
-
+        var hiddenSelectModal = document.getElementById('hidden-select-modal');
+        var hiddenSelectIndexes = document.getElementById('hidden-select-indexes');
+        var hiddenSelectCountdown = document.getElementById('hidden-select-countdown');
+        var hiddenSelectStatus = document.getElementById('hidden-select-status');
+        var hiddenSelectTimer = null;
+        var hiddenSelectDeadline = 0;
+        // 新增：暗骰选择与跟注/弃权
+        // 若页面已有容器则复用，否则创建
+        if (!hiddenSelectContainer) {
+            hiddenSelectContainer = document.createElement('div');
+            hiddenSelectContainer.id = 'hidden-select';
+            hiddenSelectContainer.style.display = 'none';
+            hiddenSelectContainer.style.margin = '12px 0';
+            hiddenSelectContainer.innerHTML = '<div class="small" id="hidden-note" style="margin-bottom:6px;color:#fbbf24;">请选择暗骰序号</div><div id="hidden-indexes" style="display:flex;gap:6px;flex-wrap:wrap;"></div>';
+            document.getElementById('arena').insertBefore(hiddenSelectContainer, document.getElementById('arena').firstChild);
+            hiddenIndexesEl = hiddenSelectContainer.querySelector('#hidden-indexes');
+        }
+        if (!decisionContainer) {
+            decisionContainer = document.createElement('div');
+            decisionContainer.id = 'decision-box';
+            decisionContainer.style.display = 'none';
+            decisionContainer.style.margin = '12px 0';
+            decisionContainer.innerHTML = '<div class="small" style="margin-bottom:6px;color:#fbbf24;">选择跟注或弃权</div><button id="btn-call" class="btn" style="margin-right:8px;">跟注</button><button id="btn-fold" class="btn secondary">弃权</button>';
+            document.getElementById('arena').insertBefore(decisionContainer, document.getElementById('arena').firstChild);
+            btnCall = decisionContainer.querySelector('#btn-call');
+            btnFold = decisionContainer.querySelector('#btn-fold');
+        }
         function updateArenaInfo(roomKey) {
             var r = rooms.find(function (x) { return x.key === roomKey; });
             if (!r) {
@@ -1078,7 +1519,8 @@ $defaultPort = 2346;
             }
         }
 
-        function updateSeats(players, spectators) {
+        function updateSeats(players, spectators, roomState) {
+            roomState = roomState || {status: 'idle'};
             var p1 = players && players.p1 ? players.p1 : '空位';
             var p2 = players && players.p2 ? players.p2 : '空位';
             var seat1El = document.getElementById('seat1');
@@ -1171,6 +1613,73 @@ $defaultPort = 2346;
                 seat2El.appendChild(kickBtn2);
             }
             
+            // 创建召唤AI和踢掉AI按钮
+            var summonAiBtn1 = document.querySelector('#seat1 .summon-ai-btn');
+            var summonAiBtn2 = document.querySelector('#seat2 .summon-ai-btn');
+            var kickAiBtn1 = document.querySelector('#seat1 .kick-ai-btn');
+            var kickAiBtn2 = document.querySelector('#seat2 .kick-ai-btn');
+            
+            if (!summonAiBtn1) {
+                summonAiBtn1 = document.createElement('button');
+                summonAiBtn1.className = 'summon-ai-btn';
+                summonAiBtn1.textContent = '🤖 召唤AI';
+                summonAiBtn1.style.cssText = 'margin-top: 8px; width: 100%; background: linear-gradient(135deg, rgba(139, 92, 246, 0.8), rgba(124, 58, 237, 0.8)) !important; color: #fff !important; font-size: 13px !important; padding: 8px 16px !important; border: 1px solid rgba(139, 92, 246, 0.5) !important;';
+                summonAiBtn1.setAttribute('data-seat', '1');
+                seat1El.appendChild(summonAiBtn1);
+            }
+            if (!summonAiBtn2) {
+                summonAiBtn2 = document.createElement('button');
+                summonAiBtn2.className = 'summon-ai-btn';
+                summonAiBtn2.textContent = '🤖 召唤AI';
+                summonAiBtn2.style.cssText = 'margin-top: 8px; width: 100%; background: linear-gradient(135deg, rgba(139, 92, 246, 0.8), rgba(124, 58, 237, 0.8)) !important; color: #fff !important; font-size: 13px !important; padding: 8px 16px !important; border: 1px solid rgba(139, 92, 246, 0.5) !important;';
+                summonAiBtn2.setAttribute('data-seat', '2');
+                seat2El.appendChild(summonAiBtn2);
+            }
+            if (!kickAiBtn1) {
+                kickAiBtn1 = document.createElement('button');
+                kickAiBtn1.className = 'kick-ai-btn';
+                kickAiBtn1.textContent = '❌ 踢掉AI';
+                kickAiBtn1.style.cssText = 'margin-top: 8px; width: 100%; background: linear-gradient(135deg, rgba(239, 68, 68, 0.8), rgba(220, 38, 38, 0.8)) !important; color: #fff !important; font-size: 13px !important; padding: 8px 16px !important; border: 1px solid rgba(239, 68, 68, 0.5) !important;';
+                kickAiBtn1.setAttribute('data-seat', '1');
+                seat1El.appendChild(kickAiBtn1);
+            }
+            if (!kickAiBtn2) {
+                kickAiBtn2 = document.createElement('button');
+                kickAiBtn2.className = 'kick-ai-btn';
+                kickAiBtn2.textContent = '❌ 踢掉AI';
+                kickAiBtn2.style.cssText = 'margin-top: 8px; width: 100%; background: linear-gradient(135deg, rgba(239, 68, 68, 0.8), rgba(220, 38, 38, 0.8)) !important; color: #fff !important; font-size: 13px !important; padding: 8px 16px !important; border: 1px solid rgba(239, 68, 68, 0.5) !important;';
+                kickAiBtn2.setAttribute('data-seat', '2');
+                seat2El.appendChild(kickAiBtn2);
+            }
+            
+            // 显示/隐藏AI按钮
+            var isP1Ai = (p1 === 'AI玩家');
+            var isP2Ai = (p2 === 'AI玩家');
+            var isP1Me = (p1 === user);
+            var isP2Me = (p2 === user);
+            var currentStatus = (roomState && roomState.status) || 'idle';
+            var isGameIdle = (currentStatus === 'idle'); // 只有idle状态才能踢掉AI
+            
+            // 座位1的AI按钮
+            if (summonAiBtn1) {
+                // 如果座位1是空的，且座位2是当前用户，且游戏处于idle状态，显示召唤AI按钮
+                summonAiBtn1.style.display = (p1 === '空位' && isP2Me && isGameIdle) ? 'block' : 'none';
+            }
+            if (kickAiBtn1) {
+                // 如果座位1是AI，且座位2是当前用户，且游戏处于idle状态，显示踢掉AI按钮
+                kickAiBtn1.style.display = (isP1Ai && isP2Me && isGameIdle) ? 'block' : 'none';
+            }
+            
+            // 座位2的AI按钮
+            if (summonAiBtn2) {
+                // 如果座位2是空的，且座位1是当前用户，且游戏处于idle状态，显示召唤AI按钮
+                summonAiBtn2.style.display = (p2 === '空位' && isP1Me && isGameIdle) ? 'block' : 'none';
+            }
+            if (kickAiBtn2) {
+                // 如果座位2是AI，且座位1是当前用户，且游戏处于idle状态，显示踢掉AI按钮
+                kickAiBtn2.style.display = (isP2Ai && isP1Me && isGameIdle) ? 'block' : 'none';
+            }
+            
             if (btn1) {
                 if (players && players.p1) {
                     btn1.disabled = true;
@@ -1224,14 +1733,28 @@ $defaultPort = 2346;
                 resultEl.innerHTML = '<div class="small">对局结果将在这里显示</div>';
                 return;
             }
-            
-            var p1Wins = res.p1_sum > res.p2_sum;
-            var p2Wins = res.p2_sum > res.p1_sum;
-            var isDraw = res.p1_sum === res.p2_sum;
-            
+
+            // 兼容新格式（dice_log/sum1/sum2/fold）
+            var sum1 = res.sum1 || res.p1_sum || 0;
+            var sum2 = res.sum2 || res.p2_sum || 0;
+            var p1Wins = sum1 > sum2;
+            var p2Wins = sum2 > sum1;
+            var isDraw = sum1 === sum2;
+            var foldInfo = res.fold ? '<div class="small" style="color:#f87171;">有玩家弃权，本局提前结算</div>' : '';
+
+            function renderDiceList(list) {
+                if (!Array.isArray(list) || list.length === 0) return '<div class="small">无</div>';
+                return list.map(function (d) {
+                    var label = d.type === 'hidden' ? '暗' : '明';
+                    var val = d.val || 0;
+                    var idx = d.idx ? ('#' + d.idx) : '';
+                    return '<span class="badge" style="margin-right:6px; margin-bottom:4px; display:inline-block; padding:4px 8px; border-radius:6px; background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.3); color:#e5e7eb;">' + label + idx + '：' + val + '</span>';
+                }).join('');
+            }
+
             var dice1Class = p1Wins ? 'winner' : (p2Wins ? 'loser' : '');
             var dice2Class = p2Wins ? 'winner' : (p1Wins ? 'loser' : '');
-            
+
             var winnerText = '';
             if (res.winner) {
                 var bonus = res.winner_bonus || 0;
@@ -1245,34 +1768,30 @@ $defaultPort = 2346;
                 winnerText = '<div class="result-winner">🤝 平局</div>';
                 if (p1Bonus > 0 || p2Bonus > 0) {
                     winnerText += '<div style="margin-top: 12px; padding: 12px; background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 8px; color: #00d4ff; font-size: 14px; text-align: center;">';
-                    if (p1Bonus > 0) {
-                        winnerText += '<div>' + res.p1 + ' 获得 ' + p1Bonus.toLocaleString() + ' 魔力值</div>';
-                    }
-                    if (p2Bonus > 0) {
-                        winnerText += '<div>' + res.p2 + ' 获得 ' + p2Bonus.toLocaleString() + ' 魔力值</div>';
-                    }
+                    if (p1Bonus > 0) winnerText += '<div>' + res.p1 + ' 获得 ' + p1Bonus.toLocaleString() + ' 魔力值</div>';
+                    if (p2Bonus > 0) winnerText += '<div>' + res.p2 + ' 获得 ' + p2Bonus.toLocaleString() + ' 魔力值</div>';
                     winnerText += '</div>';
                 }
             }
-            
+
+            var diceLogP1 = renderDiceList(res.dice_log && res.dice_log.p1);
+            var diceLogP2 = renderDiceList(res.dice_log && res.dice_log.p2);
+
             resultEl.innerHTML = '' +
                 '<div style="margin-bottom: 12px; color: #9ca3af; font-size: 13px;">时间：' + (res.time || '') + '</div>' +
+                foldInfo +
                 '<div style="margin-bottom: 16px;">' +
                     '<div style="margin-bottom: 8px; color: #9ca3af; font-size: 13px;">' + res.p1 + '</div>' +
+                    '<div style="margin-bottom:6px;">' + diceLogP1 + '</div>' +
                     '<div class="dice-container">' +
-                        '<div class="dice ' + dice1Class + '">' + res.p1_roll[0] + '</div>' +
-                        '<span style="color: #00d4ff; font-size: 20px; margin: 0 8px;">+</span>' +
-                        '<div class="dice ' + dice1Class + '">' + res.p1_roll[1] + '</div>' +
-                        '<span style="color: #00d4ff; font-size: 18px; margin-left: 12px; font-weight: 600;">= ' + res.p1_sum + '</span>' +
+                        '<span style="color: #00d4ff; font-size: 18px; font-weight: 600;">合计：' + sum1 + '</span>' +
                     '</div>' +
                 '</div>' +
                 '<div style="margin-bottom: 16px;">' +
                     '<div style="margin-bottom: 8px; color: #9ca3af; font-size: 13px;">' + res.p2 + '</div>' +
+                    '<div style="margin-bottom:6px;">' + diceLogP2 + '</div>' +
                     '<div class="dice-container">' +
-                        '<div class="dice ' + dice2Class + '">' + res.p2_roll[0] + '</div>' +
-                        '<span style="color: #00d4ff; font-size: 20px; margin: 0 8px;">+</span>' +
-                        '<div class="dice ' + dice2Class + '">' + res.p2_roll[1] + '</div>' +
-                        '<span style="color: #00d4ff; font-size: 18px; margin-left: 12px; font-weight: 600;">= ' + res.p2_sum + '</span>' +
+                        '<span style="color: #00d4ff; font-size: 18px; font-weight: 600;">合计：' + sum2 + '</span>' +
                     '</div>' +
                 '</div>' +
                 winnerText;
@@ -1302,6 +1821,7 @@ $defaultPort = 2346;
         var winStats = {p1: 0, p2: 0};
         var history = [];
         var totalBonusEarned = 0; // 累计获得的魔力值
+        var hiddenSelected = false; // 是否已选暗骰
         var rollTimer = null;
         var rollDeadline = 0;
         var pendingTurn = null;
@@ -1310,20 +1830,30 @@ $defaultPort = 2346;
         function resetStats(players) {
             currentPlayers = {p1: players.p1 || null, p2: players.p2 || null};
             winStats = {p1: 0, p2: 0};
+            currentDiceLog = {p1: [], p2: []}; // 重置骰子记录
             history = [];
             totalBonusEarned = 0; // 重置累计魔力值
             statP1.textContent = '玩家一：0 胜';
             statP2.textContent = '玩家二：0 胜';
             historyEl.innerHTML = '<div class="small">对局记录将在这里显示</div>';
             updateSeats(players, null); // 更新座位显示
+            // 重置暗骰显示
+            myHiddenDiceIndex = null;
+            opponentHiddenDiceIndex = null;
+            if (hiddenDiceDisplay) {
+                hiddenDiceDisplay.style.display = 'none';
+            }
         }
 
         function updateHistory(res) {
             if (!res) return;
+            var p1list = (res.dice_log && res.dice_log.p1 || []).map(function(d){return d.val;}).join(',');
+            var p2list = (res.dice_log && res.dice_log.p2 || []).map(function(d){return d.val;}).join(',');
             var entry = '[' + (res.time || '') + '] ' +
-                res.p1 + ' (' + res.p1_roll.join('+') + '=' + res.p1_sum + ') vs ' +
-                res.p2 + ' (' + res.p2_roll.join('+') + '=' + res.p2_sum + ') => ' +
-                (res.winner ? ('胜者 ' + res.winner) : '平局');
+                res.p1 + ' [' + p1list + ']=' + (res.sum1 || res.p1_sum || 0) + ' vs ' +
+                res.p2 + ' [' + p2list + ']=' + (res.sum2 || res.p2_sum || 0) + ' => ' +
+                (res.winner ? ('胜者 ' + res.winner) : '平局') +
+                (res.fold ? '（弃权）' : '');
             history.unshift(entry);
             if (history.length > 20) history.pop();
             historyEl.innerHTML = history.map(function (h) {
@@ -1340,12 +1870,8 @@ $defaultPort = 2346;
             html += '<div class="dice-container">';
             if (partialRolls.p1) {
                 html += '<div class="dice">' + partialRolls.p1.roll[0] + '</div>';
-                html += '<span style="color: #00d4ff; font-size: 20px; margin: 0 8px;">+</span>';
-                html += '<div class="dice">' + partialRolls.p1.roll[1] + '</div>';
-                html += '<span style="color: #00d4ff; font-size: 18px; margin-left: 12px; font-weight: 600;">= ' + partialRolls.p1.sum + '</span>';
+                html += '<span style="color: #00d4ff; font-size: 18px; margin-left: 12px; font-weight: 600;">点数：' + partialRolls.p1.sum + '</span>';
             } else {
-                html += '<div class="dice rolling">?</div>';
-                html += '<span style="color: #00d4ff; font-size: 20px; margin: 0 8px;">+</span>';
                 html += '<div class="dice rolling">?</div>';
                 html += '<span style="color: #9ca3af; font-size: 14px; margin-left: 12px;">等待中...</span>';
             }
@@ -1357,12 +1883,8 @@ $defaultPort = 2346;
             html += '<div class="dice-container">';
             if (partialRolls.p2) {
                 html += '<div class="dice">' + partialRolls.p2.roll[0] + '</div>';
-                html += '<span style="color: #00d4ff; font-size: 20px; margin: 0 8px;">+</span>';
-                html += '<div class="dice">' + partialRolls.p2.roll[1] + '</div>';
-                html += '<span style="color: #00d4ff; font-size: 18px; margin-left: 12px; font-weight: 600;">= ' + partialRolls.p2.sum + '</span>';
+                html += '<span style="color: #00d4ff; font-size: 18px; margin-left: 12px; font-weight: 600;">点数：' + partialRolls.p2.sum + '</span>';
             } else {
-                html += '<div class="dice rolling">?</div>';
-                html += '<span style="color: #00d4ff; font-size: 20px; margin: 0 8px;">+</span>';
                 html += '<div class="dice rolling">?</div>';
                 html += '<span style="color: #9ca3af; font-size: 14px; margin-left: 12px;">等待中...</span>';
             }
@@ -1403,11 +1925,10 @@ $defaultPort = 2346;
             // 设置玩家名字
             diceAnimationPlayer.textContent = playerName + ' 投掷中...';
             
-            // 重置骰子状态
+            // 重置骰子状态（只显示一个骰子）
             diceLarge1.textContent = '?';
-            diceLarge2.textContent = '?';
             diceLarge1.className = 'dice-large rolling';
-            diceLarge2.className = 'dice-large rolling';
+            diceLarge2.style.display = 'none'; // 隐藏第二个骰子
             diceAnimationResult.style.display = 'none';
             
             // 显示弹窗
@@ -1419,11 +1940,9 @@ $defaultPort = 2346;
                 
                 // 停止滚动动画，显示结果
                 diceLarge1.className = 'dice-large result';
-                diceLarge2.className = 'dice-large result';
                 diceLarge1.textContent = roll[0];
-                diceLarge2.textContent = roll[1];
                 
-                // 显示总和
+                // 显示点数（单个骰子，点数就是骰子值）
                 diceAnimationSum.textContent = sum;
                 diceAnimationResult.style.display = 'block';
                 diceAnimationPlayer.textContent = playerName + ' 投掷完成';
@@ -1522,10 +2041,15 @@ $defaultPort = 2346;
                 if (reconnectBtn) {
                     reconnectBtn.style.display = 'none';
                 }
+                // 连接成功后立即请求同步状态（用于断线重连）
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({type: 'sync_state'}));
+                }
             };
             ws.onmessage = function(e) {
                 try {
                     var data = JSON.parse(e.data);
+                    console.log('收到消息:', data.type, data);
                     if (data.type === 'system') {
                         appendLine('<span class="sys">' + data.text + '</span>', 'sys');
                     } else if (data.type === 'message') {
@@ -1537,13 +2061,160 @@ $defaultPort = 2346;
                     } else if (data.type === 'seat_assigned') {
                         if (data.seat) {
                             currentSeat = parseInt(data.seat, 10) || null;
+                            currentRole = 'player';
+                            updateStartButtonVisibility();
+                            if (data.reconnected) {
+                                appendLine('<span class="sys">已恢复到座位 ' + currentSeat + '</span>', 'sys');
+                            }
+                        }
+                    } else if (data.type === 'sync_state') {
+                        // 处理断线重连的状态同步
+                        console.log('收到状态同步:', data);
+                        
+                        // 首先检查并恢复座位（根据用户ID匹配）
+                        if (userId && data.p1_id && parseInt(data.p1_id) === parseInt(userId)) {
+                            // 当前用户是p1
+                            currentSeat = 1;
+                            currentRole = 'player';
+                            updateStartButtonVisibility();
+                        } else if (userId && data.p2_id && parseInt(data.p2_id) === parseInt(userId)) {
+                            // 当前用户是p2
+                            currentSeat = 2;
+                            currentRole = 'player';
                             updateStartButtonVisibility();
                         }
+                        
+                        // 更新房间基本信息
+                        if (data.players) {
+                            currentPlayers.p1 = data.players.p1 || null;
+                            currentPlayers.p2 = data.players.p2 || null;
+                            updateSeats(data.players || {}, data.spectators || 0, {status: data.status || 'idle'});
+                        }
+                        if (data.spectators_list && Array.isArray(data.spectators_list)) {
+                            updateSpectatorsList(data.spectators_list);
+                        }
+                        
+                        // 如果在对局中，恢复游戏状态
+                        if (data.status === 'selecting_hidden') {
+                            // 恢复暗骰选择状态
+                            if (data.available_indexes && data.selected_indexes) {
+                                showHiddenSelectModal({
+                                    available_indexes: data.available_indexes,
+                                    selected_indexes: data.selected_indexes,
+                                    starter: data.starter || 'p1',
+                                    starter_timeout: data.starter_timeout || 5
+                                });
+                                // 恢复已选择的暗骰序号
+                                var myPk = currentSeat === 1 ? 'p1' : (currentSeat === 2 ? 'p2' : null);
+                                if (myPk && data.hidden_selected && data.hidden_selected[myPk] !== null) {
+                                    myHiddenDiceIndex = data.hidden_selected[myPk];
+                                }
+                                var otherPk = currentSeat === 1 ? 'p2' : (currentSeat === 2 ? 'p1' : null);
+                                if (otherPk && data.hidden_selected && data.hidden_selected[otherPk] !== null) {
+                                    opponentHiddenDiceIndex = data.hidden_selected[otherPk];
+                                }
+                            }
+                            // 恢复奖池
+                            if (data.pool_amount !== undefined) {
+                                currentPoolAmount = parseFloat(data.pool_amount || 0);
+                                if (poolAmountValue) {
+                                    poolAmountValue.textContent = currentPoolAmount.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+                                }
+                                if (hiddenDiceDisplay && currentPoolAmount > 0) {
+                                    hiddenDiceDisplay.style.display = 'block';
+                                }
+                            }
+                        } else if (data.status === 'dueling' || data.status === 'playing' || data.status === 'decision') {
+                            // 恢复对局状态
+                            // 恢复骰子记录
+                            if (data.dice_log) {
+                                currentDiceLog = {
+                                    p1: (data.dice_log.p1 || []).slice(),
+                                    p2: (data.dice_log.p2 || []).slice()
+                                };
+                                // 恢复暗骰序号
+                                var myPk = currentSeat === 1 ? 'p1' : (currentSeat === 2 ? 'p2' : null);
+                                var otherPk = currentSeat === 1 ? 'p2' : (currentSeat === 2 ? 'p1' : null);
+                                // 从dice_log中提取暗骰序号（服务器端使用 'idx' 字段）
+                                if (myPk && data.dice_log[myPk]) {
+                                    for (var i = 0; i < data.dice_log[myPk].length; i++) {
+                                        if (data.dice_log[myPk][i].type === 'hidden') {
+                                            myHiddenDiceIndex = data.dice_log[myPk][i].idx || data.dice_log[myPk][i].hidden_index || null;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (otherPk && data.dice_log[otherPk]) {
+                                    for (var i = 0; i < data.dice_log[otherPk].length; i++) {
+                                        if (data.dice_log[otherPk][i].type === 'hidden') {
+                                            opponentHiddenDiceIndex = data.dice_log[otherPk][i].idx || data.dice_log[otherPk][i].hidden_index || null;
+                                            break;
+                                        }
+                                    }
+                                }
+                                updateHiddenDiceDisplay();
+                            }
+                            // 恢复奖池
+                            if (data.pool_amount !== undefined) {
+                                currentPoolAmount = parseFloat(data.pool_amount || 0);
+                                if (poolAmountValue) {
+                                    poolAmountValue.textContent = currentPoolAmount.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+                                }
+                                if (hiddenDiceDisplay && currentPoolAmount > 0) {
+                                    hiddenDiceDisplay.style.display = 'block';
+                                }
+                            }
+                            // 如果正在决策阶段，显示决策按钮
+                            if (data.status === 'decision') {
+                                var myPk = currentSeat === 1 ? 'p1' : (currentSeat === 2 ? 'p2' : null);
+                                if (myPk && data.decisions && data.decisions[myPk] === null) {
+                                    // 如果还没有决策，显示决策按钮
+                                    showDecision();
+                                }
+                            }
+                            // 如果正在投掷阶段，根据当前回合显示提示
+                            // 注意：如果轮到当前玩家，服务器会单独发送 roll_request 消息，这里不需要处理
+                            // 这里只处理非当前玩家的情况
+                            if (data.status === 'playing' && data.turn) {
+                                var myPk = currentSeat === 1 ? 'p1' : (currentSeat === 2 ? 'p2' : null);
+                                if (myPk !== data.turn) {
+                                    // 不是轮到我，显示等待提示
+                                    appendLine('<span class="sys">等待 ' + (data.turn === 'p1' ? (currentPlayers.p1 || '玩家一') : (currentPlayers.p2 || '玩家二')) + ' 投掷骰子</span>', 'sys');
+                                }
+                            }
+                        } else if (data.status === 'idle') {
+                            // 空闲状态，重置所有游戏相关变量
+                            currentDiceLog = {p1: [], p2: []};
+                            currentPoolAmount = 0;
+                            myHiddenDiceIndex = null;
+                            opponentHiddenDiceIndex = null;
+                            if (poolAmountValue) {
+                                poolAmountValue.textContent = '0';
+                            }
+                            if (hiddenDiceDisplay) {
+                                hiddenDiceDisplay.style.display = 'none';
+                            }
+                            hideDecision();
+                            hideHiddenSelectModal();
+                        }
+                        
+                        // 更新最后结果（如果有）
+                        if (data.last_result) {
+                            // 不自动显示结果，但保存状态
+                            // 如果需要，可以在这里调用 renderResult(data.last_result)
+                        }
                     } else if (data.type === 'room_update') {
-                        updateSeats(data.players || {}, data.spectators || 0);
+                        // 保存当前游戏状态
+                        var roomState = {status: data.status || 'idle'};
+                        updateSeats(data.players || {}, data.spectators || 0, roomState);
                         // 更新观众列表
                         if (data.spectators_list && Array.isArray(data.spectators_list)) {
                             updateSpectatorsList(data.spectators_list);
+                        }
+                        // 更新玩家信息（用于暗骰显示）
+                        if (data.players) {
+                            currentPlayers.p1 = data.players.p1 || null;
+                            currentPlayers.p2 = data.players.p2 || null;
                         }
                         // 如果玩家换人则重置统计与历史
                         if (data.players) {
@@ -1585,28 +2256,142 @@ $defaultPort = 2346;
                             hideRollModal();
                         }
                         appendLine('<span class="sys">' + data.player + ' 完成投掷' + (data.auto ? '（超时自动）' : '') + '</span>', 'sys');
-                        if (data.roll && data.roll.length === 2) {
-                            var sum = data.roll[0] + data.roll[1];
+                        if (data.roll && data.roll.length >= 1) {
+                            var sum = data.roll[0]; // 单个骰子，总和就是骰子值
                             partialRolls[data.turn] = {player: data.player, roll: data.roll, sum: sum};
                             renderPartialRolls();
                             // 显示大骰子动画
                             showDiceAnimation(data.player, data.roll, sum);
+                            
+                            // 更新骰子记录（明骰）
+                            if (!currentDiceLog[data.turn]) {
+                                currentDiceLog[data.turn] = [];
+                            }
+                            currentDiceLog[data.turn].push({
+                                type: 'open',
+                                val: sum,
+                                roll: data.roll
+                            });
+                            
+                            // 更新暗骰显示（包含所有骰子和总和）
+                            updateHiddenDiceDisplay();
                         }
                     } else if (data.type === 'countdown') {
                         overlay.style.display = 'flex';
                         overlayText.textContent = data.left;
+                    } else if (data.type === 'hidden_pool_generated') {
+                        hiddenSelected = false;
+                        myHiddenDiceIndex = null;
+                        opponentHiddenDiceIndex = null;
+                        currentDiceLog = {p1: [], p2: []}; // 重置骰子记录
+                        currentPoolAmount = 0; // 重置奖池
+                        if (poolAmountValue) {
+                            poolAmountValue.textContent = '0';
+                        }
+                        hideDecision();
+                        showHiddenSelectModal(data);
+                        updateHiddenDiceDisplay();
+                    } else if (data.type === 'hidden_select_ok') {
+                        hiddenSelected = true;
+                        myHiddenDiceIndex = data.index || null;
+                        hideHiddenSelectModal();
+                        if (hiddenSelectTimer) {
+                            clearInterval(hiddenSelectTimer);
+                            hiddenSelectTimer = null;
+                        }
+                        // 注意：暗骰的值在服务器端，客户端不知道，所以这里不添加到 currentDiceLog
+                        // 暗骰会在 updateHiddenDiceDisplay 中用 ? 显示
+                        updateHiddenDiceDisplay();
+                    } else if (data.type === 'hidden_select_update') {
+                        // 实时更新已选择的序号
+                        updateHiddenSelectModal(data.selected_indexes, data.player_key, data.auto);
+                        if (data.auto && data.player_key === ((currentSeat === 1) ? 'p1' : (currentSeat === 2) ? 'p2' : null)) {
+                            // 如果是自动选择，显示提示
+                            appendLine('<span class="sys">系统已为您自动选择暗骰序号</span>', 'sys');
+                        }
+                        // 更新暗骰显示
+                        if (data.selected_indexes) {
+                            // 根据当前座位更新暗骰序号
+                            if (currentSeat === 1) {
+                                // 我是p1
+                                if (data.selected_indexes.p1 !== undefined && data.selected_indexes.p1 !== null) {
+                                    myHiddenDiceIndex = data.selected_indexes.p1;
+                                }
+                                if (data.selected_indexes.p2 !== undefined && data.selected_indexes.p2 !== null) {
+                                    opponentHiddenDiceIndex = data.selected_indexes.p2;
+                                }
+                            } else if (currentSeat === 2) {
+                                // 我是p2
+                                if (data.selected_indexes.p1 !== undefined && data.selected_indexes.p1 !== null) {
+                                    opponentHiddenDiceIndex = data.selected_indexes.p1;
+                                }
+                                if (data.selected_indexes.p2 !== undefined && data.selected_indexes.p2 !== null) {
+                                    myHiddenDiceIndex = data.selected_indexes.p2;
+                                }
+                            } else {
+                                // 观众，显示双方
+                                if (data.selected_indexes.p1 !== undefined && data.selected_indexes.p1 !== null) {
+                                    opponentHiddenDiceIndex = data.selected_indexes.p1;
+                                }
+                                if (data.selected_indexes.p2 !== undefined && data.selected_indexes.p2 !== null) {
+                                    myHiddenDiceIndex = data.selected_indexes.p2;
+                                }
+                            }
+                        }
+                        updateHiddenDiceDisplay();
+                    } else if (data.type === 'decision_request') {
+                        showDecision();
+                    } else if (data.type === 'pool_update') {
+                        // 更新奖池显示
+                        console.log('收到奖池更新:', data);
+                        currentPoolAmount = parseFloat(data.pool_amount || 0);
+                        if (poolAmountValue) {
+                            poolAmountValue.textContent = currentPoolAmount.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+                        }
+                        // 确保暗骰显示区域可见
+                        if (hiddenDiceDisplay && currentPoolAmount > 0) {
+                            hiddenDiceDisplay.style.display = 'block';
+                        }
                     } else if (data.type === 'duel_result') {
                         overlay.style.display = 'none';
                         partialRolls = {p1: null, p2: null};
+                        hideDecision();
+                        hideHiddenSelectModal();
                         renderResult(data);
                         updateWins(data);
                         updateHistory(data);
-                refreshBonus();
+                        refreshBonus();
+                        // 对局结束后，可以显示暗骰的真实点数（从dice_log中获取）
+                        if (data.dice_log) {
+                            updateHiddenDiceDisplayWithResult(data.dice_log);
+                        }
+                        // 重置骰子记录和奖池，准备下一局
+                        currentDiceLog = {p1: [], p2: []};
+                        currentPoolAmount = 0;
+                        if (poolAmountValue) {
+                            poolAmountValue.textContent = '0';
+                        }
+                    } else if (data.type === 'error') {
+                        appendLine('<span class="sys" style="color: #f87171;">错误：' + data.text + '</span>', 'sys');
+                        // 如果是余额不足的错误，显示弹窗
+                        if (data.text && data.text.indexOf('余额不足') !== -1) {
+                            var modal = document.createElement('div');
+                            modal.style.cssText = 'position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 10002; display: flex; align-items: center; justify-content: center;';
+                            modal.innerHTML = '<div style="background: linear-gradient(135deg, rgba(10, 22, 40, 0.98), rgba(30, 27, 75, 0.98)); border: 2px solid rgba(239, 68, 68, 0.5); border-radius: 16px; padding: 24px; width: 420px; box-shadow: 0 0 40px rgba(239, 68, 68, 0.4); backdrop-filter: blur(15px);">' +
+                                '<h4 style="margin: 0 0 16px 0; color: #ef4444; text-shadow: 0 0 10px rgba(239, 68, 68, 0.6); font-size: 20px; text-align: center;">余额不足</h4>' +
+                                '<div style="color: #e5e7eb; margin-bottom: 20px; line-height: 1.6;">' +
+                                '<p style="margin: 8px 0; color: #f87171;">' + data.text + '</p>' +
+                                '<p style="margin: 8px 0; color: #9ca3af; font-size: 13px;">如果对方余额足够，对方可以开始游戏。</p>' +
+                                '</div>' +
+                                '<button onclick="this.parentElement.parentElement.remove()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, rgba(239, 68, 68, 0.8), rgba(220, 38, 38, 0.8)); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">知道了</button>' +
+                                '</div>';
+                            document.body.appendChild(modal);
+                        }
                     }
                 } catch (err) {
                     appendLine('<span class="sys">解析消息失败: ' + err + '</span>', 'sys');
                 }
-            };
+                };
             ws.onclose = function() {
                 appendLine('<span class="sys">连接已断开</span>', 'sys');
                 statusEl.textContent = '未连接';
@@ -1640,6 +2425,43 @@ $defaultPort = 2346;
 
         function sendStart() {
             if (!ws || ws.readyState !== 1) return;
+            
+            // 检查余额是否足够（需要支持开局+四次跟注）
+            // 先获取当前桌子的下注金额
+            var betAmount = 0;
+            if (rooms && rooms.length > 0) {
+                betAmount = rooms[0].bet_amount || 0;
+            }
+            
+            if (betAmount > 0) {
+                // 需要5倍下注金额：开局1次 + 跟注4次
+                var requiredAmount = betAmount * 5;
+                
+                // 检查当前余额
+                if (currentBonus < requiredAmount) {
+                    // 余额不足，显示弹窗提示
+                    var modal = document.createElement('div');
+                    modal.style.cssText = 'position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 10002; display: flex; align-items: center; justify-content: center;';
+                    modal.innerHTML = '<div style="background: linear-gradient(135deg, rgba(10, 22, 40, 0.98), rgba(30, 27, 75, 0.98)); border: 2px solid rgba(239, 68, 68, 0.5); border-radius: 16px; padding: 24px; width: 420px; box-shadow: 0 0 40px rgba(239, 68, 68, 0.4); backdrop-filter: blur(15px);">' +
+                        '<h4 style="margin: 0 0 16px 0; color: #ef4444; text-shadow: 0 0 10px rgba(239, 68, 68, 0.6); font-size: 20px; text-align: center;">余额不足</h4>' +
+                        '<div style="color: #e5e7eb; margin-bottom: 20px; line-height: 1.6;">' +
+                        '<p style="margin: 8px 0;">开始对局需要足够的余额支持：</p>' +
+                        '<ul style="margin: 8px 0; padding-left: 20px;">' +
+                        '<li>开局扣款：' + betAmount.toLocaleString() + ' 魔力值</li>' +
+                        '<li>四次跟注：' + (betAmount * 4).toLocaleString() + ' 魔力值</li>' +
+                        '<li style="color: #fbbf24; font-weight: 600;">总计需要：' + requiredAmount.toLocaleString() + ' 魔力值</li>' +
+                        '</ul>' +
+                        '<p style="margin: 8px 0; color: #f87171;">当前余额：' + currentBonus.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' 魔力值</p>' +
+                        '<p style="margin: 8px 0; color: #9ca3af; font-size: 13px;">余额不足，无法开始对局。如果对方余额足够，对方可以开始游戏。</p>' +
+                        '</div>' +
+                        '<button onclick="this.parentElement.parentElement.remove()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, rgba(239, 68, 68, 0.8), rgba(220, 38, 38, 0.8)); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">知道了</button>' +
+                        '</div>';
+                    document.body.appendChild(modal);
+                    return;
+                }
+            }
+            
+            // 余额足够，发送开始消息
             ws.send(JSON.stringify({type: 'start'}));
         }
 
@@ -1710,9 +2532,31 @@ $defaultPort = 2346;
             }
         });
         rollConfirm.addEventListener('click', sendRoll);
-        
+        // 暗骰序号按钮点击（弹窗版本）
+        if (hiddenSelectIndexes) {
+            hiddenSelectIndexes.addEventListener('click', function (e) {
+                if (e.target.tagName === 'BUTTON' && !e.target.disabled) {
+                    var idx = parseInt(e.target.getAttribute('data-idx'), 10);
+                    sendHiddenSelect(idx);
+                }
+            });
+        }
+        // 跟注/弃权按钮
+        if (btnCall) btnCall.addEventListener('click', function () { sendDecision('call'); hideDecision(); });
+        if (btnFold) btnFold.addEventListener('click', function () { sendDecision('fold'); hideDecision(); });
+
         // 占位按钮点击事件
         document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('summon-ai-btn')) {
+                if (!ws || ws.readyState !== 1) return;
+                ws.send(JSON.stringify({type: 'summon_ai'}));
+                return;
+            }
+            if (e.target.classList.contains('kick-ai-btn')) {
+                if (!ws || ws.readyState !== 1) return;
+                ws.send(JSON.stringify({type: 'kick_ai'}));
+                return;
+            }
             if (e.target.classList.contains('kick-player-btn')) {
                 var seat = parseInt(e.target.getAttribute('data-seat'), 10);
                 if (seat === 1 || seat === 2) {
@@ -1754,6 +2598,7 @@ $defaultPort = 2346;
         } else {
             roomsEl.innerHTML = '<div class="small">请先从桌子列表进入：<a href="mars_tables.php" style="color:#5ad1ff;">前往桌子列表</a></div>';
         }
+
     })();
     </script>
 </body>

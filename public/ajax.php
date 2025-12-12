@@ -1,6 +1,23 @@
 <?php
+// 先获取 action，判断是否需要特殊处理
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
+
+// 对于内部 API 调用，先清除输出缓冲区，再加载其他文件
+$isInternalApi = false;
+$needEarlyClean = in_array($action, ['mars_duel_bet', 'mars_duel_settle', 'get_game_tables', 'get_user_bonus']);
+
+if ($needEarlyClean) {
+    // 清除所有输出缓冲区，确保只输出 JSON
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    ob_start();
+}
+
 // 开启输出缓冲，避免任何输出影响 JSON 响应
-ob_start();
+if (!$needEarlyClean) {
+    ob_start();
+}
 
 use Carbon\Carbon;
 use App\Models\MedalSeries;
@@ -9,9 +26,7 @@ require "../include/bittorrent.php";
 dbconn();
 
 // 检查是否是内部 API 调用（火星幸运局相关）
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
-$isInternalApi = false;
-if (in_array($action, ['mars_duel_bet', 'mars_duel_settle'])) {
+if (in_array($action, ['mars_duel_bet', 'mars_duel_settle', 'get_game_tables', 'get_user_bonus'])) {
     $token = $_POST['token'] ?? '';
     $tokenSetting = get_setting('pvp.settle_token', '');
     
@@ -25,17 +40,14 @@ if (in_array($action, ['mars_duel_bet', 'mars_duel_settle'])) {
         $isInternalApi = true;
     }
     
-    if ($isInternalApi) {
-        // 清除所有输出缓冲区，确保只输出 JSON
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-        ob_start();
+    // 对于 get_game_tables 和 get_user_bonus，如果 token 为空且 tokenSetting 也为空，认为是内部调用
+    if (in_array($action, ['get_game_tables', 'get_user_bonus']) && empty($token) && empty($tokenSetting)) {
+        $isInternalApi = true;
     }
 }
 
 // 如果不是内部 API 调用，才检查登录
-if (!$isInternalApi) {
+if (!$isInternalApi && !in_array($action, ['get_game_tables', 'get_user_bonus'])) {
     loggedinorreturn();
 }
 
@@ -266,6 +278,56 @@ if ($action === 'get_current_bonus') {
     loggedinorreturn();
     $bonus = floatval($CURUSER['seedbonus'] ?? 0);
     exit(json_encode(['ret' => 0, 'data' => ['bonus' => $bonus]], JSON_UNESCAPED_UNICODE));
+}
+
+// 获取指定用户的魔力值（用于服务器端检查余额）
+if ($action === 'get_user_bonus') {
+    // 清除所有输出缓冲区，确保只输出 JSON
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        $token = $_POST['token'] ?? '';
+        $tokenSetting = get_setting('pvp.settle_token', '');
+        
+        // 如果 tokenSetting 为空，允许空 token（用于开发环境）
+        // 如果 tokenSetting 有值，则必须匹配
+        if (empty($tokenSetting)) {
+            $isInternal = true; // tokenSetting 未设置，允许空 token
+        } else {
+            $isInternal = hash_equals($tokenSetting, $token);
+        }
+        
+        if (!$isInternal) {
+            throw new \InvalidArgumentException('未授权访问');
+        }
+        
+        $userId = intval($_POST['user_id'] ?? 0);
+        if (!$userId) {
+            throw new \InvalidArgumentException('参数错误');
+        }
+        
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            throw new \InvalidArgumentException('用户不存在');
+        }
+        
+        $bonus = floatval($user->seedbonus ?? 0);
+        $json = json_encode(['ret' => 0, 'data' => ['bonus' => $bonus]], JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new \RuntimeException('JSON 编码失败: ' . json_last_error_msg());
+        }
+        echo $json;
+        exit(0);
+    } catch (\Throwable $e) {
+        $json = json_encode(['ret' => 1, 'msg' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            $json = json_encode(['ret' => 1, 'msg' => '系统错误'], JSON_UNESCAPED_UNICODE);
+        }
+        echo $json;
+        exit(1);
+    }
 }
 
 // $action 已在文件开头定义
@@ -1132,9 +1194,23 @@ if ($action === 'auto_claim_stardust') {
 
 // 获取桌子列表
 if ($action === 'get_game_tables') {
+    // 清除所有输出缓冲区，确保只输出 JSON
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
     header('Content-Type: application/json; charset=utf-8');
     try {
-        if (!$CURUSER) {
+        // 检查是否是内部 API 调用
+        $token = $_POST['token'] ?? '';
+        $tokenSetting = get_setting('pvp.settle_token', '');
+        $isInternal = false;
+        if (empty($tokenSetting)) {
+            $isInternal = true; // tokenSetting 未设置，允许空 token
+        } else {
+            $isInternal = hash_equals($tokenSetting, $token);
+        }
+        
+        if (!$isInternal && !$CURUSER) {
             throw new \InvalidArgumentException('请先登录');
         }
 
@@ -1175,9 +1251,19 @@ if ($action === 'get_game_tables') {
             ];
         }
 
-        exit(json_encode(['ret' => 0, 'data' => $result]));
+        $json = json_encode(['ret' => 0, 'data' => $result], JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new \RuntimeException('JSON 编码失败: ' . json_last_error_msg());
+        }
+        echo $json;
+        exit(0);
     } catch (\Throwable $e) {
-        exit(json_encode(['ret' => 1, 'msg' => $e->getMessage()]));
+        $json = json_encode(['ret' => 1, 'msg' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            $json = json_encode(['ret' => 1, 'msg' => '系统错误'], JSON_UNESCAPED_UNICODE);
+        }
+        echo $json;
+        exit(1);
     }
 }
 
@@ -1430,8 +1516,9 @@ if ($action === 'mars_duel_settle') {
         $tableId = intval($_POST['table_id'] ?? 0);
         $p1UserId = intval($_POST['p1_user_id'] ?? 0);
         $p2UserId = intval($_POST['p2_user_id'] ?? 0);
-        $winnerUserId = intval($_POST['winner_user_id'] ?? 0); // 0表示平局
-        $betAmount = intval($_POST['bet_amount'] ?? 0);
+        // 兼容两种参数名：winner 和 winner_user_id
+        $winnerUserId = intval($_POST['winner'] ?? $_POST['winner_user_id'] ?? 0); // 0表示平局
+        $poolAmount = intval($_POST['pool_amount'] ?? 0); // 奖池总额（开局扣款 + 所有跟注扣款）
         $duelId = trim($_POST['duel_id'] ?? '');
 
         if (!$tableId || !$p1UserId || !$p2UserId) {
@@ -1443,18 +1530,14 @@ if ($action === 'mars_duel_settle') {
             throw new \InvalidArgumentException('桌子不存在');
         }
 
-        // 下注额以桌子配置为准，若传入则校验一致
+        // 下注额以桌子配置为准
         $tableBet = intval($table->bet_amount);
         if ($tableBet <= 0) {
             throw new \InvalidArgumentException('该桌未设置有效的下注金额');
         }
-        if ($betAmount > 0 && $betAmount !== $tableBet) {
-            throw new \InvalidArgumentException('下注金额与桌面配置不一致');
-        }
-        $betAmount = $tableBet;
 
-        // 计算总池
-        $totalPool = $betAmount * 2; // 双方各下注
+        // 使用传入的奖池总额，如果没有传入则使用默认计算（兼容旧逻辑）
+        $totalPool = $poolAmount > 0 ? $poolAmount : ($tableBet * 2); // 如果没有传入奖池，默认双方各下注一次
 
         // 平台抽成（默认10%，可从设置中读取）
         $platformPercent = get_setting('pvp.platform_rake_percent', 10);
