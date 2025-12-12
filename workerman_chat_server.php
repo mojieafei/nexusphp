@@ -55,6 +55,69 @@ $clearTimers = function (string $room) use (&$roomState) {
     $roomState[$room]['timers'] = [];
 };
 
+// 统计当前玩家已拥有的骰子数量（含暗骰、明骰）
+$countDice = function (string $room, string $playerKey) use (&$roomState): int {
+    if (!isset($roomState[$room]['dice_log'][$playerKey])) return 0;
+    return count($roomState[$room]['dice_log'][$playerKey]);
+};
+
+// 结算工具（可在 onMessage 中调用），winnerKey: 'p1'/'p2'/null
+$settleDuel = function (string $room, ?string $winnerKey, bool $isFold = false) use (&$roomState, &$broadcastRoom, $postJson) {
+    if (($roomState[$room]['duel_settled'] ?? false) === true) return;
+    $roomState[$room]['duel_settled'] = true;
+
+    $sum1 = array_sum(array_column($roomState[$room]['dice_log']['p1'] ?? [], 'val'));
+    $sum2 = array_sum(array_column($roomState[$room]['dice_log']['p2'] ?? [], 'val'));
+    if ($winnerKey === null) {
+        if ($sum1 > $sum2) $winnerKey = 'p1';
+        elseif ($sum2 > $sum1) $winnerKey = 'p2';
+    }
+    $winnerName = $winnerKey ? ($roomState[$room][$winnerKey] ?? null) : null;
+
+    // 调用结算 API（仅 mars-table-* 有效）
+    $settleResp = null;
+    $tableId = null;
+    if (str_starts_with($room, 'mars-table-')) {
+        $tableId = intval(substr($room, strlen('mars-table-')));
+    }
+    if ($tableId) {
+        $payload = [
+            'action' => 'mars_duel_settle',
+            'winner' => $winnerKey === 'p1' ? ($roomState[$room]['p1_id'] ?? null) : ($winnerKey === 'p2' ? ($roomState[$room]['p2_id'] ?? null) : 0),
+            'table_id' => $tableId,
+            'duel_id' => $roomState[$room]['duel_id'] ?? '',
+        ];
+        $settleResp = $postJson($payload);
+    }
+
+    $result = [
+        'type' => 'duel_result',
+        'room' => $room,
+        'p1' => $roomState[$room]['p1'] ?? null,
+        'p2' => $roomState[$room]['p2'] ?? null,
+        'dice_log' => $roomState[$room]['dice_log'] ?? [],
+        'sum1' => $sum1,
+        'sum2' => $sum2,
+        'winner' => $winnerName,
+        'winner_key' => $winnerKey,
+        'fold' => $isFold,
+        'duel_id' => $roomState[$room]['duel_id'] ?? null,
+    ];
+    if ($settleResp && ($settleResp['ret'] ?? 1) === 0 && isset($settleResp['data'])) {
+        $result['winner_bonus'] = $settleResp['data']['winner_bonus'] ?? 0;
+        $result['p1_bonus'] = $settleResp['data']['p1_bonus'] ?? 0;
+        $result['p2_bonus'] = $settleResp['data']['p2_bonus'] ?? 0;
+    }
+
+    $roomState[$room]['last_result'] = $result;
+    $broadcastRoom($room, json_encode($result, JSON_UNESCAPED_UNICODE));
+
+    // 重置房间状态
+    $roomState[$room]['status'] = 'idle';
+    $roomState[$room]['turn'] = null;
+    $roomState[$room]['expected_roll'] = [];
+};
+
 // 结算/扣款 API
 $settleApi = getenv('MARS_DUEL_API') ?: 'http://127.0.0.1:8000/ajax.php';
 $settleToken = getenv('MARS_DUEL_TOKEN') ?: '';
@@ -166,6 +229,30 @@ $startDuel = function (string $room, string $starterTurn = 'p1') use (&$roomStat
         $duelId = $roomState[$room]['duel_id'] ?? bin2hex(random_bytes(16));
         $roomState[$room]['duel_id'] = $duelId;
         $roomState[$room]['duel_settled'] = false;
+        // 预生成 10 颗暗骰（仅服务器保留点数），玩家仅知道序号 1-10
+        $hiddenPool = [];
+        for ($i = 0; $i < 10; $i++) {
+            $hiddenPool[] = random_int(1, 6);
+        }
+        $roomState[$room]['hidden_pool'] = $hiddenPool;
+        $roomState[$room]['hidden_selected'] = ['p1' => null, 'p2' => null]; // 选择的序号
+        $roomState[$room]['hidden_val'] = ['p1' => null, 'p2' => null];      // 选择对应的点数（仅服务器内部使用）
+        $roomState[$room]['dice_log'] = ['p1' => [], 'p2' => []];             // 记录暗骰/明骰
+
+        // 预生成 10 颗暗骰，暂不公布点数，仅供前端选择序号
+        $hiddenPool = [];
+        for ($i = 0; $i < 10; $i++) {
+            $hiddenPool[] = random_int(1, 6);
+        }
+        $roomState[$room]['hidden_pool'] = $hiddenPool; // 仅服务器端保留真实点数
+        $roomState[$room]['hidden_selected'] = ['p1' => null, 'p2' => null]; // 存储玩家选择的序号
+        // 通知前端可选的序号（1-10），不返回点数
+        $broadcastRoom($room, json_encode([
+            'type' => 'hidden_pool_generated',
+            'room' => $room,
+            'available_indexes' => range(1, 10),
+            'note' => '请选择一枚暗骰序号（1-10），点数服务器保密',
+        ], JSON_UNESCAPED_UNICODE));
 
         // 开局前扣款：要求房间名 mars-table-<id> 才执行
         $tableId = null;
@@ -221,6 +308,13 @@ $startDuel = function (string $room, string $starterTurn = 'p1') use (&$roomStat
         $clearTimers($room);
 
         $broadcastRoom($room, json_encode(['type' => 'system', 'text' => "本局开始！{$state['p1']} vs {$state['p2']}（先手：" . ($starterTurn === 'p1' ? $state['p1'] : $state['p2']) . "）"], JSON_UNESCAPED_UNICODE));
+        // 通知可选暗骰序号（仅序号，不含点数）
+        $broadcastRoom($room, json_encode([
+            'type' => 'hidden_pool_generated',
+            'room' => $room,
+            'available_indexes' => range(1, 10),
+            'note' => '请选择一枚暗骰序号（1-10），点数服务器保密',
+        ], JSON_UNESCAPED_UNICODE));
 
         $askRoll = function (string $room, string $playerKey, string $playerName) use (&$roomState, &$broadcastRoom, $clearTimers, &$askRoll, $postJson) {
             $roomState[$room]['turn'] = $playerKey;
@@ -618,7 +712,7 @@ $worker->onConnect = function (TcpConnection $connection) use (&$roomState, $all
     };
 };
 
-$worker->onMessage = function (TcpConnection $connection, $data) use (&$roomState, &$userConnections, $broadcastRoom, $startDuel, $postJson) {
+$worker->onMessage = function (TcpConnection $connection, $data) use (&$roomState, &$userConnections, $broadcastRoom, $startDuel, $postJson, $countDice, $settleDuel) {
     $room = $connection->room ?? 'global';
     $raw = trim((string)$data);
     if ($raw === '') {
@@ -722,6 +816,64 @@ $worker->onMessage = function (TcpConnection $connection, $data) use (&$roomStat
             $roomState[$room]['ready'] = ['p1' => false, 'p2' => false];
             $roomState[$room]['starter'] = null;
             $startDuel($room, $starterTurn);
+        }
+        return;
+    }
+
+    if ($isJson && ($decoded['type'] ?? '') === 'hidden_select') {
+        $seat = $connection->seat ?? null;
+        $playerKey = $seat === 1 ? 'p1' : ($seat === 2 ? 'p2' : null);
+        if (!$playerKey) {
+            $connection->send(json_encode(['type' => 'error', 'text' => '仅玩家可选暗骰'], JSON_UNESCAPED_UNICODE));
+            return;
+        }
+        // 必须在开始后、未进入掷骰
+        if (!isset($roomState[$room]['hidden_pool'])) {
+            $connection->send(json_encode(['type' => 'error', 'text' => '当前不可选择暗骰'], JSON_UNESCAPED_UNICODE));
+            return;
+        }
+        $idx = intval($decoded['index'] ?? 0);
+        if ($idx < 1 || $idx > 10) {
+            $connection->send(json_encode(['type' => 'error', 'text' => '序号必须 1-10'], JSON_UNESCAPED_UNICODE));
+            return;
+        }
+        // 已被其他玩家占用？
+        $otherKey = $playerKey === 'p1' ? 'p2' : 'p1';
+        if (($roomState[$room]['hidden_selected'][$playerKey] ?? null) !== null) {
+            $connection->send(json_encode(['type' => 'error', 'text' => '你已选过暗骰'], JSON_UNESCAPED_UNICODE));
+            return;
+        }
+        if (($roomState[$room]['hidden_selected'][$otherKey] ?? null) === $idx) {
+            $connection->send(json_encode(['type' => 'error', 'text' => '该序号已被对手选择'], JSON_UNESCAPED_UNICODE));
+            return;
+        }
+        // 记录选择与点数（点数仅服务器留存）
+        $roomState[$room]['hidden_selected'][$playerKey] = $idx;
+        $val = $roomState[$room]['hidden_pool'][$idx - 1] ?? random_int(1, 6);
+        $roomState[$room]['hidden_val'][$playerKey] = $val;
+        $roomState[$room]['dice_log'][$playerKey][] = ['type' => 'hidden', 'val' => $val, 'idx' => $idx];
+
+        // 返回确认（仅序号）
+        $remaining = array_values(array_diff(range(1, 10), array_filter($roomState[$room]['hidden_selected'])));
+        $connection->send(json_encode([
+            'type' => 'hidden_select_ok',
+            'index' => $idx,
+            'available_indexes' => $remaining,
+        ], JSON_UNESCAPED_UNICODE));
+
+        // 如果双方都已选择，进入掷骰阶段（先手先掷）
+        if (($roomState[$room]['hidden_selected']['p1'] ?? null) !== null && ($roomState[$room]['hidden_selected']['p2'] ?? null) !== null) {
+            $roomState[$room]['status'] = 'playing'; // 进入掷骰
+            $roomState[$room]['rolls'] = [];
+            $roomState[$room]['turn'] = $roomState[$room]['turn'] ?? 'p1';
+            $first = $roomState[$room]['turn'];
+            $broadcastRoom($room, json_encode([
+                'type' => 'roll_request',
+                'room' => $room,
+                'player' => $roomState[$room][$first] ?? '',
+                'turn' => $first,
+                'timeout' => 30,
+            ], JSON_UNESCAPED_UNICODE));
         }
         return;
     }

@@ -338,22 +338,12 @@ $defaultPort = $wsPortDefault;
             <span>🚀 火星幸运局 · 桌子列表</span>
             <span style="flex:1 1 auto"></span>
             <span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <button id="show-rules-btn" style="padding:8px 12px; font-size:13px;">📖 游戏说明</button>
                 <a href="index.php" style="display:inline-block; padding:8px 12px; border-radius:8px; background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.5); color:#fbbf24; text-decoration:none;">🏠 返回主页</a>
             </span>
         </h2>
         <p style="margin: 6px 0 14px 0; color: #f87171; font-size: 13px;">温馨提示：本功能仅限娱乐，严禁赌博，严格遵守法律法规。</p>
-        <div style="background: rgba(10, 22, 40, 0.65); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 0 12px rgba(0, 212, 255, 0.12);">
-            <div style="color:#00d4ff; font-weight:600; margin-bottom:8px;">🎮 对战说明</div>
-            <ul style="margin:0; padding-left:18px; color:#cbd5e1; line-height:1.6; font-size:13px;">
-                <li>玩法：双方各掷两枚骰子，比点数和；支持手动掷骰，超时系统自动掷。</li>
-                <li>进入：默认观战，点击玩家一/二“占位”入座，房主可踢人回观众。</li>
-                <li>开始：两席都有玩家后，任意一方点击“开始对局”，先点者先手。</li>
-                <li>魔力值扣减：开局前实时按桌面“下注额”从双方账户扣款；余额不足无法开局。</li>
-                <li>分成结算：结束后立即结算，赢家获得(总池-平台抽成-老板抽成)，房主获得老板抽成，平台抽固定比例。</li>
-                <li>老板说明：持有“火星老板卡”可在无有效老板的桌子上点击“我要当老板”，有效期30天；成为老板后可在“设置”中调节下注额与抽成。</li>
-                <li>其他：掉线可手动“重新连接”；房间右侧显示在线与聊天，大厅支持全局聊天与在线数。</li>
-            </ul>
-        </div>
+        
         <div style="background: rgba(10, 22, 40, 0.6); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px; backdrop-filter: blur(10px); box-shadow: 0 0 15px rgba(0, 212, 255, 0.15);">
             <p style="margin: 0;">
                 <span style="color: #9ca3af;">当前用户：</span>
@@ -389,6 +379,17 @@ $defaultPort = $wsPortDefault;
         <div class="actions">
             <button id="modal-cancel" class="secondary">取消</button>
             <button id="modal-ok">确定</button>
+        </div>
+    </div>
+
+    <!-- 游戏说明弹窗 -->
+    <div id="rules-modal-backdrop" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:10000; align-items:center; justify-content:center;">
+        <div id="rules-modal" style="position:relative; background:linear-gradient(135deg, rgba(10, 22, 40, 0.98), rgba(30, 27, 75, 0.98)); border:1px solid rgba(0, 212, 255, 0.4); border-radius:16px; width:90vw; max-width:1000px; height:85vh; max-height:800px; box-shadow:0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(0,212,255,0.2); backdrop-filter:blur(15px); overflow:hidden; display:flex; flex-direction:column;">
+            <div style="padding:16px 20px; border-bottom:1px solid rgba(0,212,255,0.3); display:flex; align-items:center; justify-content:space-between;">
+                <h4 style="margin:0; color:#00d4ff; font-size:20px; font-weight:600; text-shadow:0 0 10px rgba(0,212,255,0.6);">📖 游戏说明</h4>
+                <button id="rules-modal-close" style="background:none; border:none; color:#9ca3af; font-size:24px; cursor:pointer; padding:0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:4px; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='none'; this.style.color='#9ca3af';">×</button>
+            </div>
+            <iframe src="mars_duel_rules.php" style="flex:1; width:100%; border:none; background:#fff;"></iframe>
         </div>
     </div>
 
@@ -793,6 +794,35 @@ $defaultPort = $wsPortDefault;
                 }).catch(function () {});
             }
         });
+
+        // 游戏说明弹窗
+        var rulesModalBackdrop = document.getElementById('rules-modal-backdrop');
+        var rulesModalClose = document.getElementById('rules-modal-close');
+        var showRulesBtn = document.getElementById('show-rules-btn');
+        
+        function showRulesModal() {
+            rulesModalBackdrop.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function hideRulesModal() {
+            rulesModalBackdrop.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        
+        if (showRulesBtn) {
+            showRulesBtn.addEventListener('click', showRulesModal);
+        }
+        if (rulesModalClose) {
+            rulesModalClose.addEventListener('click', hideRulesModal);
+        }
+        if (rulesModalBackdrop) {
+            rulesModalBackdrop.addEventListener('click', function(e) {
+                if (e.target === rulesModalBackdrop) {
+                    hideRulesModal();
+                }
+            });
+        }
 
         refreshOwnerCardCount();
         fetchRooms();
