@@ -389,7 +389,8 @@ $startRound = function (string $room) use (&$roomState, $broadcastRoom) {
 
 $worker->onConnect = function (TcpConnection $connection) use (&$roomState, &$userConnections, $broadcastRoom, $startDuel, $wsLog) {
     $connection->onWebSocketConnect = function (TcpConnection $connection, $request = null) use (&$roomState, &$userConnections, $broadcastRoom, $startDuel, $wsLog) {
-        parse_str($request->queryString() ?? ($_SERVER['QUERY_STRING'] ?? ''), $params);
+        $queryString = ($request !== null && method_exists($request, 'queryString')) ? $request->queryString() : ($_SERVER['QUERY_STRING'] ?? '');
+        parse_str($queryString, $params);
         $user = urldecode($params['user'] ?? ('guest-' . substr(md5($connection->id . microtime(true)), 0, 6)));
         $uid = intval($params['uid'] ?? 0);
         $room = $params['room'] ?? 'global';
