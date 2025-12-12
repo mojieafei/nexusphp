@@ -1439,20 +1439,28 @@ if ($action === 'mars_duel_bet') {
             throw new \InvalidArgumentException('用户不存在');
         }
 
-        // 检查用户魔力值是否足够
-        if ($user->seedbonus < $betAmount) {
-            throw new \InvalidArgumentException('魔力值不足');
-        }
+        // 检查是否是房间1且试运行模式
+        $trialMode = get_setting('pvp.trial_mode', 1); // 默认开启试运行
+        $isTrialMode = ($tableId == 1 && $trialMode == 1);
 
-        // 扣除下注金额
-        $bonusRep = new \App\Repositories\BonusRepository();
-        $suffix = $duelId ? " [duel_id: {$duelId}]" : '';
-        $bonusRep->consumeUserBonus(
-            $userId,
-            $betAmount,
-            \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_BET,
-            "火星幸运局下注（桌子 #{$tableId}）{$suffix}"
-        );
+        // 如果不是试运行模式，检查用户魔力值是否足够并扣款
+        if (!$isTrialMode) {
+            // 检查用户魔力值是否足够
+            if ($user->seedbonus < $betAmount) {
+                throw new \InvalidArgumentException('魔力值不足');
+            }
+
+            // 扣除下注金额
+            $bonusRep = new \App\Repositories\BonusRepository();
+            $suffix = $duelId ? " [duel_id: {$duelId}]" : '';
+            $bonusRep->consumeUserBonus(
+                $userId,
+                $betAmount,
+                \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_BET,
+                "火星幸运局下注（桌子 #{$tableId}）{$suffix}"
+            );
+        }
+        // 试运行模式：不扣款，但返回成功（让游戏继续进行）
 
         // 清除输出缓冲区（包括回调函数）
         ob_end_clean();

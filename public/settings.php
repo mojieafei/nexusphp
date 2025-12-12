@@ -310,9 +310,11 @@ elseif ($action == 'savesettings_misc')
     } else {
         $pvp_ws_port = intval($pvp_ws_port_raw);
     }
+    $pvp_trial_mode = isset($_POST['pvp_trial_mode']) ? 1 : 0; // 试运行模式：1=开启，0=关闭
     saveSetting('pvp', [
         'ws_host' => $pvp_ws_host,
         'ws_port' => $pvp_ws_port,
+        'trial_mode' => $pvp_trial_mode,
     ]);
     $actiontime = date("F j, Y, g:i a");
     write_log("Misc settings updated by {$CURUSER['username']}. $actiontime",'mod');
@@ -960,8 +962,11 @@ elseif ($action == 'miscsettings')
 	tr($lang_settings['row_protected_forum'], "<input type='text' style=\"width: 100px\" name='protected_forum' value='".($misc["protected_forum"] ??'')."'> ".$lang_settings['text_protected_forum'], 1);
     $pvpWsHost = get_setting('pvp.ws_host', 'localhost');
     $pvpWsPort = get_setting('pvp.ws_port', 2346);
+    $pvpTrialMode = get_setting('pvp.trial_mode', 1); // 默认开启试运行
     tr('PVP WS Host', "<input type='text' style=\"width: 160px\" name='pvp_ws_host' value='".htmlspecialchars($pvpWsHost, ENT_QUOTES)."'> 默认 localhost", 1);
     tr('PVP WS Port', "<input type='number' style=\"width: 160px\" name='pvp_ws_port' value='".htmlspecialchars($pvpWsPort, ENT_QUOTES)."'> 默认 2346", 1);
+    $trialChecked = $pvpTrialMode ? 'checked' : '';
+    tr('是否为试运行（房间1）', "<input type='checkbox' name='pvp_trial_mode' value='1' {$trialChecked}> 开启后，房间1的用户不真实扣款，但赢家、房主、平台正常获得奖励", 1);
 	tr($lang_settings['row_save_settings'],"<input type='submit' name='save' value='".$lang_settings['submit_save_settings']."'>", 1);
     print ("</form>");
 }
