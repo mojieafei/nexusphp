@@ -2289,7 +2289,12 @@ $defaultPort = 2346;
                             poolAmountValue.textContent = '0';
                         }
                         hideDecision();
-                        showHiddenSelectModal(data);
+                        if (currentSeat === 1 || currentSeat === 2) {
+                            // 仅玩家弹出选择窗口；观众直接观看，不阻塞界面
+                            showHiddenSelectModal(data);
+                        } else {
+                            hideHiddenSelectModal();
+                        }
                         updateHiddenDiceDisplay();
                     } else if (data.type === 'hidden_select_ok') {
                         hiddenSelected = true;
@@ -2330,6 +2335,11 @@ $defaultPort = 2346;
                                 }
                             } else {
                                 // 观众，显示双方
+                                if (data.selected_indexes.p1 !== undefined && data.selected_indexes.p1 !== null &&
+                                    data.selected_indexes.p2 !== undefined && data.selected_indexes.p2 !== null) {
+                                    // 双方都已选完，观众端关闭弹窗
+                                    hideHiddenSelectModal();
+                                }
                                 if (data.selected_indexes.p1 !== undefined && data.selected_indexes.p1 !== null) {
                                     opponentHiddenDiceIndex = data.selected_indexes.p1;
                                 }

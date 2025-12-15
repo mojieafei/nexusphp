@@ -476,6 +476,17 @@ $worker->onConnect = function (TcpConnection $connection) use (&$roomState, &$us
         $connection->uid = $uid;
         $connection->role = $role;
         $connection->seat = $assignedSeat;
+        // 如果重连到座位，清除离线判负计时
+        if ($role === 'player' && in_array($assignedSeat, [1, 2], true)) {
+            $seatKey = $assignedSeat === 1 ? 'p1' : 'p2';
+            if (isset($roomState[$room]['offline_timers'][$seatKey])) {
+                Timer::del($roomState[$room]['offline_timers'][$seatKey]);
+                unset($roomState[$room]['offline_timers'][$seatKey]);
+            }
+            if (isset($roomState[$room]['offline'][$seatKey])) {
+                unset($roomState[$room]['offline'][$seatKey]);
+            }
+        }
         
         // 如果成功恢复了座位，发送座位分配消息
         if ($assignedSeat !== null) {
@@ -1921,7 +1932,7 @@ $worker->onMessage = function (TcpConnection $connection, $data) use (&$roomStat
     ], JSON_UNESCAPED_UNICODE));
 };
 
-$worker->onClose = function (TcpConnection $connection) use (&$roomState, &$userConnections, $broadcastRoom) {
+$worker->onClose = function (TcpConnection $connection) use (&$roomState, &$userConnections, $broadcastRoom, $settleDuel) {
     $room = $connection->room ?? 'global';
     $user = $connection->user ?? 'guest';
     $role = $connection->role ?? 'spectator';
@@ -1931,23 +1942,65 @@ $worker->onClose = function (TcpConnection $connection) use (&$roomState, &$user
     if (isset($roomState[$room])) {
         if ($role === 'player') {
             $status = $roomState[$room]['status'] ?? 'idle';
-            // 如果在对局中（selecting_hidden, dueling, playing, decision），保留 p1_id 和 p2_id，只清空玩家名
-            // 这样断线重连时可以根据用户ID恢复座位
-            $isInDuel = in_array($status, ['selecting_hidden', 'dueling', 'playing', 'decision']);
-            
-            if ($seat === 1 && ($roomState[$room]['p1'] ?? null) === $user) {
-                $roomState[$room]['p1'] = null;
-                // 只有在空闲状态时才清空 p1_id，对局中保留以便重连恢复
-                if (!$isInDuel) {
-                    $roomState[$room]['p1_id'] = null;
+            $seatKey = $seat === 1 ? 'p1' : ($seat === 2 ? 'p2' : null);
+            if ($seatKey) {
+                // 记录离线，30 秒内未回归则判负并清座
+                if (!isset($roomState[$room]['offline'])) $roomState[$room]['offline'] = [];
+                if (!isset($roomState[$room]['offline_timers'])) $roomState[$room]['offline_timers'] = [];
+                // 先清理已有计时器
+                if (isset($roomState[$room]['offline_timers'][$seatKey])) {
+                    Timer::del($roomState[$room]['offline_timers'][$seatKey]);
                 }
-            }
-            if ($seat === 2 && ($roomState[$room]['p2'] ?? null) === $user) {
-                $roomState[$room]['p2'] = null;
-                // 只有在空闲状态时才清空 p2_id，对局中保留以便重连恢复
-                if (!$isInDuel) {
-                    $roomState[$room]['p2_id'] = null;
-                }
+                $roomState[$room]['offline'][$seatKey] = [
+                    'user' => $user,
+                    'uid' => $connection->uid ?? null,
+                    'deadline' => microtime(true) + 30,
+                ];
+                $broadcastRoom($room, json_encode([
+                    'type' => 'system',
+                    'text' => ($roomState[$room][$seatKey] ?? $user) . ' 断线，30 秒内未回归将判负并清座',
+                ], JSON_UNESCAPED_UNICODE));
+                $roomState[$room]['offline_timers'][$seatKey] = Timer::add(30, function () use (&$roomState, &$userConnections, $room, $seatKey, $user, $broadcastRoom, $settleDuel) {
+                    // 已重连则放弃处理
+                    if (isset($userConnections[$room][$user])) {
+                        return;
+                    }
+                    // 座位已被新玩家占用则放弃处理
+                    if (($roomState[$room][$seatKey] ?? null) && ($roomState[$room][$seatKey] !== $user)) {
+                        return;
+                    }
+                    $otherKey = $seatKey === 'p1' ? 'p2' : 'p1';
+                    $statusNow = $roomState[$room]['status'] ?? 'idle';
+                    if (in_array($statusNow, ['selecting_hidden', 'dueling', 'playing', 'decision'], true)) {
+                        $broadcastRoom($room, json_encode([
+                            'type' => 'system',
+                            'text' => ($roomState[$room][$seatKey] ?? $user) . ' 超时未回归，判负',
+                        ], JSON_UNESCAPED_UNICODE));
+                        $winnerKey = ($roomState[$room][$otherKey] ?? null) ? $otherKey : null;
+                        $settleDuel($room, $winnerKey, true);
+                    }
+                    // 清理座位，允许他人占用
+                    $roomState[$room][$seatKey] = null;
+                    $roomState[$room]["{$seatKey}_id"] = null;
+                    if (isset($roomState[$room]['is_ai'][$seatKey])) {
+                        unset($roomState[$room]['is_ai'][$seatKey]);
+                    }
+                    unset($roomState[$room]['offline'][$seatKey]);
+                    unset($roomState[$room]['offline_timers'][$seatKey]);
+                    // 广播房间状态
+                    $broadcastRoom($room, json_encode([
+                        'type' => 'room_update',
+                        'room' => $room,
+                        'players' => [
+                            'p1' => $roomState[$room]['p1'] ?? null,
+                            'p2' => $roomState[$room]['p2'] ?? null,
+                        ],
+                        'spectators' => $roomState[$room]['spectators'] ?? 0,
+                        'spectators_list' => $roomState[$room]['spectators_list'] ?? [],
+                        'status' => $roomState[$room]['status'] ?? 'idle',
+                        'last_result' => $roomState[$room]['last_result'] ?? null,
+                    ], JSON_UNESCAPED_UNICODE));
+                }, [], false);
             }
         } else {
             $roomState[$room]['spectators'] = max(0, ($roomState[$room]['spectators'] ?? 1) - 1);
