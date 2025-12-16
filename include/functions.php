@@ -2294,15 +2294,19 @@ function menu ($selected = "home") {
 		$selected = "forums";
 	}elseif (preg_match("/torrents/i", $script_name)) {
 		// 检查是否是黑洞页面（做种人<=1且非官方）
-		if (isset($_REQUEST['seeders_begin']) && intval($_REQUEST['seeders_begin']) == 0 && 
-		    isset($_REQUEST['seeders_end']) && intval($_REQUEST['seeders_end']) <= 1 && 
-		    (!isset($_REQUEST['tag_id']) || intval($_REQUEST['tag_id']) != 3)) {
-			$selected = "meteor";
-		} elseif (isset($_REQUEST['tag_id']) && intval($_REQUEST['tag_id']) == 3) {
-			$selected = "official_media";
-		} else {
-			$selected = "torrents";
-		}
+        // 注意：只有当用户显式填写了做种人数范围时才认为是黑洞页面，避免空值被 intval() 转成 0 导致所有请求都被当成黑洞
+        $hasSeedersBeginReq = array_key_exists('seeders_begin', $_REQUEST) && $_REQUEST['seeders_begin'] !== '' && is_numeric($_REQUEST['seeders_begin']);
+        $hasSeedersEndReq   = array_key_exists('seeders_end', $_REQUEST) && $_REQUEST['seeders_end'] !== '' && is_numeric($_REQUEST['seeders_end']);
+        if ($hasSeedersBeginReq && $hasSeedersEndReq
+            && intval($_REQUEST['seeders_begin']) == 0
+            && intval($_REQUEST['seeders_end']) <= 1
+            && (!isset($_REQUEST['tag_id']) || intval($_REQUEST['tag_id']) != 3)) {
+            $selected = "meteor";
+        } elseif (isset($_REQUEST['tag_id']) && intval($_REQUEST['tag_id']) == 3) {
+            $selected = "official_media";
+        } else {
+            $selected = "torrents";
+        }
 	}elseif (preg_match("/special/i", $script_name)) {
 		$selected = "special";
 	}elseif (preg_match("/offers/i", $script_name) OR preg_match("/offcomment/i", $script_name)) {
@@ -5035,6 +5039,10 @@ function torrenttable($rows, $variant = "torrent", $searchBoxId = 0) {
 		}
 		else $wait = 0;
 	}
+    // 当前脚本名，用于构造表头排序链接的绝对路径，避免某些模式/环境下相对 ? 链接行为异常
+    $scriptName = $_SERVER['PHP_SELF'] ?? ($_SERVER['SCRIPT_NAME'] ?? 'torrents.php');
+    $scriptName = basename($scriptName);
+    $baseHref = htmlspecialchars($scriptName, ENT_QUOTES, 'UTF-8');
 ?>
 <table class="torrents" cellspacing="0" cellpadding="5" width="100%">
 <tr>
@@ -5067,23 +5075,23 @@ for ($i=1; $i<=9; $i++){
 }
 ?>
 <td class="colhead" style="padding: 0px"><?php echo $lang_functions['col_type'] ?></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=1&amp;type=<?php echo $link[1]?>"><?php echo $lang_functions['col_name'] ?></a></td>
+<td class="colhead"><a href="<?php echo $baseHref?>?<?php echo $oldlink?>sort=1&amp;type=<?php echo $link[1]?>"><?php echo $lang_functions['col_name'] ?></a></td>
 <?php
 
-if ($wait)
-{
-	print("<td class=\"colhead\">".$lang_functions['col_wait']."</td>\n");
-}
-if ($CURUSER['showcomnum'] != 'no') { ?>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=3&amp;type=<?php echo $link[3]?>"><img class="comments" src="pic/trans.gif" alt="comments" title="<?php echo $lang_functions['title_number_of_comments'] ?>" /></a></td>
+    if ($wait)
+    {
+        print("<td class=\"colhead\">".$lang_functions['col_wait']."</td>\n");
+    }
+    if ($CURUSER['showcomnum'] != 'no') { ?>
+<td class="colhead"><a href="<?php echo $baseHref?>?<?php echo $oldlink?>sort=3&amp;type=<?php echo $link[3]?>"><img class="comments" src="pic/trans.gif" alt="comments" title="<?php echo $lang_functions['title_number_of_comments'] ?>" /></a></td>
 <?php } ?>
 
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=4&amp;type=<?php echo $link[4]?>"><img class="time" src="pic/trans.gif" alt="time" title="<?php echo ($CURUSER['timetype'] != 'timealive' ? $lang_functions['title_time_added'] : $lang_functions['title_time_alive'])?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=5&amp;type=<?php echo $link[5]?>"><img class="size" src="pic/trans.gif" alt="size" title="<?php echo $lang_functions['title_size'] ?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=7&amp;type=<?php echo $link[7]?>"><img class="seeders" src="pic/trans.gif" alt="seeders" title="<?php echo $lang_functions['title_number_of_seeders'] ?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=8&amp;type=<?php echo $link[8]?>"><img class="leechers" src="pic/trans.gif" alt="leechers" title="<?php echo $lang_functions['title_number_of_leechers'] ?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=6&amp;type=<?php echo $link[6]?>"><img class="snatched" src="pic/trans.gif" alt="snatched" title="<?php echo $lang_functions['title_number_of_snatched']?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=9&amp;type=<?php echo $link[9]?>"><?php echo $lang_functions['col_uploader']?></a></td>
+<td class="colhead"><a href="<?php echo $baseHref?>?<?php echo $oldlink?>sort=4&amp;type=<?php echo $link[4]?>"><img class="time" src="pic/trans.gif" alt="time" title="<?php echo ($CURUSER['timetype'] != 'timealive' ? $lang_functions['title_time_added'] : $lang_functions['title_time_alive'])?>" /></a></td>
+<td class="colhead"><a href="<?php echo $baseHref?>?<?php echo $oldlink?>sort=5&amp;type=<?php echo $link[5]?>"><img class="size" src="pic/trans.gif" alt="size" title="<?php echo $lang_functions['title_size'] ?>" /></a></td>
+<td class="colhead"><a href="<?php echo $baseHref?>?<?php echo $oldlink?>sort=7&amp;type=<?php echo $link[7]?>"><img class="seeders" src="pic/trans.gif" alt="seeders" title="<?php echo $lang_functions['title_number_of_seeders'] ?>" /></a></td>
+<td class="colhead"><a href="<?php echo $baseHref?>?<?php echo $oldlink?>sort=8&amp;type=<?php echo $link[8]?>"><img class="leechers" src="pic/trans.gif" alt="leechers" title="<?php echo $lang_functions['title_number_of_leechers'] ?>" /></a></td>
+<td class="colhead"><a href="<?php echo $baseHref?>?<?php echo $oldlink?>sort=6&amp;type=<?php echo $link[6]?>"><img class="snatched" src="pic/trans.gif" alt="snatched" title="<?php echo $lang_functions['title_number_of_snatched']?>" /></a></td>
+<td class="colhead"><a href="<?php echo $baseHref?>?<?php echo $oldlink?>sort=9&amp;type=<?php echo $link[9]?>"><?php echo $lang_functions['col_uploader']?></a></td>
 <?php
 if (user_can('torrentmanage')) { ?>
 	<td class="colhead"><?php echo $lang_functions['col_action'] ?></td>

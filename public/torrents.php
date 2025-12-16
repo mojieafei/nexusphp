@@ -922,20 +922,25 @@ $tagId = intval($_REQUEST['tag_id'] ?? 0);
 $officialType = isset($_GET['official_type']) ? $_GET['official_type'] : '';
 
 // 检查是否是"黑洞"页面（做种人<=1）
-$isMeteorPage = isset($_GET['seeders_begin']) && intval($_GET['seeders_begin']) == 0 && 
-                isset($_GET['seeders_end']) && intval($_GET['seeders_end']) <= 1 && 
-                (!isset($_GET['tag_id']) || intval($_GET['tag_id']) != 3);
+// 注意：只有当用户显式填写了做种人数范围时才认为是黑洞页面，避免空值被 intval() 转成 0 导致所有搜索都命中
+$hasSeedersBegin = array_key_exists('seeders_begin', $_GET) && $_GET['seeders_begin'] !== '' && is_numeric($_GET['seeders_begin']);
+$hasSeedersEnd   = array_key_exists('seeders_end', $_GET) && $_GET['seeders_end'] !== '' && is_numeric($_GET['seeders_end']);
+$isMeteorPage = $hasSeedersBegin && $hasSeedersEnd
+    && intval($_GET['seeders_begin']) == 0
+    && intval($_GET['seeders_end']) <= 1
+    && (!isset($_GET['tag_id']) || intval($_GET['tag_id']) != 3);
 
 $meteorFilter = "";
 // 黑洞页面不再使用 zero_seeder_torrents 表的JOIN，直接通过 seeders <= 1 筛选
 // 移除7天时间限制，所有做种人数<=1的种子都可以进入黑洞
 
 // 默认排除官种（tag_id=3），除非明确选择了官方资源
+// 仅在黑洞页面才默认排除官种；普通种子页不再自动过滤官方种子
 if ($tagId > 0) {
     $tagFilter = " inner join torrent_tags on torrents.id = torrent_tags.torrent_id and torrent_tags.tag_id = $tagId ";
     $addparam .= "tag_id={$tagId}&";
-} else if (empty($officialType)) {
-    // 默认排除官种（tag_id=3）
+} elseif ($isMeteorPage && empty($officialType)) {
+    // 黑洞页：默认排除官种（tag_id=3）
     $tagFilter = " LEFT JOIN torrent_tags as exclude_official ON torrents.id = exclude_official.torrent_id AND exclude_official.tag_id = 3 ";
     // 将排除条件添加到 $where 中
     $where .= ($where ? " AND " : "") . "exclude_official.torrent_id IS NULL";

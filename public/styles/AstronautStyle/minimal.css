@@ -46,6 +46,12 @@ body::after {
     display: inline-block !important;
 }
 
+/* 确保种子列表表头伪元素（扫描高亮等）不拦截点击事件，避免排序表头在极简模式下失效 */
+table.torrents td.colhead::before,
+.torrenttable td.colhead::before {
+    pointer-events: none !important;
+}
+
 /* 主要容器去除玻璃态与渐变 */
 #outer,
 td.outer,

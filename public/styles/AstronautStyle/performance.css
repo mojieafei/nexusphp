@@ -324,6 +324,12 @@ body::after {
     pointer-events: none;
 }
 
+/* 确保种子列表表头伪元素（扫描高亮等）不拦截点击事件，避免排序表头在性能模式下失效 */
+table.torrents td.colhead::before,
+.torrenttable td.colhead::before {
+    pointer-events: none !important;
+}
+
 /* 接流星游戏按钮 - 性能模式下简化样式 */
 .meteor-game-btn {
     position: fixed;
