@@ -5,43 +5,91 @@ require_once(get_langfile_path());
 //loggedinorreturn();
 
 /**
- * 在等级提升说明中添加做种积分阈值信息
+ * 动态更新等级提升说明中的时间、下载量、分享率和做种积分阈值（按照settings.php的方式）
  * @param string $answer FAQ答案的HTML内容
- * @return string 添加了做种积分阈值后的HTML内容
+ * @return string 更新后的HTML内容
  */
 function add_seed_points_to_promotion_faq($answer) {
 	// 获取账号设置（和settings.php一样的方式）
 	$ACCOUNT = get_setting_from_db('account', []);
 	
-	// 等级映射：等级名称 => [等级常量, 默认值]
+	// 等级映射：等级名称 => [输入前缀, 等级常量, 默认时间, 默认下载量, 默认分享率, 默认降级分享率, 默认做种积分]
+	// 和settings.php中的promotion_criteria调用保持一致
 	$classMapping = [
-		'PowerUser' => [UC_POWER_USER, \App\Models\User::$classes[UC_POWER_USER]['min_seed_points'] ?? 0],
-		'EliteUser' => [UC_ELITE_USER, \App\Models\User::$classes[UC_ELITE_USER]['min_seed_points'] ?? 0],
-		'CrazyUser' => [UC_CRAZY_USER, \App\Models\User::$classes[UC_CRAZY_USER]['min_seed_points'] ?? 0],
-		'InsaneUser' => [UC_INSANE_USER, \App\Models\User::$classes[UC_INSANE_USER]['min_seed_points'] ?? 0],
-		'VeteranUser' => [UC_VETERAN_USER, \App\Models\User::$classes[UC_VETERAN_USER]['min_seed_points'] ?? 0],
-		'ExtremeUser' => [UC_EXTREME_USER, \App\Models\User::$classes[UC_EXTREME_USER]['min_seed_points'] ?? 0],
-		'UltimateUser' => [UC_ULTIMATE_USER, \App\Models\User::$classes[UC_ULTIMATE_USER]['min_seed_points'] ?? 0],
-		'NexusMaster' => [UC_NEXUS_MASTER, \App\Models\User::$classes[UC_NEXUS_MASTER]['min_seed_points'] ?? 0],
+		'PowerUser' => ['pu', UC_POWER_USER, 4, 50, 1.05, 0.95, \App\Models\User::$classes[UC_POWER_USER]['min_seed_points'] ?? 0],
+		'EliteUser' => ['eu', UC_ELITE_USER, 8, 120, 1.55, 1.45, \App\Models\User::$classes[UC_ELITE_USER]['min_seed_points'] ?? 0],
+		'CrazyUser' => ['cu', UC_CRAZY_USER, 15, 300, 2.05, 1.95, \App\Models\User::$classes[UC_CRAZY_USER]['min_seed_points'] ?? 0],
+		'InsaneUser' => ['iu', UC_INSANE_USER, 25, 500, 2.55, 2.45, \App\Models\User::$classes[UC_INSANE_USER]['min_seed_points'] ?? 0],
+		'VeteranUser' => ['vu', UC_VETERAN_USER, 40, 750, 3.05, 2.95, \App\Models\User::$classes[UC_VETERAN_USER]['min_seed_points'] ?? 0],
+		'ExtremeUser' => ['exu', UC_EXTREME_USER, 60, 1024, 3.55, 3.45, \App\Models\User::$classes[UC_EXTREME_USER]['min_seed_points'] ?? 0],
+		'UltimateUser' => ['uu', UC_ULTIMATE_USER, 80, 1536, 4.05, 3.95, \App\Models\User::$classes[UC_ULTIMATE_USER]['min_seed_points'] ?? 0],
+		'NexusMaster' => ['nm', UC_NEXUS_MASTER, 100, 3072, 4.55, 4.45, \App\Models\User::$classes[UC_NEXUS_MASTER]['min_seed_points'] ?? 0],
 	];
 	
-	// 为每个等级添加做种积分阈值
+	// 为每个等级动态替换值
 	foreach ($classMapping as $className => $classInfo) {
-		$class = $classInfo[0];
-		$defaultSeedPoints = $classInfo[1];
-		// 配置键名格式和settings.php一样：$class . "_min_seed_points"
-		$configKey = $class . '_min_seed_points';
-		// 获取做种积分阈值（和settings.php一样的逻辑）
-		$seedPoints = isset($ACCOUNT[$configKey]) ? (int)$ACCOUNT[$configKey] : $defaultSeedPoints;
+		$inputPrefix = $classInfo[0];
+		$class = $classInfo[1];
+		$defaultTime = $classInfo[2];
+		$defaultDl = $classInfo[3];
+		$defaultPrRatio = $classInfo[4];
+		$defaultDeRatio = $classInfo[5];
+		$defaultSeedPoints = $classInfo[6];
 		
-		// 如果做种积分阈值大于0，则添加
-		if ($seedPoints > 0) {
-			// 在包含该等级名称的tr标签中，找到"分享率大于数字"的位置，在其前面添加"，做种积分大于X"
-			// 匹配模式：在包含该等级名称的tr标签中，找到"分享率大于数字"
-			$pattern = '/(<tr[^>]*>.*?<b[^>]*class="' . preg_quote($className, '/') . '_Name"[^>]*>.*?分享率大于[\d.]+)([。，<])/s';
-			$replacement = '$1，做种积分大于' . number_format($seedPoints) . '$2';
-			$answer = preg_replace($pattern, $replacement, $answer);
+		// 获取配置值（和settings.php一样的逻辑）
+		$inputtime = $inputPrefix . "time";
+		$inputdl = $inputPrefix . "dl";
+		$inputprratio = $inputPrefix . "prratio";
+		$inputderatio = $inputPrefix . "deratio";
+		$inputSeedPoints = $class . "_min_seed_points";
+		
+		$time = isset($ACCOUNT[$inputtime]) ? (int)$ACCOUNT[$inputtime] : $defaultTime;
+		$dl = isset($ACCOUNT[$inputdl]) ? (int)$ACCOUNT[$inputdl] : $defaultDl;
+		$prRatio = isset($ACCOUNT[$inputprratio]) ? (float)$ACCOUNT[$inputprratio] : $defaultPrRatio;
+		$deRatio = isset($ACCOUNT[$inputderatio]) ? (float)$ACCOUNT[$inputderatio] : $defaultDeRatio;
+		$seedPoints = isset($ACCOUNT[$inputSeedPoints]) ? (int)$ACCOUNT[$inputSeedPoints] : $defaultSeedPoints;
+		
+		// 格式化下载量（GB或TB）
+		$dlText = '';
+		if ($dl >= 1024) {
+			$tbValue = $dl / 1024;
+			// 如果是整数，显示整数；否则显示一位小数
+			if ($tbValue == floor($tbValue)) {
+				$dlText = (int)$tbValue . 'TB';
+			} else {
+				$dlText = number_format($tbValue, 1) . 'TB';
+			}
+		} else {
+			$dlText = $dl . 'G';
 		}
+		
+		// 匹配包含该等级名称的tr标签，然后找到包含"必须注册至少"的td标签（内容所在的td）
+		$pattern = '/(<tr[^>]*>.*?<b[^>]*class="' . preg_quote($className, '/') . '_Name"[^>]*>.*?)(<td[^>]*>.*?必须注册至少.*?<\/td>)(.*?<\/tr>)/s';
+		$answer = preg_replace_callback($pattern, function($matches) use ($time, $dlText, $prRatio, $deRatio, $seedPoints) {
+			$beforeContentTd = $matches[1]; // tr开始到内容td之前
+			$contentTd = $matches[2]; // 包含内容的td标签
+			$afterContentTd = $matches[3]; // 内容td之后到tr结束
+			
+			// 在td内容中替换
+			// 替换"注册至少X周" - 只替换数字，保留"注册至少"和"周"
+			$contentTd = preg_replace('/(注册至少)\d+(周)/u', '${1}' . $time . '${2}', $contentTd);
+			
+			// 替换"下载至少XG"或"下载至少XTB"或"下载至少X.5TB" - 替换数字+单位，保留"下载至少"
+			$contentTd = preg_replace('/(下载至少)[\d.]+[GT]B?/u', '${1}' . $dlText, $contentTd);
+			
+			// 替换"分享率大于X" - 只替换数字，保留"分享率大于"
+			$contentTd = preg_replace('/(分享率大于)[\d.]+/u', '${1}' . $prRatio, $contentTd);
+			
+			// 替换"分享率低于X" - 只替换数字，保留"分享率低于"
+			$contentTd = preg_replace('/(分享率低于)[\d.]+/u', '${1}' . $deRatio, $contentTd);
+			
+			// 如果做种积分阈值大于0，添加"做种积分大于X"（在"分享率大于X"之后）
+			if ($seedPoints > 0) {
+				$contentTd = preg_replace('/(分享率大于[\d.]+)([。，<])/u', '${1}，做种积分大于' . number_format($seedPoints) . '${2}', $contentTd);
+			}
+			
+			return $beforeContentTd . $contentTd . $afterContentTd;
+		}, $answer);
 	}
 	
 	return $answer;

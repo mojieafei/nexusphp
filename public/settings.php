@@ -146,6 +146,9 @@ elseif ($action == 'savesettings_account') 	// save account
 	$actiontime = date("F j, Y, g:i a");
 	write_log("Tracker account settings updated by {$CURUSER['username']}. $actiontime",'mod');
 	\Nexus\Database\NexusDB::cache_del('stats_classes');
+	// 清除FAQ页面缓存，因为账号设置中的等级提升条件会影响FAQ页面的显示
+	$Cache->delete_value('faq', true);
+	$Cache->delete_value('faq_page', true);
 	go_back();
 }
 elseif($action == 'savesettings_torrent') 	// save account
