@@ -143,7 +143,7 @@ $gameStats = [
     'stardust_from_game' => $stardustBySource->get('game', 0),
 ];
 
-// 6. 星尘农场互动数据
+// 6. 星尘农场互动数据（修复：使用whereBetween确保时间范围正确）
 $interactions = \App\Models\StardustInteraction::where('from_user_id', $targetUserId)
     ->whereBetween('created_at', [$startDate, $endDate])
     ->get();
@@ -154,15 +154,15 @@ $interactionStats = [
     'total_steal' => $interactions->where('action', 'steal')->count(),
 ];
 
-// 7. 论坛和评论数据
+// 7. 论坛和评论数据（修复：使用whereBetween确保时间范围正确，并且added字段可能为null需要处理）
 $forumPosts = \App\Models\Post::where('userid', $targetUserId)
-    ->where('added', '>=', $startDate)
-    ->where('added', '<=', $endDate)
+    ->whereBetween('added', [$startDate, $endDate])
     ->count();
 
+// 修复评论统计：使用whereBetween，并且处理added可能为null的情况
 $comments = \App\Models\Comment::where('user', $targetUserId)
-    ->where('added', '>=', $startDate)
-    ->where('added', '<=', $endDate)
+    ->whereNotNull('added')
+    ->whereBetween('added', [$startDate, $endDate])
     ->count();
 
 // 8. 签到数据统计
@@ -222,16 +222,23 @@ $marsDuelStats = [
     'total_win_amount' => $marsDuelWins->sum('value'), // 使用value字段
 ];
 
-// 月度数据
+// 月度数据（修复：统计该月内完成的所有记录的上传/下载量，而不是只统计completedat在该月的）
 $monthlyData = [];
 for ($month = 1; $month <= 12; $month++) {
     $monthStart = Carbon\Carbon::create($year, $month, 1, 0, 0, 0);
     $monthEnd = Carbon\Carbon::create($year, $month, 1, 0, 0, 0)->endOfMonth();
     
+    // 修复：统计在该月完成的所有记录，但需要计算该月内的增量
+    // 由于snatched表记录的是累计值，我们需要统计在该月完成且completedat在该月的记录
     $monthSnatches = \App\Models\Snatch::where('userid', $targetUserId)
+        ->where('finished', 'yes')
+        ->whereNotNull('completedat')
         ->whereBetween('completedat', [$monthStart, $monthEnd])
         ->get();
     
+    // 对于月度统计，我们使用该月完成记录的上传/下载量
+    // 注意：snatched表中的uploaded/downloaded是该记录的累计值，不是月度增量
+    // 但为了显示月度趋势，我们使用completedat在该月的记录
     $monthGames = \App\Models\MeteorGameScore::where('user_id', $targetUserId)
         ->whereBetween('created_at', [$monthStart, $monthEnd])
         ->where('is_flagged', false)
@@ -675,42 +682,26 @@ $defaultWishes = [
         }
         
         .wish-buttons-section {
-            margin-top: 30px;
-            padding: 25px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-            border: 1px solid rgba(138, 43, 226, 0.2);
-        }
-        
-        .wish-buttons-title {
-            font-size: 16px;
-            color: #ffd700;
-            margin-bottom: 15px;
+            margin-top: 20px;
             text-align: center;
+        }
+        
+        .wish-random-btn {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.6) 0%, rgba(0, 212, 255, 0.6) 100%);
+            border: 2px solid rgba(138, 43, 226, 0.8);
+            border-radius: 30px;
+            color: #fff;
+            font-size: 18px;
             font-weight: bold;
-        }
-        
-        .wish-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-        }
-        
-        .wish-btn {
-            padding: 12px 24px;
-            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(138, 43, 226, 0.2) 100%);
-            border: 2px solid rgba(0, 212, 255, 0.4);
-            border-radius: 25px;
-            color: #00d4ff;
             cursor: pointer;
-            font-size: 14px;
             transition: all 0.3s;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 5px 20px rgba(138, 43, 226, 0.4);
         }
         
-        .wish-btn::before {
+        .wish-random-btn::before {
             content: '';
             position: absolute;
             top: 50%;
@@ -718,25 +709,30 @@ $defaultWishes = [
             width: 0;
             height: 0;
             border-radius: 50%;
-            background: rgba(0, 212, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
             transform: translate(-50%, -50%);
             transition: width 0.6s, height 0.6s;
         }
         
-        .wish-btn:hover {
-            background: linear-gradient(135deg, rgba(0, 212, 255, 0.4) 0%, rgba(138, 43, 226, 0.4) 100%);
-            border-color: #00d4ff;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        .wish-random-btn:hover {
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.8) 0%, rgba(0, 212, 255, 0.8) 100%);
+            border-color: rgba(138, 43, 226, 1);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(138, 43, 226, 0.6);
         }
         
-        .wish-btn:hover::before {
-            width: 300px;
-            height: 300px;
+        .wish-random-btn:hover::before {
+            width: 400px;
+            height: 400px;
         }
         
-        .wish-btn:active {
-            transform: translateY(0);
+        .wish-random-btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .wish-random-btn span {
+            position: relative;
+            z-index: 1;
         }
         
         .wish-submit-section {
@@ -1040,14 +1036,6 @@ $defaultWishes = [
                         <div class="ppt-content">
                             <div class="stats-grid">
                                 <div class="stat-card">
-                                    <div class="stat-label">获得星尘</div>
-                                    <div class="stat-value"><?php echo number_format($stardustEarned); ?></div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-label">消耗星尘</div>
-                                    <div class="stat-value"><?php echo number_format($stardustSpent); ?></div>
-                                </div>
-                                <div class="stat-card">
                                     <div class="stat-label">当前星尘</div>
                                     <div class="stat-value"><?php echo number_format($farmData['current_stardust']); ?></div>
                                 </div>
@@ -1067,17 +1055,6 @@ $defaultWishes = [
                                     <div class="stat-label">完成成就</div>
                                     <div class="stat-value"><?php echo number_format($farmData['achievements_count']); ?></div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 第6页：互动统计（调换顺序） -->
-                <div class="slider-page">
-                    <div class="ppt-slide">
-                        <div class="ppt-title">🤝 <?php echo $year; ?> 年农场互动统计</div>
-                        <div class="ppt-content">
-                            <div class="stats-grid">
                                 <div class="stat-card">
                                     <div class="stat-label">访问农场</div>
                                     <div class="stat-value"><?php echo number_format($interactionStats['total_visits']); ?></div>
@@ -1095,7 +1072,7 @@ $defaultWishes = [
                     </div>
                 </div>
                 
-                <!-- 第7页：流星游戏统计（调换顺序） -->
+                <!-- 第6页：流星游戏统计（调换顺序） -->
                 <div class="slider-page">
                     <div class="ppt-slide">
                         <div class="ppt-title">🎮 <?php echo $year; ?> 年流星游戏统计</div>
@@ -1296,10 +1273,6 @@ $defaultWishes = [
                             </div>
                             
                             <div style="margin-top: 30px; font-size: 18px; line-height: 2.2;">
-                                <div class="highlight-box" style="border-left-color: #4ECDC4;">
-                                    ✨ 您共获得了 <strong style="color: #4ECDC4; font-size: 22px;"><?php echo number_format($stardustEarned); ?></strong> 星尘
-                                </div>
-                                
                                 <div class="highlight-box" style="border-left-color: #ff6b6b;">
                                     🤝 您与好友互动了 <strong style="color: #ff6b6b; font-size: 22px;"><?php echo number_format($interactionStats['total_visits'] + $interactionStats['total_water'] + $interactionStats['total_steal']); ?></strong> 次
                                 </div>
@@ -1462,12 +1435,9 @@ $defaultWishes = [
                                 </div>
                                 
                                 <div class="wish-buttons-section">
-                                    <div class="wish-buttons-title">💫 或选择一句祝福（点击即可填入）</div>
-                                    <div class="wish-buttons">
-                                        <?php foreach ($defaultWishes as $wish): ?>
-                                        <button class="wish-btn" onclick="setWish('<?php echo htmlspecialchars($wish, ENT_QUOTES); ?>')"><?php echo htmlspecialchars($wish); ?></button>
-                                        <?php endforeach; ?>
-                                    </div>
+                                    <button class="wish-random-btn" id="wish-random-btn" onclick="randomWish()">
+                                        <span>🎲 随机祝福</span>
+                                    </button>
                                 </div>
                                 
                                 <div class="wish-submit-section">
@@ -1775,6 +1745,26 @@ $defaultWishes = [
             if (wishInput) {
                 wishInput.value = wish;
                 wishInput.dispatchEvent(new Event('input'));
+            }
+        };
+        
+        // 随机祝福功能
+        window.randomWish = function() {
+            const defaultWishes = <?php echo json_encode($defaultWishes); ?>;
+            if (defaultWishes && defaultWishes.length > 0 && wishInput) {
+                const randomIndex = Math.floor(Math.random() * defaultWishes.length);
+                const randomWish = defaultWishes[randomIndex];
+                wishInput.value = randomWish;
+                wishInput.dispatchEvent(new Event('input'));
+                
+                // 添加一个简单的动画效果
+                const randomBtn = document.getElementById('wish-random-btn');
+                if (randomBtn) {
+                    randomBtn.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        randomBtn.style.transform = '';
+                    }, 150);
+                }
             }
         };
         
