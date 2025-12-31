@@ -159,11 +159,15 @@ $forumPosts = \App\Models\Post::where('userid', $targetUserId)
     ->whereBetween('added', [$startDate, $endDate])
     ->count();
 
-// 修复评论统计：使用whereBetween，并且处理added可能为null的情况
-$comments = \App\Models\Comment::where('user', $targetUserId)
-    ->whereNotNull('added')
-    ->whereBetween('added', [$startDate, $endDate])
-    ->count();
+// 修复评论统计：使用原生SQL查询，确保时间范围正确
+// 因为comments表的added字段是datetime类型，需要正确格式化时间
+$startDateStr = $startDate->format('Y-m-d H:i:s');
+$endDateStr = $endDate->format('Y-m-d H:i:s');
+$commentsResult = \Nexus\Database\NexusDB::selectOne(
+    "SELECT COUNT(*) as count FROM comments WHERE user = ? AND added IS NOT NULL AND added >= ? AND added <= ?",
+    [$targetUserId, $startDateStr, $endDateStr]
+);
+$comments = $commentsResult ? (int)$commentsResult['count'] : 0;
 
 // 8. 签到数据统计
 $attendanceLogs = \App\Models\AttendanceLog::where('uid', $targetUserId)
@@ -1054,18 +1058,6 @@ $defaultWishes = [
                                 <div class="stat-card">
                                     <div class="stat-label">完成成就</div>
                                     <div class="stat-value"><?php echo number_format($farmData['achievements_count']); ?></div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-label">访问农场</div>
-                                    <div class="stat-value"><?php echo number_format($interactionStats['total_visits']); ?></div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-label">浇水次数</div>
-                                    <div class="stat-value"><?php echo number_format($interactionStats['total_water']); ?></div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-label">偷取次数</div>
-                                    <div class="stat-value"><?php echo number_format($interactionStats['total_steal']); ?></div>
                                 </div>
                             </div>
                         </div>
