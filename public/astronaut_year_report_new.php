@@ -154,20 +154,26 @@ $interactionStats = [
     'total_steal' => $interactions->where('action', 'steal')->count(),
 ];
 
-// 7. 论坛和评论数据（修复：使用whereBetween确保时间范围正确，并且added字段可能为null需要处理）
-$forumPosts = \App\Models\Post::where('userid', $targetUserId)
-    ->whereBetween('added', [$startDate, $endDate])
+// 7. 论坛和评论数据
+// 发帖数量：统计该用户创建的主题数量（通过topics表的firstpost对应的posts.added时间判断）
+$forumPosts = \App\Models\Topic::where('userid', $targetUserId)
+    ->whereHas('firstPost', function($query) use ($startDate, $endDate) {
+        $query->whereNotNull('added')
+              ->whereBetween('added', [$startDate, $endDate]);
+    })
     ->count();
 
-// 修复评论统计：使用原生SQL查询，确保时间范围正确
-// 因为comments表的added字段是datetime类型，需要正确格式化时间
-$startDateStr = $startDate->format('Y-m-d H:i:s');
-$endDateStr = $endDate->format('Y-m-d H:i:s');
-$commentsResult = \Nexus\Database\NexusDB::selectOne(
-    "SELECT COUNT(*) as count FROM comments WHERE user = ? AND added IS NOT NULL AND added >= ? AND added <= ?",
-    [$targetUserId, $startDateStr, $endDateStr]
-);
-$comments = $commentsResult ? (int)$commentsResult['count'] : 0;
+// 论坛评论数量：统计posts表中该用户的回复（排除主题帖，即排除topics.firstpost对应的帖子）
+$firstPostIds = \App\Models\Topic::whereNotNull('firstpost')
+    ->where('firstpost', '>', 0)
+    ->pluck('firstpost')
+    ->toArray();
+
+$comments = \App\Models\Post::where('userid', $targetUserId)
+    ->whereNotNull('added')
+    ->whereBetween('added', [$startDate, $endDate])
+    ->whereNotIn('id', $firstPostIds)
+    ->count();
 
 // 8. 签到数据统计
 $attendanceLogs = \App\Models\AttendanceLog::where('uid', $targetUserId)
@@ -182,23 +188,43 @@ $attendanceModel = \App\Models\Attendance::where('uid', $targetUserId)->first();
 $currentContinuousDays = $attendanceModel ? $attendanceModel->days : 0;
 $totalAttendanceDays = $attendanceModel ? $attendanceModel->total_days : 0;
 
-// 计算最长连续签到天数（修复版）
+// 计算最长连续签到天数（修复版：确保正确计算连续天数）
 $maxContinuous = 0;
 $currentContinuous = 0;
 $lastDate = null;
-foreach ($attendanceLogs as $log) {
-    $logDate = Carbon\Carbon::parse($log->date);
+
+// 确保按日期升序排序
+$sortedLogs = $attendanceLogs->sortBy('date');
+
+foreach ($sortedLogs as $log) {
+    $logDate = Carbon\Carbon::parse($log->date)->startOfDay();
+    
     if ($lastDate === null) {
+        // 第一条记录
         $currentContinuous = 1;
-    } elseif ($logDate->diffInDays($lastDate) == 1) {
-        $currentContinuous++;
     } else {
-        $maxContinuous = max($maxContinuous, $currentContinuous);
-        $currentContinuous = 1;
+        // 计算日期差（确保是正数，即下一天）
+        $daysDiff = $lastDate->diffInDays($logDate, false);
+        
+        if ($daysDiff == 1) {
+            // 连续签到（正好是下一天），天数+1
+            $currentContinuous++;
+        } else {
+            // 不连续（间隔超过1天），更新最大连续天数，重置当前连续天数
+            $maxContinuous = max($maxContinuous, $currentContinuous);
+            $currentContinuous = 1;
+        }
     }
     $lastDate = $logDate;
 }
+
+// 最后再更新一次最大连续天数（处理最后一段连续签到）
 $maxContinuous = max($maxContinuous, $currentContinuous);
+
+// 如果没有任何签到记录，最长连续天数为0
+if ($attendanceLogs->count() == 0) {
+    $maxContinuous = 0;
+}
 
 // 9. 做种时间统计
 $seedTime = \App\Models\Snatch::where('userid', $targetUserId)
@@ -226,23 +252,194 @@ $marsDuelStats = [
     'total_win_amount' => $marsDuelWins->sum('value'), // 使用value字段
 ];
 
-// 月度数据（修复：统计该月内完成的所有记录的上传/下载量，而不是只统计completedat在该月的）
+// 综合评分系统（0-10分）
+function calculateYearScore($data) {
+    $score = 0;
+    
+    // 1. 上传量评分（0-2分）
+    $uploadedGB = $data['uploaded'] / (1024 * 1024 * 1024);
+    if ($uploadedGB >= 1000) $score += 2.0;
+    elseif ($uploadedGB >= 500) $score += 1.5;
+    elseif ($uploadedGB >= 200) $score += 1.0;
+    elseif ($uploadedGB >= 100) $score += 0.7;
+    elseif ($uploadedGB >= 50) $score += 0.4;
+    elseif ($uploadedGB >= 10) $score += 0.2;
+    
+    // 2. 下载量评分（0-1分）
+    $downloadedGB = $data['downloaded'] / (1024 * 1024 * 1024);
+    if ($downloadedGB >= 500) $score += 1.0;
+    elseif ($downloadedGB >= 200) $score += 0.7;
+    elseif ($downloadedGB >= 100) $score += 0.5;
+    elseif ($downloadedGB >= 50) $score += 0.3;
+    elseif ($downloadedGB >= 10) $score += 0.1;
+    
+    // 3. 分享率评分（0-1.5分）
+    if ($data['shareRatio'] === '∞' || (is_numeric($data['shareRatio']) && $data['shareRatio'] >= 2.0)) {
+        $score += 1.5;
+    } elseif (is_numeric($data['shareRatio']) && $data['shareRatio'] >= 1.5) {
+        $score += 1.2;
+    } elseif (is_numeric($data['shareRatio']) && $data['shareRatio'] >= 1.0) {
+        $score += 1.0;
+    } elseif (is_numeric($data['shareRatio']) && $data['shareRatio'] >= 0.8) {
+        $score += 0.7;
+    } elseif (is_numeric($data['shareRatio']) && $data['shareRatio'] >= 0.5) {
+        $score += 0.4;
+    } elseif (is_numeric($data['shareRatio']) && $data['shareRatio'] >= 0.3) {
+        $score += 0.2;
+    }
+    
+    // 4. 签到天数评分（0-1分）
+    if ($data['attendance'] >= 300) $score += 1.0;
+    elseif ($data['attendance'] >= 200) $score += 0.8;
+    elseif ($data['attendance'] >= 150) $score += 0.6;
+    elseif ($data['attendance'] >= 100) $score += 0.4;
+    elseif ($data['attendance'] >= 50) $score += 0.2;
+    elseif ($data['attendance'] >= 20) $score += 0.1;
+    
+    // 5. 发种数量评分（0-1.5分）
+    if ($data['torrentsUploaded'] >= 50) $score += 1.5;
+    elseif ($data['torrentsUploaded'] >= 30) $score += 1.2;
+    elseif ($data['torrentsUploaded'] >= 20) $score += 1.0;
+    elseif ($data['torrentsUploaded'] >= 10) $score += 0.7;
+    elseif ($data['torrentsUploaded'] >= 5) $score += 0.4;
+    elseif ($data['torrentsUploaded'] >= 1) $score += 0.2;
+    
+    // 6. 做种时间评分（0-1分）
+    if ($data['seedTimeDays'] >= 200) $score += 1.0;
+    elseif ($data['seedTimeDays'] >= 150) $score += 0.8;
+    elseif ($data['seedTimeDays'] >= 100) $score += 0.6;
+    elseif ($data['seedTimeDays'] >= 50) $score += 0.4;
+    elseif ($data['seedTimeDays'] >= 20) $score += 0.2;
+    elseif ($data['seedTimeDays'] >= 10) $score += 0.1;
+    
+    // 7. 社区互动评分（0-0.5分）
+    $communityActivity = $data['forumPosts'] + $data['comments'];
+    if ($communityActivity >= 100) $score += 0.5;
+    elseif ($communityActivity >= 50) $score += 0.3;
+    elseif ($communityActivity >= 20) $score += 0.2;
+    elseif ($communityActivity >= 10) $score += 0.1;
+    
+    // 8. 游戏数据评分（0-0.5分）
+    if ($data['gameStats']['total_games'] >= 100 && $data['gameStats']['max_score'] >= 10000) $score += 0.5;
+    elseif ($data['gameStats']['total_games'] >= 50 && $data['gameStats']['max_score'] >= 5000) $score += 0.3;
+    elseif ($data['gameStats']['total_games'] >= 20 && $data['gameStats']['max_score'] >= 2000) $score += 0.2;
+    elseif ($data['gameStats']['total_games'] >= 10) $score += 0.1;
+    
+    // 9. 星尘农场评分（0-1分）
+    $farmScore = 0;
+    if ($data['farmData']['current_level'] >= 20) $farmScore += 0.4;
+    elseif ($data['farmData']['current_level'] >= 15) $farmScore += 0.3;
+    elseif ($data['farmData']['current_level'] >= 10) $farmScore += 0.2;
+    elseif ($data['farmData']['current_level'] >= 5) $farmScore += 0.1;
+    
+    if ($data['farmData']['achievements_count'] >= 20) $farmScore += 0.3;
+    elseif ($data['farmData']['achievements_count'] >= 10) $farmScore += 0.2;
+    elseif ($data['farmData']['achievements_count'] >= 5) $farmScore += 0.1;
+    
+    if ($data['farmData']['fragments_count'] + $data['farmData']['planets_count'] >= 100) $farmScore += 0.3;
+    elseif ($data['farmData']['fragments_count'] + $data['farmData']['planets_count'] >= 50) $farmScore += 0.2;
+    elseif ($data['farmData']['fragments_count'] + $data['farmData']['planets_count'] >= 20) $farmScore += 0.1;
+    
+    $score += min($farmScore, 1.0);
+    
+    // 确保分数在0-10之间
+    return min(10, max(0, round($score, 1)));
+}
+
+// 获取头衔
+function getTitleByScore($score) {
+    $titles = [
+        0 => ['name' => '初来乍到', 'desc' => '欢迎来到天枢，开始您的探索之旅'],
+        1 => ['name' => '新手上路', 'desc' => '您已经迈出了第一步，继续加油'],
+        2 => ['name' => '小有成就', 'desc' => '您正在逐步成长，表现不错'],
+        3 => ['name' => '渐入佳境', 'desc' => '您已经熟悉了天枢，表现越来越好'],
+        4 => ['name' => '活跃用户', 'desc' => '您是天枢的活跃成员，感谢您的参与'],
+        5 => ['name' => '优秀成员', 'desc' => '您的表现非常优秀，是天枢的中坚力量'],
+        6 => ['name' => '精英用户', 'desc' => '您是天枢的精英，为社区做出了重要贡献'],
+        7 => ['name' => '社区之星', 'desc' => '您是天枢的明星用户，闪耀着独特的光芒'],
+        8 => ['name' => '天枢之光', 'desc' => '您是天枢的骄傲，照亮了社区前进的道路'],
+        9 => ['name' => '传奇人物', 'desc' => '您在天枢创造了传奇，是所有人的榜样'],
+        10 => ['name' => '天枢之神', 'desc' => '您是天枢的至高存在，无人能及'],
+    ];
+    
+    $scoreInt = (int)floor($score);
+    return $titles[min(10, max(0, $scoreInt))];
+}
+
+// 计算综合评分
+$scoreData = [
+    'uploaded' => $uploaded,
+    'downloaded' => $downloaded,
+    'shareRatio' => $shareRatio,
+    'attendance' => $attendance,
+    'torrentsUploaded' => $torrentsUploaded,
+    'seedTimeDays' => $seedTimeDays,
+    'forumPosts' => $forumPosts,
+    'comments' => $comments,
+    'gameStats' => $gameStats,
+    'farmData' => $farmData,
+];
+
+$yearScore = calculateYearScore($scoreData);
+$userTitle = getTitleByScore($yearScore);
+
+// 月度数据（修复：从announce_logs表统计该月内的上传/下载增量）
 $monthlyData = [];
+$isAnnounceLogEnabled = \App\Models\Setting::getIsRecordAnnounceLog();
+
 for ($month = 1; $month <= 12; $month++) {
     $monthStart = Carbon\Carbon::create($year, $month, 1, 0, 0, 0);
     $monthEnd = Carbon\Carbon::create($year, $month, 1, 0, 0, 0)->endOfMonth();
     
-    // 修复：统计在该月完成的所有记录，但需要计算该月内的增量
-    // 由于snatched表记录的是累计值，我们需要统计在该月完成且completedat在该月的记录
-    $monthSnatches = \App\Models\Snatch::where('userid', $targetUserId)
-        ->where('finished', 'yes')
-        ->whereNotNull('completedat')
-        ->whereBetween('completedat', [$monthStart, $monthEnd])
-        ->get();
+    // 从announce_logs表统计该月内的上传/下载增量（准确方法）
+    $monthUploaded = 0;
+    $monthDownloaded = 0;
     
-    // 对于月度统计，我们使用该月完成记录的上传/下载量
-    // 注意：snatched表中的uploaded/downloaded是该记录的累计值，不是月度增量
-    // 但为了显示月度趋势，我们使用completedat在该月的记录
+    if ($isAnnounceLogEnabled) {
+        try {
+            $clickhouseClient = app(\ClickHouseDB\Client::class);
+            $monthStartStr = $monthStart->format('Y-m-d H:i:s');
+            $monthEndStr = $monthEnd->format('Y-m-d H:i:s');
+            
+            // 统计该月内的上传增量
+            $uploadedSql = sprintf(
+                "SELECT sum(uploaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
+                $targetUserId, $monthStartStr, $monthEndStr
+            );
+            $uploadedResult = $clickhouseClient->select($uploadedSql);
+            $uploadedRows = $uploadedResult->rows();
+            $monthUploaded = isset($uploadedRows[0]['total']) ? (float)$uploadedRows[0]['total'] : 0;
+            
+            // 统计该月内的下载增量
+            $downloadedSql = sprintf(
+                "SELECT sum(downloaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
+                $targetUserId, $monthStartStr, $monthEndStr
+            );
+            $downloadedResult = $clickhouseClient->select($downloadedSql);
+            $downloadedRows = $downloadedResult->rows();
+            $monthDownloaded = isset($downloadedRows[0]['total']) ? (float)$downloadedRows[0]['total'] : 0;
+        } catch (\Exception $e) {
+            // 如果ClickHouse查询失败，使用备用方法（从snatched表统计该月完成的记录）
+            do_log("Failed to query announce_logs for monthly data: " . $e->getMessage(), 'warning');
+            $monthSnatches = \App\Models\Snatch::where('userid', $targetUserId)
+                ->where('finished', 'yes')
+                ->whereNotNull('completedat')
+                ->whereBetween('completedat', [$monthStart, $monthEnd])
+                ->get();
+            $monthUploaded = $monthSnatches->sum('uploaded');
+            $monthDownloaded = $monthSnatches->sum('downloaded');
+        }
+    } else {
+        // 如果未启用announce_log，使用备用方法（从snatched表统计该月完成的记录）
+        $monthSnatches = \App\Models\Snatch::where('userid', $targetUserId)
+            ->where('finished', 'yes')
+            ->whereNotNull('completedat')
+            ->whereBetween('completedat', [$monthStart, $monthEnd])
+            ->get();
+        $monthUploaded = $monthSnatches->sum('uploaded');
+        $monthDownloaded = $monthSnatches->sum('downloaded');
+    }
+    
     $monthGames = \App\Models\MeteorGameScore::where('user_id', $targetUserId)
         ->whereBetween('created_at', [$monthStart, $monthEnd])
         ->where('is_flagged', false)
@@ -254,8 +451,8 @@ for ($month = 1; $month <= 12; $month++) {
         ->sum('amount');
     
     $monthlyData[$month] = [
-        'uploaded' => $monthSnatches->sum('uploaded'),
-        'downloaded' => $monthSnatches->sum('downloaded'),
+        'uploaded' => $monthUploaded,
+        'downloaded' => $monthDownloaded,
         'games' => $monthGames->count(),
         'stardust' => $monthStardust,
     ];
@@ -583,6 +780,44 @@ $defaultWishes = [
             font-size: 11px;
             color: #fff;
             margin-top: 5px;
+        }
+        
+        /* 评分展示样式 */
+        .score-display {
+            animation: scorePulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes scorePulse {
+            0%, 100% {
+                transform: scale(1);
+                text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+            }
+            50% {
+                transform: scale(1.05);
+                text-shadow: 0 0 50px rgba(255, 215, 0, 1);
+            }
+        }
+        
+        .title-display {
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+        
+        @keyframes titleGlow {
+            0%, 100% {
+                text-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+            }
+            50% {
+                text-shadow: 0 0 40px rgba(0, 212, 255, 1), 0 0 60px rgba(0, 212, 255, 0.8);
+            }
+        }
+        
+        .score-detail-box {
+            transition: all 0.3s ease;
+        }
+        
+        .score-detail-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(138, 43, 226, 0.5);
         }
         
         /* 许愿表单样式 */
@@ -1255,28 +1490,67 @@ $defaultWishes = [
                     <div class="ppt-slide">
                         <div class="ppt-title">🎯 <?php echo $year; ?> 年总结</div>
                         <div class="ppt-content">
-                            <div class="highlight-box">
-                                <div style="font-size: 24px; color: #ffd700; margin-bottom: 15px;">
-                                    💫 这一年，您在天枢留下了无数美好的足迹
+                            <!-- 综合评分展示 -->
+                            <div style="text-align: center; margin-bottom: 40px;">
+                                <div class="score-display" style="font-size: 48px; font-weight: bold; color: #ffd700; margin-bottom: 10px;">
+                                    <?php echo number_format($yearScore, 1); ?><span style="font-size: 32px; color: #aaa;">/10</span>
                                 </div>
-                                <div style="font-size: 16px; color: #aaa; line-height: 1.8;">
-                                    每一份数据，都记录着您与天枢共同成长的点点滴滴
+                                <div class="title-display" style="font-size: 32px; color: #00d4ff; margin-bottom: 15px;">
+                                    <?php echo $userTitle['name']; ?>
+                                </div>
+                                <div style="font-size: 18px; color: #aaa; line-height: 1.6; max-width: 600px; margin: 0 auto;">
+                                    <?php echo $userTitle['desc']; ?>
                                 </div>
                             </div>
                             
-                            <div style="margin-top: 30px; font-size: 18px; line-height: 2.2;">
-                                <div class="highlight-box" style="border-left-color: #ff6b6b;">
-                                    🤝 您与好友互动了 <strong style="color: #ff6b6b; font-size: 22px;"><?php echo number_format($interactionStats['total_visits'] + $interactionStats['total_water'] + $interactionStats['total_steal']); ?></strong> 次
+                            <!-- 评分详情 -->
+                            <div class="score-detail-box" style="margin-top: 30px; padding: 25px; background: rgba(0, 0, 0, 0.4); border-radius: 15px; border: 2px solid rgba(138, 43, 226, 0.3);">
+                                <div style="font-size: 20px; color: #ffd700; margin-bottom: 20px; text-align: center;">
+                                    📊 综合评分详情
                                 </div>
-                                
-                                <?php if ($attendance > 0): ?>
-                                <div class="highlight-box" style="border-left-color: #ffd700;">
-                                    📅 您签到了 <strong style="color: #ffd700; font-size: 22px;"><?php echo number_format($attendance); ?></strong> 天
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; font-size: 14px;">
+                                    <div style="color: #aaa;">
+                                        <span style="color: #00d4ff;">上传量：</span>
+                                        <?php 
+                                        $uploadedGB = $uploaded / (1024 * 1024 * 1024);
+                                        echo number_format($uploadedGB, 1) . ' GB';
+                                        ?>
+                                    </div>
+                                    <div style="color: #aaa;">
+                                        <span style="color: #00d4ff;">下载量：</span>
+                                        <?php 
+                                        $downloadedGB = $downloaded / (1024 * 1024 * 1024);
+                                        echo number_format($downloadedGB, 1) . ' GB';
+                                        ?>
+                                    </div>
+                                    <div style="color: #aaa;">
+                                        <span style="color: #00d4ff;">分享率：</span>
+                                        <?php echo is_numeric($shareRatio) ? number_format($shareRatio, 2) : $shareRatio; ?>
+                                    </div>
+                                    <div style="color: #aaa;">
+                                        <span style="color: #00d4ff;">签到天数：</span>
+                                        <?php echo number_format($attendance); ?> 天
+                                    </div>
+                                    <div style="color: #aaa;">
+                                        <span style="color: #00d4ff;">发种数量：</span>
+                                        <?php echo number_format($torrentsUploaded); ?> 个
+                                    </div>
+                                    <div style="color: #aaa;">
+                                        <span style="color: #00d4ff;">做种时间：</span>
+                                        <?php echo number_format($seedTimeDays, 1); ?> 天
+                                    </div>
+                                    <div style="color: #aaa;">
+                                        <span style="color: #00d4ff;">社区互动：</span>
+                                        <?php echo number_format($forumPosts + $comments); ?> 次
+                                    </div>
+                                    <div style="color: #aaa;">
+                                        <span style="color: #00d4ff;">游戏次数：</span>
+                                        <?php echo number_format($gameStats['total_games']); ?> 次
+                                    </div>
                                 </div>
-                                <?php endif; ?>
                             </div>
                             
-                            <div style="margin-top: 40px; padding: 30px; background: rgba(138, 43, 226, 0.2); border-radius: 10px; text-align: center;">
+                            <div style="margin-top: 30px; padding: 30px; background: rgba(138, 43, 226, 0.2); border-radius: 10px; text-align: center;">
                                 <div style="font-size: 20px; color: #fff; line-height: 1.8; margin-bottom: 15px;">
                                     🌟 <strong style="color: #ffd700;">感谢您这一年的陪伴！</strong>
                                 </div>
