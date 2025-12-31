@@ -39,298 +39,368 @@ if (!$user) {
     die("错误：用户不存在");
 }
 
-// 计算年份的日期范围
-$startDate = Carbon\Carbon::create($year, 1, 1, 0, 0, 0);
-$endDate = Carbon\Carbon::create($year, 12, 31, 23, 59, 59);
+// 尝试从Redis读取缓存数据
+$cacheKey = "year_report:{$year}:user:{$targetUserId}";
+$cachedData = null;
+try {
+    $redis = \Nexus\Database\NexusDB::redis();
+    if ($redis) {
+        $cachedJson = $redis->get($cacheKey);
+        if ($cachedJson) {
+            $cachedData = json_decode($cachedJson, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                do_log("年度报告缓存JSON解析失败: " . json_last_error_msg(), 'warning');
+                $cachedData = null;
+            }
+        }
+    }
+} catch (\Exception $e) {
+    do_log("读取年度报告Redis缓存失败: " . $e->getMessage(), 'warning');
+}
 
-// 1. 基础数据统计
-$inviter = $user->inviter;
-$invitedCount = \App\Models\User::where('invited_by', $targetUserId)->count();
+// 如果缓存存在，使用缓存数据
+if ($cachedData) {
+    // 从缓存中提取所有变量
+    $userInfo = $cachedData['userInfo'];
+    $yearUploaded = $cachedData['yearUploaded'];
+    $yearDownloaded = $cachedData['yearDownloaded'];
+    $yearShareRatio = $cachedData['yearShareRatio'];
+    $yearTrueUploaded = $cachedData['yearTrueUploaded'];
+    $yearTrueDownloaded = $cachedData['yearTrueDownloaded'];
+    $yearTrueShareRatio = $cachedData['yearTrueShareRatio'];
+    $totalUploaded = $cachedData['totalUploaded'];
+    $totalDownloaded = $cachedData['totalDownloaded'];
+    $totalShareRatio = $cachedData['totalShareRatio'];
+    $trueUploaded = $cachedData['trueUploaded'];
+    $trueDownloaded = $cachedData['trueDownloaded'];
+    $trueShareRatio = $cachedData['trueShareRatio'];
+    $torrentsUploaded = $cachedData['torrentsUploaded'];
+    $torrentsSize = $cachedData['torrentsSize'];
+    $snatchesCount = $cachedData['snatchesCount'];
+    $seedingCount = $cachedData['seedingCount'];
+    $farmData = $cachedData['farmData'];
+    $stardustEarned = $cachedData['stardustEarned'];
+    $stardustSpent = $cachedData['stardustSpent'];
+    $stardustBySource = collect($cachedData['stardustBySource']);
+    $gameStats = $cachedData['gameStats'];
+    $interactionStats = $cachedData['interactionStats'];
+    $forumPosts = $cachedData['forumPosts'];
+    $comments = $cachedData['comments'];
+    $attendance = $cachedData['attendance'];
+    $attendanceBonus = $cachedData['attendanceBonus'];
+    $currentContinuousDays = $cachedData['currentContinuousDays'];
+    $totalAttendanceDays = $cachedData['totalAttendanceDays'];
+    $maxContinuous = $cachedData['maxContinuous'];
+    $seedTime = $cachedData['seedTime'];
+    $leechTime = $cachedData['leechTime'];
+    $seedTimeDays = $cachedData['seedTimeDays'];
+    $leechTimeDays = $cachedData['leechTimeDays'];
+    $seedLeechRatio = $cachedData['seedLeechRatio'];
+    $marsDuelStats = $cachedData['marsDuelStats'];
+    $yearScore = $cachedData['yearScore'];
+    $userTitle = $cachedData['userTitle'];
+    
+    // 获取缓存生成时间（数据统计截止时间）
+    $cacheGeneratedAt = isset($cachedData['cache_generated_at']) ? $cachedData['cache_generated_at'] : null;
+    
+    // 保留旧变量名以兼容评分系统
+    $uploaded = $yearUploaded;
+    $downloaded = $yearDownloaded;
+    $shareRatio = $yearShareRatio;
+    
+    // 计算年份的日期范围（用于荣誉榜单等需要实时查询的数据）
+    $startDate = Carbon\Carbon::create($year, 1, 1, 0, 0, 0);
+    $endDate = Carbon\Carbon::create($year, 12, 31, 23, 59, 59);
+    
+    // 荣誉榜单需要实时查询（因为可能变化）
+    $useCache = true; // 标记使用缓存
+} else {
+    // 缓存不存在，执行原有查询逻辑
+    $useCache = false;
+    
+    // 计算年份的日期范围
+    $startDate = Carbon\Carbon::create($year, 1, 1, 0, 0, 0);
+    $endDate = Carbon\Carbon::create($year, 12, 31, 23, 59, 59);
 
-$userInfo = [
+    // 1. 基础数据统计
+    $inviter = $user->inviter;
+    $invitedCount = \App\Models\User::where('invited_by', $targetUserId)->count();
+
+    $userInfo = [
     'username' => $user->username,
     'class' => get_user_class_name($user->class, false, false, true),
     'joined_date' => $user->added ? $user->added->format('Y-m-d') : '未知',
     'last_seen' => $user->last_access ? $user->last_access->format('Y-m-d H:i:s') : '从未',
-    'inviter_name' => $inviter ? $inviter->username : '无',
-    'invited_count' => $invitedCount,
-];
+        'inviter_name' => $inviter ? $inviter->username : '无',
+        'invited_count' => $invitedCount,
+    ];
 
-// 2. 流量数据统计
-// 2.1 2025年流量统计（从snatched表统计2025年完成的种子的实际流量）
-$snatches = \App\Models\Snatch::where('userid', $targetUserId)
+    // 2. 流量数据统计
+    // 2.1 2025年流量统计（从snatched表统计2025年完成的种子的实际流量）
+    $snatches = \App\Models\Snatch::where('userid', $targetUserId)
     ->where('finished', 'yes')
     ->whereNotNull('completedat')
-    ->whereBetween('completedat', [$startDate, $endDate])
-    ->get();
+        ->whereBetween('completedat', [$startDate, $endDate])
+        ->get();
 
-$yearUploaded = $snatches->sum('uploaded');
-$yearDownloaded = $snatches->sum('downloaded');
-$yearShareRatio = $yearDownloaded > 0 ? round($yearUploaded / $yearDownloaded, 3) : ($yearUploaded > 0 ? '∞' : 0);
+    $yearUploaded = $snatches->sum('uploaded');
+    $yearDownloaded = $snatches->sum('downloaded');
+    $yearShareRatio = $yearDownloaded > 0 ? round($yearUploaded / $yearDownloaded, 3) : ($yearUploaded > 0 ? '∞' : 0);
 
-// 2.2 2025年真实流量统计（优先使用announce_logs表统计2025年内的增量，与月度数据一致）
-$yearTrueUploaded = 0;
-$yearTrueDownloaded = 0;
-$isAnnounceLogEnabledForYear = \App\Models\Setting::getIsRecordAnnounceLog();
+    // 2.2 2025年真实流量统计（优先使用announce_logs表统计2025年内的增量，与月度数据一致）
+    $yearTrueUploaded = 0;
+    $yearTrueDownloaded = 0;
+    $isAnnounceLogEnabledForYear = \App\Models\Setting::getIsRecordAnnounceLog();
 
-if ($isAnnounceLogEnabledForYear) {
-    try {
-        $clickhouseClient = app(\ClickHouseDB\Client::class);
-        $startDateStr = $startDate->format('Y-m-d H:i:s');
-        $endDateStr = $endDate->format('Y-m-d H:i:s');
-        
-        // 统计2025年内的上传增量
-        $uploadedSql = sprintf(
-            "SELECT sum(uploaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
-            $targetUserId, $startDateStr, $endDateStr
-        );
-        $uploadedResult = $clickhouseClient->select($uploadedSql);
-        $uploadedRows = $uploadedResult->rows();
-        $yearTrueUploaded = isset($uploadedRows[0]['total']) ? (float)$uploadedRows[0]['total'] : 0;
-        
-        // 统计2025年内的下载增量
-        $downloadedSql = sprintf(
-            "SELECT sum(downloaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
-            $targetUserId, $startDateStr, $endDateStr
-        );
-        $downloadedResult = $clickhouseClient->select($downloadedSql);
-        $downloadedRows = $downloadedResult->rows();
-        $yearTrueDownloaded = isset($downloadedRows[0]['total']) ? (float)$downloadedRows[0]['total'] : 0;
-    } catch (\Exception $e) {
-        // 如果ClickHouse查询失败，使用备用方法（从snatched表统计2025年完成的记录）
-        do_log("Failed to query announce_logs for year traffic: " . $e->getMessage(), 'warning');
+    if ($isAnnounceLogEnabledForYear) {
+        try {
+            $clickhouseClient = app(\ClickHouseDB\Client::class);
+            $startDateStr = $startDate->format('Y-m-d H:i:s');
+            $endDateStr = $endDate->format('Y-m-d H:i:s');
+            
+            // 统计2025年内的上传增量
+            $uploadedSql = sprintf(
+                "SELECT sum(uploaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
+                $targetUserId, $startDateStr, $endDateStr
+            );
+            $uploadedResult = $clickhouseClient->select($uploadedSql);
+            $uploadedRows = $uploadedResult->rows();
+            $yearTrueUploaded = isset($uploadedRows[0]['total']) ? (float)$uploadedRows[0]['total'] : 0;
+            
+            // 统计2025年内的下载增量
+            $downloadedSql = sprintf(
+                "SELECT sum(downloaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
+                $targetUserId, $startDateStr, $endDateStr
+            );
+            $downloadedResult = $clickhouseClient->select($downloadedSql);
+            $downloadedRows = $downloadedResult->rows();
+            $yearTrueDownloaded = isset($downloadedRows[0]['total']) ? (float)$downloadedRows[0]['total'] : 0;
+        } catch (\Exception $e) {
+            // 如果ClickHouse查询失败，使用备用方法（从snatched表统计2025年完成的记录）
+            do_log("Failed to query announce_logs for year traffic: " . $e->getMessage(), 'warning');
+            $yearTrueUploaded = $yearUploaded;
+            $yearTrueDownloaded = $yearDownloaded;
+        }
+    } else {
+        // 如果未启用announce_log，使用备用方法（从snatched表统计2025年完成的记录）
         $yearTrueUploaded = $yearUploaded;
         $yearTrueDownloaded = $yearDownloaded;
     }
-} else {
-    // 如果未启用announce_log，使用备用方法（从snatched表统计2025年完成的记录）
-    $yearTrueUploaded = $yearUploaded;
-    $yearTrueDownloaded = $yearDownloaded;
-}
 
-$yearTrueShareRatio = $yearTrueDownloaded > 0 ? round($yearTrueUploaded / $yearTrueDownloaded, 3) : ($yearTrueUploaded > 0 ? '∞' : 0);
+    $yearTrueShareRatio = $yearTrueDownloaded > 0 ? round($yearTrueUploaded / $yearTrueDownloaded, 3) : ($yearTrueUploaded > 0 ? '∞' : 0);
 
-// 保留旧变量名以兼容评分系统
-$uploaded = $yearUploaded;
-$downloaded = $yearDownloaded;
-$shareRatio = $yearShareRatio;
+    // 保留旧变量名以兼容评分系统
+    $uploaded = $yearUploaded;
+    $downloaded = $yearDownloaded;
+    $shareRatio = $yearShareRatio;
 
-// 总流量（所有时间，从users表）
-$totalUploaded = $user->uploaded;
-$totalDownloaded = $user->downloaded;
-$totalShareRatio = $totalDownloaded > 0 ? round($totalUploaded / $totalDownloaded, 3) : ($totalUploaded > 0 ? '∞' : 0);
+    // 总流量（所有时间，从users表）
+    $totalUploaded = $user->uploaded;
+    $totalDownloaded = $user->downloaded;
+    $totalShareRatio = $totalDownloaded > 0 ? round($totalUploaded / $totalDownloaded, 3) : ($totalUploaded > 0 ? '∞' : 0);
 
-// 真实流量（所有时间，从snatched表统计，与个人页面一致）
-$trueUploadedResult = \Nexus\Database\NexusDB::selectOne(
-    "SELECT SUM(uploaded) as total FROM snatched WHERE userid = ?",
-    [$targetUserId]
-);
-$trueDownloadedResult = \Nexus\Database\NexusDB::selectOne(
-    "SELECT SUM(downloaded) as total FROM snatched WHERE userid = ?",
-    [$targetUserId]
-);
-$trueUploaded = isset($trueUploadedResult['total']) ? (float)$trueUploadedResult['total'] : 0;
-$trueDownloaded = isset($trueDownloadedResult['total']) ? (float)$trueDownloadedResult['total'] : 0;
-$trueShareRatio = $trueDownloaded > 0 ? round($trueUploaded / $trueDownloaded, 3) : ($trueUploaded > 0 ? '∞' : 0);
+    // 真实流量（所有时间，从snatched表统计，与个人页面一致）
+    $trueUploadedResult = \Nexus\Database\NexusDB::selectOne(
+        "SELECT SUM(uploaded) as total FROM snatched WHERE userid = ?",
+        [$targetUserId]
+    );
+    $trueDownloadedResult = \Nexus\Database\NexusDB::selectOne(
+        "SELECT SUM(downloaded) as total FROM snatched WHERE userid = ?",
+        [$targetUserId]
+    );
+    $trueUploaded = isset($trueUploadedResult['total']) ? (float)$trueUploadedResult['total'] : 0;
+    $trueDownloaded = isset($trueDownloadedResult['total']) ? (float)$trueDownloadedResult['total'] : 0;
+    $trueShareRatio = $trueDownloaded > 0 ? round($trueUploaded / $trueDownloaded, 3) : ($trueUploaded > 0 ? '∞' : 0);
 
-// 3. 种子数据统计
-$torrentsUploaded = \App\Models\Torrent::where('owner', $targetUserId)
-    ->whereBetween('added', [$startDate, $endDate])
-    ->where('visible', 'yes')
-    ->where('banned', 'no')
-    ->count();
+    // 3. 种子数据统计
+    $torrentsUploaded = \App\Models\Torrent::where('owner', $targetUserId)
+        ->whereBetween('added', [$startDate, $endDate])
+        ->where('visible', 'yes')
+        ->where('banned', 'no')
+        ->count();
 
-$torrentsSize = \App\Models\Torrent::where('owner', $targetUserId)
-    ->whereBetween('added', [$startDate, $endDate])
-    ->where('visible', 'yes')
-    ->where('banned', 'no')
-    ->sum('size');
+    $torrentsSize = \App\Models\Torrent::where('owner', $targetUserId)
+        ->whereBetween('added', [$startDate, $endDate])
+        ->where('visible', 'yes')
+        ->where('banned', 'no')
+        ->sum('size');
 
-$snatchesCount = \App\Models\Snatch::where('userid', $targetUserId)
-    ->whereBetween('completedat', [$startDate, $endDate])
-    ->where('finished', 'yes')
-    ->count();
+    $snatchesCount = \App\Models\Snatch::where('userid', $targetUserId)
+        ->whereBetween('completedat', [$startDate, $endDate])
+        ->where('finished', 'yes')
+        ->count();
 
-// 做种数量：按照个人页面的统计方式（完全复制个人页面的查询逻辑）
-// 个人页面统计：peers LEFT JOIN torrents ... LEFT JOIN snatched ... WHERE peers.userid=$id AND snatched.userid = $id AND peers.seeder='yes'
-// 使用 count(*) 而不是 COUNT(DISTINCT)，因为个人页面使用的是 count(*)
-$seedingCount = \Nexus\Database\NexusDB::selectOne(
-    "SELECT COUNT(*) as count 
-     FROM peers 
-     LEFT JOIN torrents ON peers.torrent = torrents.id 
-     LEFT JOIN categories ON torrents.category = categories.id 
-     LEFT JOIN snatched ON torrents.id = snatched.torrentid 
-     WHERE peers.userid = ? 
-     AND snatched.userid = ? 
-     AND peers.seeder = 'yes'",
-    [$targetUserId, $targetUserId]
-);
-$seedingCount = $seedingCount ? (int)$seedingCount['count'] : 0;
+    // 做种数量：按照个人页面的统计方式（完全复制个人页面的查询逻辑）
+    // 个人页面统计：peers LEFT JOIN torrents ... LEFT JOIN snatched ... WHERE peers.userid=$id AND snatched.userid = $id AND peers.seeder='yes'
+    // 使用 count(*) 而不是 COUNT(DISTINCT)，因为个人页面使用的是 count(*)
+    $seedingCount = \Nexus\Database\NexusDB::selectOne(
+        "SELECT COUNT(*) as count 
+         FROM peers 
+         LEFT JOIN torrents ON peers.torrent = torrents.id 
+         LEFT JOIN categories ON torrents.category = categories.id 
+         LEFT JOIN snatched ON torrents.id = snatched.torrentid 
+         WHERE peers.userid = ? 
+         AND snatched.userid = ? 
+         AND peers.seeder = 'yes'",
+        [$targetUserId, $targetUserId]
+    );
+    $seedingCount = $seedingCount ? (int)$seedingCount['count'] : 0;
 
-// 4. 星尘农场数据统计
-$farm = \App\Models\StardustFarm::where('user_id', $targetUserId)->first();
-$fragmentsCount = \App\Models\StardustInventory::where('user_id', $targetUserId)
-    ->where('item_type', 'fragment')
-    ->sum('quantity');
-$planetsCount = \App\Models\StardustInventory::where('user_id', $targetUserId)
-    ->where('item_type', 'planet')
-    ->sum('quantity');
-$achievementsCount = \Nexus\Database\NexusDB::table('stardust_user_achievements')
-    ->where('user_id', $targetUserId)
-    ->count();
+    // 4. 星尘农场数据统计
+    $farm = \App\Models\StardustFarm::where('user_id', $targetUserId)->first();
+    $fragmentsCount = \App\Models\StardustInventory::where('user_id', $targetUserId)
+        ->where('item_type', 'fragment')
+        ->sum('quantity');
+    $planetsCount = \App\Models\StardustInventory::where('user_id', $targetUserId)
+        ->where('item_type', 'planet')
+        ->sum('quantity');
+    $achievementsCount = \Nexus\Database\NexusDB::table('stardust_user_achievements')
+        ->where('user_id', $targetUserId)
+        ->count();
 
-$farmData = [
-    'current_stardust' => $farm ? $farm->stardust : 0,
-    'current_level' => $farm ? $farm->level : 1,
-    'current_experience' => $farm ? $farm->experience : 0,
-    'land_slots' => $farm ? $farm->land_slots : 3,
-    'fragments_count' => $fragmentsCount,
-    'planets_count' => $planetsCount,
-    'achievements_count' => $achievementsCount,
-];
+    $farmData = [
+        'current_stardust' => $farm ? $farm->stardust : 0,
+        'current_level' => $farm ? $farm->level : 1,
+        'current_experience' => $farm ? $farm->experience : 0,
+        'land_slots' => $farm ? $farm->land_slots : 3,
+        'fragments_count' => $fragmentsCount,
+        'planets_count' => $planetsCount,
+        'achievements_count' => $achievementsCount,
+    ];
 
-$transactions = \App\Models\StardustTransactionLog::where('user_id', $targetUserId)
-    ->whereBetween('created_at', [$startDate, $endDate])
-    ->get();
+    $transactions = \App\Models\StardustTransactionLog::where('user_id', $targetUserId)
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->get();
 
-$stardustEarned = $transactions->where('type', 'earn')->sum('amount');
-$stardustSpent = abs($transactions->where('type', 'spend')->sum('amount'));
+    $stardustEarned = $transactions->where('type', 'earn')->sum('amount');
+    $stardustSpent = abs($transactions->where('type', 'spend')->sum('amount'));
 
-$stardustBySource = $transactions->where('type', 'earn')
-    ->groupBy('source')
-    ->map(function($group) {
-        return $group->sum('amount');
-    });
+    $stardustBySource = $transactions->where('type', 'earn')
+        ->groupBy('source')
+        ->map(function($group) {
+            return $group->sum('amount');
+        });
 
-// 5. 流星游戏数据统计
-$gameScores = \App\Models\MeteorGameScore::where('user_id', $targetUserId)
-    ->whereBetween('created_at', [$startDate, $endDate])
-    ->where('is_flagged', false)
-    ->get();
+    // 5. 流星游戏数据统计
+    $gameScores = \App\Models\MeteorGameScore::where('user_id', $targetUserId)
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->where('is_flagged', false)
+        ->get();
 
-$gameStats = [
-    'total_games' => $gameScores->count(),
-    'total_score' => $gameScores->sum('score'),
-    'avg_score' => $gameScores->count() > 0 ? round($gameScores->avg('score'), 0) : 0,
-    'max_score' => $gameScores->max('score') ?? 0,
-    'max_combo' => $gameScores->max('combo_max') ?? 0,
-    'stardust_from_game' => $stardustBySource->get('game', 0),
-];
+    $gameStats = [
+        'total_games' => $gameScores->count(),
+        'total_score' => $gameScores->sum('score'),
+        'avg_score' => $gameScores->count() > 0 ? round($gameScores->avg('score'), 0) : 0,
+        'max_score' => $gameScores->max('score') ?? 0,
+        'max_combo' => $gameScores->max('combo_max') ?? 0,
+        'stardust_from_game' => $stardustBySource->get('game', 0),
+    ];
 
-// 6. 星尘农场互动数据（修复：使用whereBetween确保时间范围正确）
-$interactions = \App\Models\StardustInteraction::where('from_user_id', $targetUserId)
-    ->whereBetween('created_at', [$startDate, $endDate])
-    ->get();
+    // 6. 星尘农场互动数据（修复：使用whereBetween确保时间范围正确）
+    $interactions = \App\Models\StardustInteraction::where('from_user_id', $targetUserId)
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->get();
 
-$interactionStats = [
-    'total_visits' => $interactions->where('action', 'visit')->count(),
-    'total_water' => $interactions->where('action', 'water')->count(),
-    'total_steal' => $interactions->where('action', 'steal')->count(),
-];
+    $interactionStats = [
+        'total_visits' => $interactions->where('action', 'visit')->count(),
+        'total_water' => $interactions->where('action', 'water')->count(),
+        'total_steal' => $interactions->where('action', 'steal')->count(),
+    ];
 
-// 7. 论坛和评论数据（按照个人页面的统计方式：所有时间）
-// 个人页面显示：
-// - row_torrent_comment: SELECT COUNT(*) FROM comments WHERE user=$user['id']（种子评论）
-// - row_forum_posts: SELECT COUNT(*) FROM posts WHERE userid=$user['id']（论坛所有帖子）
-// 年度报告"社区互动"页面需要：
-// - 论坛发帖：论坛主题帖数量（topics表）
-// - 评论数量：论坛回复数量（posts表中排除主题帖的回复）
+    // 7. 论坛和评论数据（按照个人页面的统计方式：所有时间）
+    // 论坛主题帖数量（所有时间）
+    $forumPosts = \App\Models\Topic::where('userid', $targetUserId)
+        ->count();
 
-// 论坛主题帖数量（所有时间）
-$forumPosts = \App\Models\Topic::where('userid', $targetUserId)
-    ->count();
+    // 获取所有主题帖的firstpost ID
+    $firstPostIds = \App\Models\Topic::whereNotNull('firstpost')
+        ->where('firstpost', '>', 0)
+        ->pluck('firstpost')
+        ->toArray();
 
-// 获取所有主题帖的firstpost ID
-$firstPostIds = \App\Models\Topic::whereNotNull('firstpost')
-    ->where('firstpost', '>', 0)
-    ->pluck('firstpost')
-    ->toArray();
+    // 论坛回复数量（所有时间，排除主题帖）
+    $comments = \App\Models\Post::where('userid', $targetUserId)
+        ->whereNotIn('id', $firstPostIds)
+        ->count();
 
-// 论坛回复数量（所有时间，排除主题帖）
-$comments = \App\Models\Post::where('userid', $targetUserId)
-    ->whereNotIn('id', $firstPostIds)
-    ->count();
+    // 8. 签到数据统计
+    $attendanceLogs = \App\Models\AttendanceLog::where('uid', $targetUserId)
+        ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+        ->orderBy('date', 'asc')
+        ->get();
 
-// 8. 签到数据统计
-$attendanceLogs = \App\Models\AttendanceLog::where('uid', $targetUserId)
-    ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-    ->orderBy('date', 'asc')
-    ->get();
+    $attendance = $attendanceLogs->count();
+    $attendanceBonus = $attendanceLogs->sum('points');
 
-$attendance = $attendanceLogs->count();
-$attendanceBonus = $attendanceLogs->sum('points');
+    $attendanceModel = \App\Models\Attendance::where('uid', $targetUserId)->first();
+    $currentContinuousDays = $attendanceModel ? $attendanceModel->days : 0;
+    $totalAttendanceDays = $attendanceModel ? $attendanceModel->total_days : 0;
 
-$attendanceModel = \App\Models\Attendance::where('uid', $targetUserId)->first();
-$currentContinuousDays = $attendanceModel ? $attendanceModel->days : 0;
-$totalAttendanceDays = $attendanceModel ? $attendanceModel->total_days : 0;
-
-// 计算最长连续签到天数（修复版：确保正确计算连续天数）
-$maxContinuous = 0;
-$currentContinuous = 0;
-$lastDate = null;
-
-// 确保按日期升序排序
-$sortedLogs = $attendanceLogs->sortBy('date');
-
-foreach ($sortedLogs as $log) {
-    $logDate = Carbon\Carbon::parse($log->date)->startOfDay();
-    
-    if ($lastDate === null) {
-        // 第一条记录
-        $currentContinuous = 1;
-    } else {
-        // 计算日期差（确保是正数，即下一天）
-        $daysDiff = $lastDate->diffInDays($logDate, false);
-        
-        if ($daysDiff == 1) {
-            // 连续签到（正好是下一天），天数+1
-            $currentContinuous++;
-        } else {
-            // 不连续（间隔超过1天），更新最大连续天数，重置当前连续天数
-            $maxContinuous = max($maxContinuous, $currentContinuous);
-            $currentContinuous = 1;
-        }
-    }
-    $lastDate = $logDate;
-}
-
-// 最后再更新一次最大连续天数（处理最后一段连续签到）
-$maxContinuous = max($maxContinuous, $currentContinuous);
-
-// 如果没有任何签到记录，最长连续天数为0
-if ($attendanceLogs->count() == 0) {
+    // 计算最长连续签到天数（修复版：确保正确计算连续天数）
     $maxContinuous = 0;
-}
+    $currentContinuous = 0;
+    $lastDate = null;
 
-// 9. 做种时间统计（按照个人页面的统计方式：所有时间）
-// 个人页面统计：$user["seedtime"]（所有时间）
-// 个人页面统计：$user["leechtime"]（所有时间）
-$seedTime = $user->seedtime ?? 0;
-$leechTime = $user->leechtime ?? 0;
-$seedTimeDays = round($seedTime / 86400, 1);
-$leechTimeDays = round($leechTime / 86400, 1);
-$seedLeechRatio = $leechTime > 0 ? round($seedTime / $leechTime, 3) : ($seedTime > 0 ? '∞' : 0);
+    // 确保按日期升序排序
+    $sortedLogs = $attendanceLogs->sortBy('date');
 
-// 10. 火星幸运局统计（修复版）
-$marsDuelBets = \App\Models\BonusLogs::where('uid', $targetUserId)
-    ->where('business_type', \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_BET)
-    ->whereBetween('created_at', [$startDate, $endDate])
-    ->get();
+    foreach ($sortedLogs as $log) {
+        $logDate = Carbon\Carbon::parse($log->date)->startOfDay();
+        
+        if ($lastDate === null) {
+            // 第一条记录
+            $currentContinuous = 1;
+        } else {
+            // 计算日期差（确保是正数，即下一天）
+            $daysDiff = $lastDate->diffInDays($logDate, false);
+            
+            if ($daysDiff == 1) {
+                // 连续签到（正好是下一天），天数+1
+                $currentContinuous++;
+            } else {
+                // 不连续（间隔超过1天），更新最大连续天数，重置当前连续天数
+                $maxContinuous = max($maxContinuous, $currentContinuous);
+                $currentContinuous = 1;
+            }
+        }
+        $lastDate = $logDate;
+    }
 
-$marsDuelWins = \App\Models\BonusLogs::where('uid', $targetUserId)
-    ->where('business_type', \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_WINNER)
-    ->whereBetween('created_at', [$startDate, $endDate])
-    ->get();
+    // 最后再更新一次最大连续天数（处理最后一段连续签到）
+    $maxContinuous = max($maxContinuous, $currentContinuous);
 
-$marsDuelStats = [
-    'total_bets' => $marsDuelBets->count(),
-    'total_bet_amount' => abs($marsDuelBets->sum('value')), // 使用value字段而不是points
-    'total_wins' => $marsDuelWins->count(),
-    'total_win_amount' => $marsDuelWins->sum('value'), // 使用value字段
-];
+    // 如果没有任何签到记录，最长连续天数为0
+    if ($attendanceLogs->count() == 0) {
+        $maxContinuous = 0;
+    }
 
-// 综合评分系统（0-10分）
-function calculateYearScore($data) {
+    // 9. 做种时间统计（按照个人页面的统计方式：所有时间）
+    $seedTime = $user->seedtime ?? 0;
+    $leechTime = $user->leechtime ?? 0;
+    $seedTimeDays = round($seedTime / 86400, 1);
+    $leechTimeDays = round($leechTime / 86400, 1);
+    $seedLeechRatio = $leechTime > 0 ? round($seedTime / $leechTime, 3) : ($seedTime > 0 ? '∞' : 0);
+
+    // 10. 火星幸运局统计（修复版）
+    $marsDuelBets = \App\Models\BonusLogs::where('uid', $targetUserId)
+        ->where('business_type', \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_BET)
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->get();
+
+    $marsDuelWins = \App\Models\BonusLogs::where('uid', $targetUserId)
+        ->where('business_type', \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_WINNER)
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->get();
+
+    $marsDuelStats = [
+        'total_bets' => $marsDuelBets->count(),
+        'total_bet_amount' => abs($marsDuelBets->sum('value')),
+        'total_wins' => $marsDuelWins->count(),
+        'total_win_amount' => $marsDuelWins->sum('value'),
+    ];
+
+    // 综合评分系统（0-10分）
+    function calculateYearScore($data) {
     $score = 0;
     
     // 1. 上传量评分（0-2分）
@@ -443,24 +513,28 @@ function getTitleByScore($score) {
     return $titles[min(10, max(0, $scoreInt))];
 }
 
-// 计算综合评分（使用个人页面的数据：总流量、所有时间的做种时间、所有时间的论坛帖子等）
-$scoreData = [
-    'uploaded' => $totalUploaded,  // 使用总上传量（与个人页面一致）
-    'downloaded' => $totalDownloaded,  // 使用总下载量（与个人页面一致）
-    'shareRatio' => $totalShareRatio,  // 使用总分享率（与个人页面一致）
-    'attendance' => $attendance,
-    'torrentsUploaded' => $torrentsUploaded,
-    'seedTimeDays' => $seedTimeDays,  // 使用所有时间的做种时间（与个人页面一致）
-    'forumPosts' => $forumPosts,  // 使用所有时间的论坛帖子（与个人页面一致）
-    'comments' => $comments,  // 使用所有时间的评论（与个人页面一致）
-    'gameStats' => $gameStats,
-    'farmData' => $farmData,
-];
+    // 计算综合评分（使用个人页面的数据：总流量、所有时间的做种时间、所有时间的论坛帖子等）
+    $scoreData = [
+        'uploaded' => $totalUploaded,
+        'downloaded' => $totalDownloaded,
+        'shareRatio' => $totalShareRatio,
+        'attendance' => $attendance,
+        'torrentsUploaded' => $torrentsUploaded,
+        'seedTimeDays' => $seedTimeDays,
+        'forumPosts' => $forumPosts,
+        'comments' => $comments,
+        'gameStats' => $gameStats,
+        'farmData' => $farmData,
+    ];
 
-$yearScore = calculateYearScore($scoreData);
-$userTitle = getTitleByScore($yearScore);
+    $yearScore = calculateYearScore($scoreData);
+    $userTitle = getTitleByScore($yearScore);
+    
+    // 如果没有缓存，则没有缓存生成时间
+    $cacheGeneratedAt = null;
+}
 
-// 获取2025年荣誉榜单（与topten.php保持一致）
+// 获取2025年荣誉榜单（与topten.php保持一致，无论是否使用缓存都需要实时查询）
 // 1. 上传量第一 - Top 1 上传者（全部时间，与topten.php一致）
 $uploadLeaderUser = \Nexus\Database\NexusDB::selectOne(
     "SELECT id as userid, username FROM users WHERE enabled = 'yes' ORDER BY uploaded DESC LIMIT 1"
@@ -1134,6 +1208,11 @@ $defaultWishes = [
                         <div style="font-size: 24px; color: #aaa; margin-bottom: 60px;">
                             <?php echo $userInfo['class']; ?> | 注册于 <?php echo $userInfo['joined_date']; ?>
                         </div>
+                        <?php if ($cacheGeneratedAt): ?>
+                        <div style="font-size: 14px; color: #666; margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                            📅 数据统计截止时间：<?php echo $cacheGeneratedAt; ?>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
