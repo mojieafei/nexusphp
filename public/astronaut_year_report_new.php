@@ -57,17 +57,81 @@ $userInfo = [
 ];
 
 // 2. 流量数据统计
+// 2.1 2025年流量统计（从snatched表统计2025年完成的种子的实际流量）
 $snatches = \App\Models\Snatch::where('userid', $targetUserId)
+    ->where('finished', 'yes')
+    ->whereNotNull('completedat')
     ->whereBetween('completedat', [$startDate, $endDate])
     ->get();
 
-$uploaded = $snatches->sum('uploaded');
-$downloaded = $snatches->sum('downloaded');
-$shareRatio = $downloaded > 0 ? round($uploaded / $downloaded, 3) : ($uploaded > 0 ? '∞' : 0);
+$yearUploaded = $snatches->sum('uploaded');
+$yearDownloaded = $snatches->sum('downloaded');
+$yearShareRatio = $yearDownloaded > 0 ? round($yearUploaded / $yearDownloaded, 3) : ($yearUploaded > 0 ? '∞' : 0);
 
+// 2.2 2025年真实流量统计（优先使用announce_logs表统计2025年内的增量，与月度数据一致）
+$yearTrueUploaded = 0;
+$yearTrueDownloaded = 0;
+$isAnnounceLogEnabledForYear = \App\Models\Setting::getIsRecordAnnounceLog();
+
+if ($isAnnounceLogEnabledForYear) {
+    try {
+        $clickhouseClient = app(\ClickHouseDB\Client::class);
+        $startDateStr = $startDate->format('Y-m-d H:i:s');
+        $endDateStr = $endDate->format('Y-m-d H:i:s');
+        
+        // 统计2025年内的上传增量
+        $uploadedSql = sprintf(
+            "SELECT sum(uploaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
+            $targetUserId, $startDateStr, $endDateStr
+        );
+        $uploadedResult = $clickhouseClient->select($uploadedSql);
+        $uploadedRows = $uploadedResult->rows();
+        $yearTrueUploaded = isset($uploadedRows[0]['total']) ? (float)$uploadedRows[0]['total'] : 0;
+        
+        // 统计2025年内的下载增量
+        $downloadedSql = sprintf(
+            "SELECT sum(downloaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
+            $targetUserId, $startDateStr, $endDateStr
+        );
+        $downloadedResult = $clickhouseClient->select($downloadedSql);
+        $downloadedRows = $downloadedResult->rows();
+        $yearTrueDownloaded = isset($downloadedRows[0]['total']) ? (float)$downloadedRows[0]['total'] : 0;
+    } catch (\Exception $e) {
+        // 如果ClickHouse查询失败，使用备用方法（从snatched表统计2025年完成的记录）
+        do_log("Failed to query announce_logs for year traffic: " . $e->getMessage(), 'warning');
+        $yearTrueUploaded = $yearUploaded;
+        $yearTrueDownloaded = $yearDownloaded;
+    }
+} else {
+    // 如果未启用announce_log，使用备用方法（从snatched表统计2025年完成的记录）
+    $yearTrueUploaded = $yearUploaded;
+    $yearTrueDownloaded = $yearDownloaded;
+}
+
+$yearTrueShareRatio = $yearTrueDownloaded > 0 ? round($yearTrueUploaded / $yearTrueDownloaded, 3) : ($yearTrueUploaded > 0 ? '∞' : 0);
+
+// 保留旧变量名以兼容评分系统
+$uploaded = $yearUploaded;
+$downloaded = $yearDownloaded;
+$shareRatio = $yearShareRatio;
+
+// 总流量（所有时间，从users表）
 $totalUploaded = $user->uploaded;
 $totalDownloaded = $user->downloaded;
 $totalShareRatio = $totalDownloaded > 0 ? round($totalUploaded / $totalDownloaded, 3) : ($totalUploaded > 0 ? '∞' : 0);
+
+// 真实流量（所有时间，从snatched表统计，与个人页面一致）
+$trueUploadedResult = \Nexus\Database\NexusDB::selectOne(
+    "SELECT SUM(uploaded) as total FROM snatched WHERE userid = ?",
+    [$targetUserId]
+);
+$trueDownloadedResult = \Nexus\Database\NexusDB::selectOne(
+    "SELECT SUM(downloaded) as total FROM snatched WHERE userid = ?",
+    [$targetUserId]
+);
+$trueUploaded = isset($trueUploadedResult['total']) ? (float)$trueUploadedResult['total'] : 0;
+$trueDownloaded = isset($trueDownloadedResult['total']) ? (float)$trueDownloadedResult['total'] : 0;
+$trueShareRatio = $trueDownloaded > 0 ? round($trueUploaded / $trueDownloaded, 3) : ($trueUploaded > 0 ? '∞' : 0);
 
 // 3. 种子数据统计
 $torrentsUploaded = \App\Models\Torrent::where('owner', $targetUserId)
@@ -87,11 +151,22 @@ $snatchesCount = \App\Models\Snatch::where('userid', $targetUserId)
     ->where('finished', 'yes')
     ->count();
 
-$seedingCount = \App\Models\Snatch::where('userid', $targetUserId)
-    ->whereBetween('completedat', [$startDate, $endDate])
-    ->where('finished', 'yes')
-    ->where('seedtime', '>', 0)
-    ->count();
+// 做种数量：按照个人页面的统计方式（从peers表查询当前正在做种的种子，但限制在2025年完成的）
+// 个人页面统计：peers.userid = $id AND snatched.userid = $id AND peers.seeder = 'yes'
+// 年度报告：在此基础上，限制snatched.completedat在2025年
+$seedingCount = \Nexus\Database\NexusDB::selectOne(
+    "SELECT COUNT(DISTINCT peers.torrent) as count 
+     FROM peers 
+     LEFT JOIN snatched ON snatched.torrentid = peers.torrent AND snatched.userid = peers.userid 
+     WHERE peers.userid = ? 
+     AND peers.seeder = 'yes' 
+     AND snatched.completedat IS NOT NULL 
+     AND snatched.completedat >= ? 
+     AND snatched.completedat <= ? 
+     AND snatched.finished = 'yes'",
+    [$targetUserId, $startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')]
+);
+$seedingCount = $seedingCount ? (int)$seedingCount['count'] : 0;
 
 // 4. 星尘农场数据统计
 $farm = \App\Models\StardustFarm::where('user_id', $targetUserId)->first();
@@ -154,24 +229,26 @@ $interactionStats = [
     'total_steal' => $interactions->where('action', 'steal')->count(),
 ];
 
-// 7. 论坛和评论数据
-// 发帖数量：统计该用户创建的主题数量（通过topics表的firstpost对应的posts.added时间判断）
+// 7. 论坛和评论数据（按照个人页面的统计方式：所有时间）
+// 个人页面显示：
+// - row_torrent_comment: SELECT COUNT(*) FROM comments WHERE user=$user['id']（种子评论）
+// - row_forum_posts: SELECT COUNT(*) FROM posts WHERE userid=$user['id']（论坛所有帖子）
+// 年度报告"社区互动"页面需要：
+// - 论坛发帖：论坛主题帖数量（topics表）
+// - 评论数量：论坛回复数量（posts表中排除主题帖的回复）
+
+// 论坛主题帖数量（所有时间）
 $forumPosts = \App\Models\Topic::where('userid', $targetUserId)
-    ->whereHas('firstPost', function($query) use ($startDate, $endDate) {
-        $query->whereNotNull('added')
-              ->whereBetween('added', [$startDate, $endDate]);
-    })
     ->count();
 
-// 论坛评论数量：统计posts表中该用户的回复（排除主题帖，即排除topics.firstpost对应的帖子）
+// 获取所有主题帖的firstpost ID
 $firstPostIds = \App\Models\Topic::whereNotNull('firstpost')
     ->where('firstpost', '>', 0)
     ->pluck('firstpost')
     ->toArray();
 
+// 论坛回复数量（所有时间，排除主题帖）
 $comments = \App\Models\Post::where('userid', $targetUserId)
-    ->whereNotNull('added')
-    ->whereBetween('added', [$startDate, $endDate])
     ->whereNotIn('id', $firstPostIds)
     ->count();
 
@@ -226,13 +303,14 @@ if ($attendanceLogs->count() == 0) {
     $maxContinuous = 0;
 }
 
-// 9. 做种时间统计
-$seedTime = \App\Models\Snatch::where('userid', $targetUserId)
-    ->whereBetween('completedat', [$startDate, $endDate])
-    ->where('finished', 'yes')
-    ->sum('seedtime');
-
+// 9. 做种时间统计（按照个人页面的统计方式：所有时间）
+// 个人页面统计：$user["seedtime"]（所有时间）
+// 个人页面统计：$user["leechtime"]（所有时间）
+$seedTime = $user->seedtime ?? 0;
+$leechTime = $user->leechtime ?? 0;
 $seedTimeDays = round($seedTime / 86400, 1);
+$leechTimeDays = round($leechTime / 86400, 1);
+$seedLeechRatio = $leechTime > 0 ? round($seedTime / $leechTime, 3) : ($seedTime > 0 ? '∞' : 0);
 
 // 10. 火星幸运局统计（修复版）
 $marsDuelBets = \App\Models\BonusLogs::where('uid', $targetUserId)
@@ -366,97 +444,22 @@ function getTitleByScore($score) {
     return $titles[min(10, max(0, $scoreInt))];
 }
 
-// 计算综合评分
+// 计算综合评分（使用个人页面的数据：总流量、所有时间的做种时间、所有时间的论坛帖子等）
 $scoreData = [
-    'uploaded' => $uploaded,
-    'downloaded' => $downloaded,
-    'shareRatio' => $shareRatio,
+    'uploaded' => $totalUploaded,  // 使用总上传量（与个人页面一致）
+    'downloaded' => $totalDownloaded,  // 使用总下载量（与个人页面一致）
+    'shareRatio' => $totalShareRatio,  // 使用总分享率（与个人页面一致）
     'attendance' => $attendance,
     'torrentsUploaded' => $torrentsUploaded,
-    'seedTimeDays' => $seedTimeDays,
-    'forumPosts' => $forumPosts,
-    'comments' => $comments,
+    'seedTimeDays' => $seedTimeDays,  // 使用所有时间的做种时间（与个人页面一致）
+    'forumPosts' => $forumPosts,  // 使用所有时间的论坛帖子（与个人页面一致）
+    'comments' => $comments,  // 使用所有时间的评论（与个人页面一致）
     'gameStats' => $gameStats,
     'farmData' => $farmData,
 ];
 
 $yearScore = calculateYearScore($scoreData);
 $userTitle = getTitleByScore($yearScore);
-
-// 月度数据（修复：从announce_logs表统计该月内的上传/下载增量）
-$monthlyData = [];
-$isAnnounceLogEnabled = \App\Models\Setting::getIsRecordAnnounceLog();
-
-for ($month = 1; $month <= 12; $month++) {
-    $monthStart = Carbon\Carbon::create($year, $month, 1, 0, 0, 0);
-    $monthEnd = Carbon\Carbon::create($year, $month, 1, 0, 0, 0)->endOfMonth();
-    
-    // 从announce_logs表统计该月内的上传/下载增量（准确方法）
-    $monthUploaded = 0;
-    $monthDownloaded = 0;
-    
-    if ($isAnnounceLogEnabled) {
-        try {
-            $clickhouseClient = app(\ClickHouseDB\Client::class);
-            $monthStartStr = $monthStart->format('Y-m-d H:i:s');
-            $monthEndStr = $monthEnd->format('Y-m-d H:i:s');
-            
-            // 统计该月内的上传增量
-            $uploadedSql = sprintf(
-                "SELECT sum(uploaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
-                $targetUserId, $monthStartStr, $monthEndStr
-            );
-            $uploadedResult = $clickhouseClient->select($uploadedSql);
-            $uploadedRows = $uploadedResult->rows();
-            $monthUploaded = isset($uploadedRows[0]['total']) ? (float)$uploadedRows[0]['total'] : 0;
-            
-            // 统计该月内的下载增量
-            $downloadedSql = sprintf(
-                "SELECT sum(downloaded_increment_for_user) as total FROM announce_logs WHERE user_id = %d AND timestamp >= '%s' AND timestamp <= '%s'",
-                $targetUserId, $monthStartStr, $monthEndStr
-            );
-            $downloadedResult = $clickhouseClient->select($downloadedSql);
-            $downloadedRows = $downloadedResult->rows();
-            $monthDownloaded = isset($downloadedRows[0]['total']) ? (float)$downloadedRows[0]['total'] : 0;
-        } catch (\Exception $e) {
-            // 如果ClickHouse查询失败，使用备用方法（从snatched表统计该月完成的记录）
-            do_log("Failed to query announce_logs for monthly data: " . $e->getMessage(), 'warning');
-            $monthSnatches = \App\Models\Snatch::where('userid', $targetUserId)
-                ->where('finished', 'yes')
-                ->whereNotNull('completedat')
-                ->whereBetween('completedat', [$monthStart, $monthEnd])
-                ->get();
-            $monthUploaded = $monthSnatches->sum('uploaded');
-            $monthDownloaded = $monthSnatches->sum('downloaded');
-        }
-    } else {
-        // 如果未启用announce_log，使用备用方法（从snatched表统计该月完成的记录）
-        $monthSnatches = \App\Models\Snatch::where('userid', $targetUserId)
-            ->where('finished', 'yes')
-            ->whereNotNull('completedat')
-            ->whereBetween('completedat', [$monthStart, $monthEnd])
-            ->get();
-        $monthUploaded = $monthSnatches->sum('uploaded');
-        $monthDownloaded = $monthSnatches->sum('downloaded');
-    }
-    
-    $monthGames = \App\Models\MeteorGameScore::where('user_id', $targetUserId)
-        ->whereBetween('created_at', [$monthStart, $monthEnd])
-        ->where('is_flagged', false)
-        ->get();
-    
-    $monthStardust = \App\Models\StardustTransactionLog::where('user_id', $targetUserId)
-        ->where('type', 'earn')
-        ->whereBetween('created_at', [$monthStart, $monthEnd])
-        ->sum('amount');
-    
-    $monthlyData[$month] = [
-        'uploaded' => $monthUploaded,
-        'downloaded' => $monthDownloaded,
-        'games' => $monthGames->count(),
-        'stardust' => $monthStardust,
-    ];
-}
 
 // 获取2025年荣誉榜单（与topten.php保持一致）
 // 1. 上传量第一 - Top 1 上传者（全部时间，与topten.php一致）
@@ -747,40 +750,6 @@ $defaultWishes = [
             border-radius: 5px;
         }
         
-        .monthly-chart {
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-end;
-            height: 300px;
-            margin-top: 30px;
-        }
-        
-        .month-bar {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100%;
-        }
-        
-        .bar {
-            width: 80%;
-            min-height: 10px;
-            border-radius: 5px 5px 0 0;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            padding: 5px;
-            font-size: 12px;
-            color: #fff;
-        }
-        
-        .bar-value {
-            font-size: 11px;
-            color: #fff;
-            margin-top: 5px;
-        }
         
         /* 评分展示样式 */
         .score-display {
@@ -1208,28 +1177,28 @@ $defaultWishes = [
                             <div class="stats-grid">
                                 <div class="stat-card">
                                     <div class="stat-label">上传量</div>
-                                    <div class="stat-value"><?php echo mksize($uploaded); ?></div>
+                                    <div class="stat-value"><?php echo mksize($totalUploaded); ?></div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-label">下载量</div>
-                                    <div class="stat-value"><?php echo mksize($downloaded); ?></div>
+                                    <div class="stat-value"><?php echo mksize($totalDownloaded); ?></div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-label">分享率</div>
-                                    <div class="stat-value"><?php echo $shareRatio; ?></div>
+                                    <div class="stat-value"><?php echo $totalShareRatio; ?></div>
                                 </div>
                             </div>
                             <div class="highlight-box" style="margin-top: 30px; border-left-color: #00d4ff;">
                                 <div style="font-size: 18px; color: #00d4ff; line-height: 1.8;">
-                                    💫 总上传：<strong style="font-size: 22px;"><?php echo mksize($totalUploaded); ?></strong> | 
-                                    总下载：<strong style="font-size: 22px;"><?php echo mksize($totalDownloaded); ?></strong> | 
-                                    总分享率：<strong style="font-size: 22px;"><?php echo $totalShareRatio; ?></strong>
+                                    💫 实际上传：<strong style="font-size: 22px;"><?php echo mksize($trueUploaded); ?></strong> | 
+                                    实际下载：<strong style="font-size: 22px;"><?php echo mksize($trueDownloaded); ?></strong> | 
+                                    实际分享率：<strong style="font-size: 22px;"><?php echo $trueShareRatio; ?></strong>
                                     <div style="margin-top: 15px; font-size: 16px; color: #aaa;">
                                         每一字节的流量，都记录着您在天枢的每一次探索与分享
                                     </div>
                                 </div>
                             </div>
-                            <?php if ($uploaded > 0 || $downloaded > 0): ?>
+                            <?php if ($totalUploaded > 0 || $totalDownloaded > 0): ?>
                             <div class="highlight-box" style="margin-top: 20px; border-left-color: #ff6b6b;">
                                 <div style="font-size: 16px; color: #ff6b6b; line-height: 1.8;">
                                     ✨ 这一年，您在天枢的流量世界里留下了深刻的足迹<br>
@@ -1445,47 +1414,7 @@ $defaultWishes = [
                     </div>
                 </div>
                 
-                <!-- 第11页：月度数据 -->
-                <div class="slider-page">
-                    <div class="ppt-slide">
-                        <div class="ppt-title">📅 <?php echo $year; ?> 年月度数据</div>
-                        <div class="ppt-content">
-                            <div class="monthly-chart">
-                                <?php 
-                                $maxValue = max(array_map(function($m) { 
-                                    return max($m['uploaded'], $m['downloaded']); 
-                                }, $monthlyData));
-                                $monthNames = ['', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-                                foreach ($monthlyData as $month => $data): 
-                                    $uploadHeight = $maxValue > 0 ? ($data['uploaded'] / $maxValue * 100) : 0;
-                                    $downloadHeight = $maxValue > 0 ? ($data['downloaded'] / $maxValue * 100) : 0;
-                                ?>
-                                <div class="month-bar">
-                                    <div style="display: flex; flex-direction: column; height: 100%; width: 100%; justify-content: flex-end;">
-                                        <?php if ($data['uploaded'] > 0): ?>
-                                        <div class="bar" style="height: <?php echo $uploadHeight; ?>%; background: linear-gradient(180deg, #00d4ff, #0099cc); margin-bottom: 2px;">
-                                            <div class="bar-value"><?php echo mksize($data['uploaded']); ?></div>
-                                        </div>
-                                        <?php endif; ?>
-                                        <?php if ($data['downloaded'] > 0): ?>
-                                        <div class="bar" style="height: <?php echo $downloadHeight; ?>%; background: linear-gradient(180deg, #ff6b6b, #cc0000);">
-                                            <div class="bar-value"><?php echo mksize($data['downloaded']); ?></div>
-                                        </div>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div style="margin-top: 10px; font-size: 14px;"><?php echo $monthNames[$month]; ?></div>
-                                </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <div style="text-align: center; margin-top: 20px; font-size: 14px; color: #aaa;">
-                                <span style="color: #00d4ff;">■</span> 上传量 | 
-                                <span style="color: #ff6b6b;">■</span> 下载量
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 第12页：总结 -->
+                <!-- 第11页：总结 -->
                 <div class="slider-page">
                     <div class="ppt-slide">
                         <div class="ppt-title">🎯 <?php echo $year; ?> 年总结</div>
@@ -1512,20 +1441,20 @@ $defaultWishes = [
                                     <div style="color: #aaa;">
                                         <span style="color: #00d4ff;">上传量：</span>
                                         <?php 
-                                        $uploadedGB = $uploaded / (1024 * 1024 * 1024);
+                                        $uploadedGB = $totalUploaded / (1024 * 1024 * 1024);
                                         echo number_format($uploadedGB, 1) . ' GB';
                                         ?>
                                     </div>
                                     <div style="color: #aaa;">
                                         <span style="color: #00d4ff;">下载量：</span>
                                         <?php 
-                                        $downloadedGB = $downloaded / (1024 * 1024 * 1024);
+                                        $downloadedGB = $totalDownloaded / (1024 * 1024 * 1024);
                                         echo number_format($downloadedGB, 1) . ' GB';
                                         ?>
                                     </div>
                                     <div style="color: #aaa;">
                                         <span style="color: #00d4ff;">分享率：</span>
-                                        <?php echo is_numeric($shareRatio) ? number_format($shareRatio, 2) : $shareRatio; ?>
+                                        <?php echo is_numeric($totalShareRatio) ? number_format($totalShareRatio, 2) : $totalShareRatio; ?>
                                     </div>
                                     <div style="color: #aaa;">
                                         <span style="color: #00d4ff;">签到天数：</span>
