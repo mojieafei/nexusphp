@@ -151,20 +151,17 @@ $snatchesCount = \App\Models\Snatch::where('userid', $targetUserId)
     ->where('finished', 'yes')
     ->count();
 
-// 做种数量：按照个人页面的统计方式（从peers表查询当前正在做种的种子，但限制在2025年完成的）
+// 做种数量：按照个人页面的统计方式（从peers表查询当前正在做种的种子，与个人页面完全一致）
 // 个人页面统计：peers.userid = $id AND snatched.userid = $id AND peers.seeder = 'yes'
-// 年度报告：在此基础上，限制snatched.completedat在2025年
+// 因为网站是今年成立的，所以所有时间的数据就是2025年的数据，不需要时间限制
 $seedingCount = \Nexus\Database\NexusDB::selectOne(
     "SELECT COUNT(DISTINCT peers.torrent) as count 
      FROM peers 
      LEFT JOIN snatched ON snatched.torrentid = peers.torrent AND snatched.userid = peers.userid 
      WHERE peers.userid = ? 
      AND peers.seeder = 'yes' 
-     AND snatched.completedat IS NOT NULL 
-     AND snatched.completedat >= ? 
-     AND snatched.completedat <= ? 
-     AND snatched.finished = 'yes'",
-    [$targetUserId, $startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')]
+     AND snatched.userid = ?",
+    [$targetUserId, $targetUserId]
 );
 $seedingCount = $seedingCount ? (int)$seedingCount['count'] : 0;
 
