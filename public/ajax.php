@@ -1709,10 +1709,10 @@ if ($action === 'get_mars_duel_leaderboard') {
             $totalWins = $win ? (int)$win->total_wins : 0;
             $totalWinAmount = $win ? (int)$win->total_win_amount : 0;
             
-            // 只显示有下注记录的用户，排除 admin2 (AI机器人)
+            // 只显示有下注记录的用户，排除 admin2 和 admin22 (AI机器人)
             if ($totalBets > 0) {
                 $user = \App\Models\User::find($userId);
-                if ($user && $user->username !== 'admin2') {
+                if ($user && !in_array($user->username, ['admin2', 'admin22'])) {
                     $leaderboard[] = [
                         'user_id' => $userId,
                         'username' => $user->username,
