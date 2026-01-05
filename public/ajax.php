@@ -1677,6 +1677,87 @@ if ($action === 'space_miner_leaderboard') {
     }
 }
 
+// 火星幸运局 - 获取排行榜
+if ($action === 'get_mars_duel_leaderboard') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        $type = $_GET['type'] ?? 'bet'; // bet, win, profit, rate
+        
+        // 查询所有用户的下注和获胜数据
+        $betData = \App\Models\BonusLogs::where('business_type', \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_BET)
+            ->selectRaw('uid, COUNT(*) as total_bets, SUM(ABS(value)) as total_bet_amount')
+            ->groupBy('uid')
+            ->get()
+            ->keyBy('uid');
+        
+        $winData = \App\Models\BonusLogs::where('business_type', \App\Models\BonusLogs::BUSINESS_TYPE_MARS_DUEL_WINNER)
+            ->selectRaw('uid, COUNT(*) as total_wins, SUM(value) as total_win_amount')
+            ->groupBy('uid')
+            ->get()
+            ->keyBy('uid');
+        
+        // 合并数据
+        $allUserIds = $betData->keys()->merge($winData->keys())->unique();
+        $leaderboard = [];
+        
+        foreach ($allUserIds as $userId) {
+            $bet = $betData->get($userId);
+            $win = $winData->get($userId);
+            
+            $totalBets = $bet ? (int)$bet->total_bets : 0;
+            $totalBetAmount = $bet ? (int)$bet->total_bet_amount : 0;
+            $totalWins = $win ? (int)$win->total_wins : 0;
+            $totalWinAmount = $win ? (int)$win->total_win_amount : 0;
+            
+            // 只显示有下注记录的用户，排除 admin2 (AI机器人)
+            if ($totalBets > 0) {
+                $user = \App\Models\User::find($userId);
+                if ($user && $user->username !== 'admin2') {
+                    $leaderboard[] = [
+                        'user_id' => $userId,
+                        'username' => $user->username,
+                        'total_bets' => $totalBets,
+                        'total_bet_amount' => $totalBetAmount,
+                        'total_wins' => $totalWins,
+                        'total_win_amount' => $totalWinAmount,
+                    ];
+                }
+            }
+        }
+        
+        // 根据类型排序
+        if ($type === 'bet') {
+            usort($leaderboard, function($a, $b) {
+                return $b['total_bet_amount'] - $a['total_bet_amount'];
+            });
+        } else if ($type === 'win') {
+            usort($leaderboard, function($a, $b) {
+                return $b['total_win_amount'] - $a['total_win_amount'];
+            });
+        } else if ($type === 'profit') {
+            usort($leaderboard, function($a, $b) {
+                $profitA = $a['total_win_amount'] - $a['total_bet_amount'];
+                $profitB = $b['total_win_amount'] - $b['total_bet_amount'];
+                return $profitB - $profitA;
+            });
+        } else if ($type === 'rate') {
+            usort($leaderboard, function($a, $b) {
+                $rateA = $a['total_bets'] > 0 ? ($a['total_wins'] / $a['total_bets']) : 0;
+                $rateB = $b['total_bets'] > 0 ? ($b['total_wins'] / $b['total_bets']) : 0;
+                return $rateB <=> $rateA;
+            });
+        }
+        
+        // 限制前50名
+        $leaderboard = array_slice($leaderboard, 0, 50);
+        
+        exit(json_encode(['ret' => 0, 'msg' => 'success', 'data' => $leaderboard], JSON_UNESCAPED_UNICODE));
+        
+    } catch (\Throwable $e) {
+        exit(json_encode(['ret' => -1, 'msg' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
+    }
+}
+
 // 宇宙碎片抓取游戏 - 获取今日剩余提交次数
 if ($action === 'space_miner_remaining') {
     header('Content-Type: application/json; charset=utf-8');

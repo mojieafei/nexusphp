@@ -2319,10 +2319,8 @@ function menu ($selected = "home") {
 		$selected = "subtitles";
 	}elseif (preg_match("/usercp/i", $script_name)) {
 		$selected = "usercp";
-	}elseif (preg_match("/topten/i", $script_name)) {
-		$selected = "topten";
-	}elseif (preg_match("/stardust_leaderboard/i", $script_name)) {
-		$selected = "stardust_leaderboard";
+	}elseif (preg_match("/topten|stardust_leaderboard|mars_duel_leaderboard/i", $script_name)) {
+		$selected = "leaderboard";
 	}elseif (preg_match("/meteor_game/i", $script_name)) {
 		$selected = "meteor_game";
 	}elseif (preg_match("/torrents/i", $script_name) && isset($_REQUEST['seeders_end']) && intval($_REQUEST['seeders_end']) == 2 && (!isset($_REQUEST['tag_id']) || intval($_REQUEST['tag_id']) != 3)) {
@@ -2480,16 +2478,105 @@ function menu ($selected = "home") {
         print ("</ul>");
         print ("</li>");
         
-        // 排行榜
+        // 排行榜下拉菜单（合并传统排行榜和游戏排行榜）
+        $isLeaderboardPage = preg_match("/topten|stardust_leaderboard|mars_duel_leaderboard/i", $script_name);
+        print ("<li class=\"dropdown-menu" . ($isLeaderboardPage ? " selected" : "") . "\" id=\"leaderboard-dropdown\">");
+        print ("<a href=\"javascript:void(0);\" class=\"dropdown-toggle\" onclick=\"return false;\">🏆排行榜▼</a>");
+        print ("<ul class=\"dropdown-content\">");
         if (user_can('topten')) {
             $toptenText = $lang_functions['text_top_ten'];
             $toptenText = str_replace('&nbsp;', '', $toptenText);
             $toptenText = str_replace(' ', '', $toptenText);
-            print ("<li" . ($selected == "topten" ? " class=\"selected\"" : "") . "><a href=\"topten.php\">".$toptenText."</a></li>");
+            print ("<li" . ($selected == "leaderboard" && preg_match("/topten/i", $script_name) ? " class=\"selected\"" : "") . "><a href=\"topten.php\">".$toptenText."</a></li>");
         }
+        print ("<li" . ($selected == "leaderboard" && preg_match("/stardust_leaderboard/i", $script_name) ? " class=\"selected\"" : "") . "><a href=\"stardust_leaderboard.php\">🌍 星尘农场排行榜</a></li>");
+        print ("<li" . ($selected == "leaderboard" && preg_match("/mars_duel_leaderboard/i", $script_name) ? " class=\"selected\"" : "") . "><a href=\"mars_duel_leaderboard.php\">🎲 火星幸运局排行榜</a></li>");
+        print ("</ul>");
+        print ("</li>");
         
-        // 农场排行榜
-        print ("<li" . ($selected == "stardust_leaderboard" ? " class=\"selected\"" : "") . "><a href=\"stardust_leaderboard.php\">🏆农场排行榜</a></li>");
+        // 排行榜下拉菜单JS控制
+        print ("<script>
+        (function() {
+            var dropdown = document.getElementById('leaderboard-dropdown');
+            if (!dropdown) return;
+            var dropdownContent = dropdown.querySelector('.dropdown-content');
+            var dropdownToggle = dropdown.querySelector('.dropdown-toggle');
+            var isOpen = false;
+            
+            function updateDropdownPosition() {
+                var rect = dropdown.getBoundingClientRect();
+                dropdownContent.style.position = 'fixed';
+                dropdownContent.style.top = rect.bottom + 'px';
+                dropdownContent.style.left = rect.left + 'px';
+                dropdownContent.style.zIndex = '2147483646';
+            }
+            
+            function showDropdown() {
+                updateDropdownPosition();
+                dropdownContent.style.display = 'block';
+                isOpen = true;
+                dropdown.classList.add('active');
+            }
+            
+            function hideDropdown() {
+                dropdownContent.style.display = 'none';
+                isOpen = false;
+                dropdown.classList.remove('active');
+            }
+            
+            function toggleDropdown(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isOpen) {
+                    hideDropdown();
+                } else {
+                    showDropdown();
+                }
+            }
+            
+            // 点击按钮切换下拉菜单
+            dropdownToggle.addEventListener('click', toggleDropdown);
+            
+            // 点击外部区域关闭下拉菜单
+            document.addEventListener('click', function(e) {
+                if (isOpen && !dropdown.contains(e.target)) {
+                    hideDropdown();
+                }
+            });
+            
+            // 鼠标离开下拉菜单区域时关闭
+            dropdown.addEventListener('mouseleave', function() {
+                if (isOpen) {
+                    setTimeout(function() {
+                        if (!dropdown.matches(':hover')) {
+                            hideDropdown();
+                        }
+                    }, 300);
+                }
+            });
+            
+            // 窗口滚动/调整大小时更新位置
+            window.addEventListener('scroll', function() {
+                if (isOpen) {
+                    updateDropdownPosition();
+                }
+            });
+            
+            window.addEventListener('resize', function() {
+                if (isOpen) {
+                    updateDropdownPosition();
+                }
+            });
+            
+            // 点击下拉菜单链接时关闭
+            var links = dropdown.querySelectorAll('.dropdown-content a');
+            links.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    hideDropdown();
+                });
+            });
+        })();
+        </script>");
         
         // 星际法则下拉菜单（规则、常见问题）
         $isNoticePage = preg_match("/rules|faq/i", $script_name);
