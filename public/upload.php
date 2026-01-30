@@ -335,4 +335,57 @@ $deadlineCalcJs = <<<JS
 })();
 JS;
 \Nexus\Nexus::js($deadlineCalcJs, 'footer', false);
+
+// 自动选择标签和位置功能（当URL中包含#auto_select标识时）
+$autoSelectJs = <<<JS
+(function() {
+    // 检查URL中是否包含auto_select标识
+    // 标识可以通过hash fragment传递，例如：#separator#...data#auto_select
+    let hash = window.location.hash;
+    let urlParams = new URLSearchParams(window.location.search);
+    
+    // 检查hash中是否包含auto_select，或者URL参数中是否有auto_select
+    let shouldAutoSelect = hash.includes('#auto_select') || urlParams.get('auto_select') === '1';
+    
+    if (shouldAutoSelect) {
+        // 等待页面完全加载后再执行
+        setTimeout(function() {
+            try {
+                // 选择"官方"和"中字"标签
+                let checkboxes = document.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(function(cb) {
+                    let label = cb.closest('label') || cb.parentElement;
+                    if (label) {
+                        let labelText = label.textContent || label.innerText || '';
+                        if (labelText.includes('官方') || labelText.includes('中字')) {
+                            cb.checked = true;
+                            // 触发change事件以确保网站识别选择
+                            let event = new Event('change', { bubbles: true });
+                            cb.dispatchEvent(event);
+                        }
+                    }
+                });
+                
+                // 选择"一级置顶"位置
+                let posSelect = document.querySelector('select[name="pos_state"]');
+                if (posSelect) {
+                    for (let i = 0; i < posSelect.options.length; i++) {
+                        let option = posSelect.options[i];
+                        if (option.text.includes('一级置顶') || option.value == '1') {
+                            posSelect.value = option.value;
+                            // 触发change事件
+                            let event = new Event('change', { bubbles: true });
+                            posSelect.dispatchEvent(event);
+                            break;
+                        }
+                    }
+                }
+            } catch(e) {
+                console.log('自动选择失败:', e);
+            }
+        }, 1500); // 等待1.5秒确保页面元素都已加载
+    }
+})();
+JS;
+\Nexus\Nexus::js($autoSelectJs, 'footer', false);
 stdfoot();
