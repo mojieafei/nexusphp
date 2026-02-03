@@ -336,32 +336,40 @@ $deadlineCalcJs = <<<JS
 JS;
 \Nexus\Nexus::js($deadlineCalcJs, 'footer', false);
 
-// 自动选择标签和位置功能（当URL中包含#auto_select标识时）
+// 自动选择标签和位置功能
 $autoSelectJs = <<<JS
 (function() {
-    // 检查URL中是否包含auto_select标识
-    // 标识可以通过hash fragment传递，例如：#separator#...data#auto_select
+    // 检查hash中是否包含auto_select，或者URL参数中是否有auto_select
     let hash = window.location.hash;
     let urlParams = new URLSearchParams(window.location.search);
-    
-    // 检查hash中是否包含auto_select，或者URL参数中是否有auto_select
     let shouldAutoSelect = hash.includes('#auto_select') || urlParams.get('auto_select') === '1';
     
     if (shouldAutoSelect) {
-        // 等待页面完全加载后再执行
-        setTimeout(function() {
+        let attempts = 0;
+        let maxAttempts = 10;
+        
+        function tryAutoSelect() {
+            attempts++;
+            
             try {
                 // 选择"官方"和"中字"标签
                 let checkboxes = document.querySelectorAll('input[type="checkbox"]');
                 checkboxes.forEach(function(cb) {
                     let label = cb.closest('label') || cb.parentElement;
                     if (label) {
-                        let labelText = label.textContent || label.innerText || '';
+                        let labelText = (label.textContent || label.innerText || '').trim();
                         if (labelText.includes('官方') || labelText.includes('中字')) {
-                            cb.checked = true;
-                            // 触发change事件以确保网站识别选择
-                            let event = new Event('change', { bubbles: true });
-                            cb.dispatchEvent(event);
+                            if (!cb.checked) {
+                                cb.checked = true;
+                                // 触发多种事件以确保网站识别
+                                ['change', 'click', 'input'].forEach(function(eventType) {
+                                    let event = new Event(eventType, { bubbles: true, cancelable: true });
+                                    cb.dispatchEvent(event);
+                                });
+                                if (typeof jQuery !== 'undefined') {
+                                    jQuery(cb).trigger('change').trigger('click');
+                                }
+                            }
                         }
                     }
                 });
@@ -371,19 +379,39 @@ $autoSelectJs = <<<JS
                 if (posSelect) {
                     for (let i = 0; i < posSelect.options.length; i++) {
                         let option = posSelect.options[i];
-                        if (option.text.includes('一级置顶') || option.value == '1') {
+                        let optionText = option.text || option.textContent || '';
+                        if (optionText.includes('一级置顶') || optionText.includes('一级') || option.value == '1') {
                             posSelect.value = option.value;
-                            // 触发change事件
-                            let event = new Event('change', { bubbles: true });
-                            posSelect.dispatchEvent(event);
+                            // 触发多种事件
+                            ['change', 'input'].forEach(function(eventType) {
+                                let event = new Event(eventType, { bubbles: true, cancelable: true });
+                                posSelect.dispatchEvent(event);
+                            });
+                            if (typeof jQuery !== 'undefined') {
+                                jQuery(posSelect).trigger('change');
+                            }
                             break;
                         }
                     }
                 }
             } catch(e) {
-                console.log('自动选择失败:', e);
+                // 静默处理错误
             }
-        }, 1500); // 等待1.5秒确保页面元素都已加载
+            
+            // 如果还没有完成，继续尝试
+            if (attempts < maxAttempts) {
+                setTimeout(tryAutoSelect, 500);
+            }
+        }
+        
+        // 等待页面加载完成后开始尝试
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(tryAutoSelect, 1500); // 初始等待1.5秒
+            });
+        } else {
+            setTimeout(tryAutoSelect, 1500); // 初始等待1.5秒
+        }
     }
 })();
 JS;
